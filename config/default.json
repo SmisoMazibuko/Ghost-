@@ -1,0 +1,51 @@
+{
+  "$schema": "./config.schema.json",
+  "version": "15.1",
+  "description": "Ghost Evaluator v15.1 - Default Configuration",
+
+  "evaluator": {
+    "neutralBand": 0.05,
+    "dailyTarget": 2000,
+    "betAmount": 200,
+    "singleProfitThreshold": 70,
+    "cumulativeProfitThreshold": 100,
+    "p1ConsecutiveThreshold": 7
+  },
+
+  "patterns": {
+    "enabled": [
+      "2A2", "Anti2A2",
+      "3A3", "Anti3A3",
+      "4A4", "5A5",
+      "AP5", "OZ",
+      "ZZ", "AntiZZ",
+      "PP", "ST"
+    ],
+    "continuous": ["ZZ", "AntiZZ", "PP", "ST"],
+    "opposites": {
+      "2A2": "Anti2A2",
+      "Anti2A2": "2A2",
+      "3A3": "Anti3A3",
+      "Anti3A3": "3A3",
+      "AP5": "OZ",
+      "OZ": "AP5",
+      "ZZ": "AntiZZ",
+      "AntiZZ": "ZZ",
+      "PP": null,
+      "ST": null
+    }
+  },
+
+  "logging": {
+    "level": "info",
+    "console": true,
+    "file": true,
+    "filePath": "./data/logs/evaluator.log"
+  },
+
+  "session": {
+    "autoSave": true,
+    "autoSaveInterval": 5000,
+    "sessionDir": "./data/sessions"
+  }
+}

@@ -1,0 +1,478 @@
+{
+  "suites": {
+    "default": {
+      "id": "default",
+      "name": "Ghost Evaluator Core Tests",
+      "tests": [
+        {
+          "id": "TEST-001",
+          "name": "ZZ Immediate Activation",
+          "description": "ZZ pattern should activate immediately on first detection",
+          "type": "unit",
+          "category": "lifecycle_rules",
+          "patterns": [
+            "ZZ"
+          ],
+          "setup": {
+            "config": {
+              "dailyTarget": 2000,
+              "betAmount": 200
+            }
+          },
+          "steps": [
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 60
+              },
+              "description": "Start indicator"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 55
+              },
+              "description": "Continue indicator"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": -1,
+                "pct": 50
+              },
+              "description": "First single"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 45
+              },
+              "description": "Second single"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": -1,
+                "pct": 55
+              },
+              "description": "Third single - ZZ triggers"
+            }
+          ],
+          "expectedOutcome": {
+            "patternStates": {
+              "ZZ": "active"
+            },
+            "assertions": [
+              {
+                "field": "lifecycle.ZZ.state",
+                "operator": "eq",
+                "value": "active",
+                "message": "ZZ should be active"
+              }
+            ]
+          },
+          "metadata": {
+            "author": "system",
+            "createdAt": "2025-12-05T23:45:35.099Z",
+            "tags": [
+              "zz",
+              "activation",
+              "core"
+            ],
+            "relatedRules": [
+              "RULE-ACT-003"
+            ],
+            "priority": 1
+          }
+        },
+        {
+          "id": "TEST-002",
+          "name": "No Negative Accumulation",
+          "description": "Pattern cumulative profit should never go below 0",
+          "type": "unit",
+          "category": "accumulation",
+          "patterns": [
+            "2A2",
+            "Anti2A2"
+          ],
+          "setup": {
+            "config": {
+              "dailyTarget": 2000,
+              "betAmount": 200
+            }
+          },
+          "steps": [
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 70
+              },
+              "description": "Build run"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 70
+              },
+              "description": "2A2 triggers"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 80
+              },
+              "description": "2A2 loses (continuation)"
+            },
+            {
+              "action": "assert",
+              "params": {
+                "field": "lifecycle.2A2.cumulativeProfit",
+                "operator": "gte",
+                "value": 0
+              }
+            }
+          ],
+          "expectedOutcome": {
+            "assertions": [
+              {
+                "field": "lifecycle.2A2.cumulativeProfit",
+                "operator": "eq",
+                "value": 0,
+                "message": "Cumulative should be 0 after loss"
+              },
+              {
+                "field": "lifecycle.Anti2A2.cumulativeProfit",
+                "operator": "gt",
+                "value": 0,
+                "message": "Opposite should gain"
+              }
+            ]
+          },
+          "metadata": {
+            "author": "system",
+            "createdAt": "2025-12-05T23:45:35.099Z",
+            "tags": [
+              "accumulation",
+              "core"
+            ],
+            "relatedRules": [
+              "RULE-ACC-001",
+              "RULE-ACC-002"
+            ],
+            "priority": 1
+          }
+        },
+        {
+          "id": "TEST-003",
+          "name": "Loss Transfer to Opposite Pattern",
+          "description": "When pattern loses, loss amount should transfer to opposite as positive",
+          "type": "unit",
+          "category": "accumulation",
+          "patterns": [
+            "3A3",
+            "Anti3A3"
+          ],
+          "setup": {
+            "config": {
+              "dailyTarget": 2000,
+              "betAmount": 200
+            }
+          },
+          "steps": [
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 60
+              },
+              "description": "Block 1"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 70
+              },
+              "description": "Block 2"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 75
+              },
+              "description": "Block 3 - 3A3 triggers"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 65
+              },
+              "description": "3A3 loses - transfer to Anti3A3"
+            }
+          ],
+          "expectedOutcome": {
+            "assertions": [
+              {
+                "field": "lifecycle.3A3.cumulativeProfit",
+                "operator": "eq",
+                "value": 0,
+                "message": "3A3 reset to 0"
+              },
+              {
+                "field": "lifecycle.Anti3A3.cumulativeProfit",
+                "operator": "eq",
+                "value": 65,
+                "message": "Anti3A3 gains loss amount"
+              }
+            ]
+          },
+          "metadata": {
+            "author": "system",
+            "createdAt": "2025-12-05T23:45:35.099Z",
+            "tags": [
+              "accumulation",
+              "transfer",
+              "core"
+            ],
+            "relatedRules": [
+              "RULE-ACC-002"
+            ],
+            "priority": 1
+          }
+        },
+        {
+          "id": "TEST-004",
+          "name": "ZZ to AntiZZ Switch on Unprofitable Run",
+          "description": "ZZ should switch to AntiZZ when last run profit is <= 0",
+          "type": "scenario",
+          "category": "lifecycle_rules",
+          "patterns": [
+            "ZZ",
+            "AntiZZ"
+          ],
+          "setup": {
+            "config": {
+              "dailyTarget": 2000,
+              "betAmount": 200
+            }
+          },
+          "steps": [
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 60
+              },
+              "description": "Indicator 1"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 55
+              },
+              "description": "Indicator 2"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": -1,
+                "pct": 50
+              },
+              "description": "Single 1"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 45
+              },
+              "description": "Single 2"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": -1,
+                "pct": 55
+              },
+              "description": "Single 3 - ZZ active"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": -1,
+                "pct": 70
+              },
+              "description": "ZZ loses (predicted up, got down)"
+            }
+          ],
+          "expectedOutcome": {
+            "assertions": [
+              {
+                "field": "lifecycle.AntiZZ.state",
+                "operator": "eq",
+                "value": "active",
+                "message": "AntiZZ should be active after ZZ unprofitable"
+              }
+            ]
+          },
+          "metadata": {
+            "author": "system",
+            "createdAt": "2025-12-05T23:45:35.099Z",
+            "tags": [
+              "zz",
+              "antizz",
+              "switching"
+            ],
+            "relatedRules": [
+              "RULE-SWT-001"
+            ],
+            "priority": 1
+          }
+        },
+        {
+          "id": "TEST-005",
+          "name": "Cooldown After 2 Consecutive Losses",
+          "description": "System should enter 3-block cooldown after 2 consecutive losses",
+          "type": "integration",
+          "category": "trading_rules",
+          "patterns": [],
+          "setup": {
+            "config": {
+              "dailyTarget": 2000,
+              "betAmount": 200
+            }
+          },
+          "steps": [],
+          "expectedOutcome": {
+            "assertions": [
+              {
+                "field": "reaction.cooldownRemaining",
+                "operator": "eq",
+                "value": 3,
+                "message": "Cooldown should be 3 blocks"
+              }
+            ]
+          },
+          "metadata": {
+            "author": "system",
+            "createdAt": "2025-12-05T23:45:35.099Z",
+            "tags": [
+              "cooldown",
+              "risk"
+            ],
+            "relatedRules": [
+              "RULE-RSK-001"
+            ],
+            "priority": 2
+          }
+        },
+        {
+          "id": "TEST-006",
+          "name": "Standard Pattern Activation at 70%",
+          "description": "Non-ZZ patterns should activate when single result >= 70%",
+          "type": "unit",
+          "category": "lifecycle_rules",
+          "patterns": [
+            "2A2"
+          ],
+          "setup": {
+            "config": {
+              "dailyTarget": 2000,
+              "betAmount": 200,
+              "singleProfitThreshold": 70
+            }
+          },
+          "steps": [
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 65
+              },
+              "description": "Block 1"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": 1,
+                "pct": 60
+              },
+              "description": "Block 2 - 2A2 triggers"
+            },
+            {
+              "action": "add_block",
+              "params": {
+                "dir": -1,
+                "pct": 75
+              },
+              "description": "2A2 wins with 75% (>= 70%)"
+            }
+          ],
+          "expectedOutcome": {
+            "patternStates": {
+              "2A2": "active"
+            },
+            "assertions": [
+              {
+                "field": "lifecycle.2A2.state",
+                "operator": "eq",
+                "value": "active",
+                "message": "2A2 should activate at 75%"
+              }
+            ]
+          },
+          "metadata": {
+            "author": "system",
+            "createdAt": "2025-12-05T23:45:35.099Z",
+            "tags": [
+              "activation",
+              "70%",
+              "core"
+            ],
+            "relatedRules": [
+              "RULE-ACT-001"
+            ],
+            "priority": 1
+          }
+        }
+      ],
+      "metadata": {
+        "totalTests": 6,
+        "categories": [
+          "accumulation",
+          "lifecycle_rules",
+          "trading_rules"
+        ],
+        "patterns": [
+          "2A2",
+          "Anti2A2",
+          "3A3",
+          "Anti3A3",
+          "4A4",
+          "Anti4A4",
+          "5A5",
+          "Anti5A5",
+          "6A6",
+          "Anti6A6",
+          "AP5",
+          "OZ",
+          "ZZ",
+          "AntiZZ",
+          "PP",
+          "AntiPP",
+          "ST",
+          "AntiST"
+        ]
+      }
+    }
+  }
+}
