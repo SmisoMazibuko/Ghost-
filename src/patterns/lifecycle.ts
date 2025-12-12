@@ -52,6 +52,8 @@ export class PatternLifecycleManager {
       cumulativeProfit: 0,
       allTimeProfit: 0,
       lastRunProfit: 0,
+      breakRunProfit: 0,
+      breakLoss: 0,
       lastFormationIndex: -1,
       savedIndicatorDirection: null,
       waitingForIndicator: false,
@@ -164,7 +166,7 @@ export class PatternLifecycleManager {
       // Check if should activate
       if (this.checkActivation(cycle, result.pattern)) {
         cycle.state = 'active';
-        cycle.lastRunProfit = result.profit; // Include the activating result's profit
+        cycle.lastRunProfit = 0; // Run profit starts at 0 - activation trade is NOT part of run
         activated = true;
       }
     } else if (cycle.state === 'active') {
@@ -172,11 +174,23 @@ export class PatternLifecycleManager {
       cycle.activeResults.push(result);
       cycle.lastRunProfit += result.profit; // Track last run profit
 
-      // Check for break condition
-      if (result.profit < 0) {
+      // B&S INVERSE TRADE: Always break after evaluation
+      // B&S cycle: BAIT → SWITCH → break → wait for next BAIT
+      // Pattern stays in BNS bucket, but must re-confirm bait (70%+) before next switch
+      if (result.isBnsInverse) {
+        cycle.breakLoss = result.profit < 0 ? result.profit : 0;
+        this.breakPattern(result.pattern, result.indicatorDirection);
+        broken = true;
+        console.log(`[Lifecycle] B&S pattern ${result.pattern} broke after switch trade (profit: ${result.profit.toFixed(0)}%) - waiting for next bait`);
+      }
+      // Check for normal break condition
+      else if (result.profit < 0) {
         // For continuous patterns, any loss breaks
         // For single-shot patterns, loss on evaluation breaks
         if (cycle.isContinuous || !cycle.isContinuous) {
+          // Track the break loss (the single loss that broke the pattern)
+          cycle.breakLoss = result.profit; // This is negative (e.g., -80)
+
           // For ZZ/AntiZZ, pass the indicator direction for potential persistence
           this.breakPattern(result.pattern, result.indicatorDirection);
           broken = true;
@@ -251,12 +265,16 @@ export class PatternLifecycleManager {
   /**
    * Break a pattern (active → observing)
    *
-   * ZZ/AntiZZ special handling (based on LAST RUN profit, not all-time):
-   * - Default is ZZ
-   * - If ZZ breaks and lastRunProfit > 0: stay active (last run was profitable)
-   * - If ZZ breaks and lastRunProfit <= 0: switch to AntiZZ
-   * - If AntiZZ breaks and lastRunProfit > 0: stay active (last run was profitable)
-   * - If AntiZZ breaks and lastRunProfit <= 0: switch back to ZZ
+   * CORRECTED ZZ/AntiZZ handling:
+   * - ZZ/AntiZZ state switching is NOW handled by ZZStateManager
+   * - This method ONLY handles the basic break logic for lifecycle tracking
+   * - Anti-ZZ is NOT activated here (only activated when first prediction is negative)
+   * - Pocket assignment is tracked by ZZStateManager for confirmation purposes
+   *
+   * For ZZ/AntiZZ:
+   * - If last run was profitable: stay ACTIVE, save indicator direction
+   * - If last run was unprofitable: go to OBSERVING (ZZStateManager decides Anti-ZZ)
+   * - NEVER switch to Anti-ZZ based on run profit here
    */
   breakPattern(pattern: PatternName, indicatorDirection?: Direction): void {
     const cycle = this.cycles.get(pattern);
@@ -264,18 +282,24 @@ export class PatternLifecycleManager {
 
     const isZZ = pattern === 'ZZ';
     const isAntiZZ = pattern === 'AntiZZ';
-    // Use LAST RUN profit to decide switching (not all-time profit)
+    // Use LAST RUN profit to decide if pattern stays active (not all-time profit)
     const lastRunWasProfitable = cycle.lastRunProfit > 0;
 
-    if (isZZ && indicatorDirection) {
+    // Save the break run profit BEFORE resetting (for bucket manager to read)
+    cycle.breakRunProfit = cycle.lastRunProfit;
+
+    if ((isZZ || isAntiZZ) && indicatorDirection) {
       if (lastRunWasProfitable) {
-        // ZZ last run was profitable - stay ACTIVE and save indicator direction
+        // Last run was profitable - stay ACTIVE and save indicator direction
+        // This allows the pattern to resume when alternation returns
         cycle.savedIndicatorDirection = indicatorDirection;
         cycle.lastRunProfit = 0;
         // state stays 'active'
+        console.log(`[Lifecycle] ${pattern} last run profitable - staying ACTIVE, waiting for indicator`);
       } else {
-        // ZZ last run was unprofitable - switch to AntiZZ
-        // Reset ZZ to observing
+        // Last run was unprofitable - go to OBSERVING
+        // NOTE: We do NOT switch to Anti-ZZ here anymore!
+        // ZZStateManager handles Anti-ZZ activation based on FIRST PREDICTION
         cycle.state = 'observing';
         cycle.observationResults = [];
         cycle.activeResults = [];
@@ -283,41 +307,7 @@ export class PatternLifecycleManager {
         cycle.lastRunProfit = 0;
         cycle.waitingForIndicator = false;
         cycle.savedIndicatorDirection = null;
-
-        // Activate AntiZZ
-        const antiZZCycle = this.cycles.get('AntiZZ');
-        if (antiZZCycle) {
-          antiZZCycle.state = 'active';
-          antiZZCycle.savedIndicatorDirection = indicatorDirection;
-          antiZZCycle.lastRunProfit = 0;
-          console.log('[Lifecycle] ZZ unprofitable - switching to AntiZZ');
-        }
-      }
-    } else if (isAntiZZ && indicatorDirection) {
-      if (lastRunWasProfitable) {
-        // AntiZZ last run was profitable - stay ACTIVE and save indicator direction
-        cycle.savedIndicatorDirection = indicatorDirection;
-        cycle.lastRunProfit = 0;
-        // state stays 'active'
-      } else {
-        // AntiZZ last run was unprofitable - switch back to ZZ
-        // Reset AntiZZ to observing
-        cycle.state = 'observing';
-        cycle.observationResults = [];
-        cycle.activeResults = [];
-        cycle.cumulativeProfit = 0;
-        cycle.lastRunProfit = 0;
-        cycle.waitingForIndicator = false;
-        cycle.savedIndicatorDirection = null;
-
-        // Activate ZZ
-        const zzCycle = this.cycles.get('ZZ');
-        if (zzCycle) {
-          zzCycle.state = 'active';
-          zzCycle.savedIndicatorDirection = indicatorDirection;
-          zzCycle.lastRunProfit = 0;
-          console.log('[Lifecycle] AntiZZ unprofitable - switching back to ZZ');
-        }
+        console.log(`[Lifecycle] ${pattern} last run unprofitable (breakProfit: ${cycle.breakRunProfit.toFixed(0)}%) - going to OBSERVING (ZZStateManager handles next activation)`);
       }
     } else {
       // Normal break: go back to observing
@@ -325,10 +315,12 @@ export class PatternLifecycleManager {
       cycle.observationResults = [];
       cycle.activeResults = [];
       cycle.cumulativeProfit = 0;
+      // DEBUG: Log before resetting lastRunProfit to verify breakRunProfit was captured
+      console.log(`[Lifecycle] ${pattern} breaking: lastRunProfit=${cycle.lastRunProfit.toFixed(0)}%, breakRunProfit(saved)=${cycle.breakRunProfit.toFixed(0)}%`);
       cycle.lastRunProfit = 0;
       cycle.waitingForIndicator = false;
       cycle.savedIndicatorDirection = null;
-      // Note: allTimeProfit is preserved
+      // Note: allTimeProfit and breakRunProfit are preserved
     }
   }
 
@@ -673,6 +665,9 @@ export class PatternLifecycleManager {
       if (PATTERN_NAMES.includes(pattern as PatternName)) {
         this.cycles.set(pattern as PatternName, {
           ...cycle,
+          // Provide defaults for fields that may be missing from older sessions
+          breakRunProfit: cycle.breakRunProfit ?? 0,
+          breakLoss: cycle.breakLoss ?? 0,
           isContinuous: CONTINUOUS_PATTERNS.includes(pattern as PatternName),
         });
       }

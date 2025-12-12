@@ -78,6 +78,8 @@ export interface PatternSignal {
   ts: string;
   /** Indicator direction for ZZ/AntiZZ patterns (direction of the ≥3 run) */
   indicatorDirection?: Direction;
+  /** True if this signal is being bet inversely (B&S mode) */
+  isBnsInverse?: boolean;
 }
 
 /** Evaluated result of a pattern signal */
@@ -106,6 +108,8 @@ export interface EvaluatedResult {
   ts: string;
   /** Indicator direction for ZZ/AntiZZ (for persistence after break) */
   indicatorDirection?: Direction;
+  /** True if this was a B&S inverse trade - pattern should break after evaluation */
+  isBnsInverse?: boolean;
 }
 
 /** Pattern cycle state tracking */
@@ -124,6 +128,17 @@ export interface PatternCycle {
   allTimeProfit: number;
   /** Last run profit (resets when pattern breaks and restarts) */
   lastRunProfit: number;
+  /**
+   * Run profit when pattern broke (preserved for bucket manager).
+   * This is set when the pattern breaks and keeps the lastRunProfit value
+   * before it's reset to 0.
+   */
+  breakRunProfit: number;
+  /**
+   * The single loss that broke the pattern (for 70% rule in bucket manager).
+   * This is always negative (the actual loss percentage that caused the break).
+   */
+  breakLoss: number;
   /** Last block index where pattern formed */
   lastFormationIndex: number;
   /**
@@ -136,6 +151,104 @@ export interface PatternCycle {
    * Whether ZZ is waiting for indicator (profitable run broke, waiting for next indicator)
    */
   waitingForIndicator?: boolean;
+}
+
+// ============================================================================
+// ZZ STRATEGY STATE TYPES (Corrected Implementation)
+// ============================================================================
+
+/**
+ * ZZ Pocket assignment based on previous run profit.
+ * - Pocket 1: Previous run was profitable (profit > 0)
+ * - Pocket 2: Previous run was unprofitable (profit < 0)
+ *
+ * NOTE: Pocket placement is for CONFIRMATION only.
+ * It does NOT trigger Anti-ZZ activation.
+ */
+export type ZZPocket = 1 | 2;
+
+/**
+ * ZZ Strategy State Machine
+ *
+ * States:
+ * - inactive: ZZ system not active (game start, waiting for trigger)
+ * - zz_active: Normal ZZ mode - predicting alternation continues
+ * - anti_zz_active: Anti-ZZ mode - predicting alternation breaks
+ * - suspended: ZZ suspended during bait-and-switch (main strategy takes over)
+ */
+export type ZZState = 'inactive' | 'zz_active' | 'anti_zz_active' | 'suspended';
+
+/**
+ * Complete ZZ strategy session state
+ */
+export interface ZZStrategyState {
+  /** Current ZZ state machine state */
+  currentState: ZZState;
+
+  /** Current pocket assignment (1 or 2) */
+  currentPocket: ZZPocket;
+
+  /** Previous ZZ run profit (used for pocket assignment) */
+  previousRunProfit: number;
+
+  /** Whether the first prediction of current run was negative (triggers Anti-ZZ) */
+  firstPredictionNegative: boolean;
+
+  /** Whether first prediction has been evaluated for this run */
+  firstPredictionEvaluated: boolean;
+
+  /** Current run profit accumulator */
+  currentRunProfit: number;
+
+  /** Number of predictions made in current run */
+  currentRunPredictions: number;
+
+  /** Saved indicator direction from last ZZ trigger */
+  savedIndicatorDirection: Direction | null;
+
+  /** Block index when ZZ was last activated */
+  activationBlockIndex: number;
+
+  /** Block index when Anti-ZZ was activated (if applicable) */
+  antiZZActivationBlockIndex: number;
+
+  /** Whether game is currently in bait-and-switch mode */
+  isInBaitSwitch: boolean;
+
+  /** History of ZZ runs for analysis */
+  runHistory: ZZRunRecord[];
+}
+
+/**
+ * Record of a completed ZZ/Anti-ZZ run
+ */
+export interface ZZRunRecord {
+  /** Run number (1-indexed) */
+  runNumber: number;
+
+  /** Whether this was a ZZ or Anti-ZZ run */
+  wasAntiZZ: boolean;
+
+  /** Pocket assigned at start of run */
+  pocket: ZZPocket;
+
+  /** Whether first prediction was negative */
+  firstPredictionNegative: boolean;
+
+  /** Total profit for this run */
+  profit: number;
+
+  /** Number of predictions in this run */
+  predictionCount: number;
+
+  /** Block index when run started */
+  startBlockIndex: number;
+
+  /** Block index when run ended */
+  endBlockIndex: number;
+
+  /** Timestamp */
+  ts: string;
 }
 
 /** Pattern definition for detection */

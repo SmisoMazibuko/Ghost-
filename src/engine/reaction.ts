@@ -1,7 +1,13 @@
 /**
- * Ghost Evaluator v15.1 - Reaction Engine
+ * Ghost Evaluator v15.2 - Reaction Engine
  * ========================================
  * Generates predictions and manages auto-betting
+ *
+ * v15.2 Changes:
+ * - Integrated new bucket manager methods for B&S lifecycle
+ * - markSwitchStarted() called when B&S pattern plays switch
+ * - recordBaitLoss() called for bait failed detection (RRR)
+ * - addBlockedAccumulation() called for blocked pattern profit tracking
  */
 
 import {
@@ -22,11 +28,20 @@ import {
   ProfitDeltas,
   BspTradeSimulation,
   SessionProfitState,
+  ZZStrategyState,
+  OPPOSITE_PATTERNS,
 } from '../types';
 import { GameStateEngine } from './state';
 import { SessionHealthManager, createSessionHealthManager } from './session-health';
 import { RecoveryManager, createRecoveryManager } from './recovery';
 import { HostilityManager, createHostilityManager } from './hostility';
+import {
+  BucketManager,
+  createBucketManager,
+  BucketConfig,
+  DEFAULT_BUCKET_CONFIG,
+} from './bucket-manager';
+import { ZZStateManager, createZZStateManager } from './zz-state-manager';
 
 // ============================================================================
 // CONFIDENCE CALCULATION
@@ -58,6 +73,7 @@ export class ReactionEngine {
   private config: EvaluatorConfig;
   private healthConfig: SessionHealthConfig;
   private hostilityConfig: HostilityConfig;
+  private bucketConfig: BucketConfig;
   private gameState: GameStateEngine;
   private pendingTrade: PendingTrade | null = null;
   private completedTrades: CompletedTrade[] = [];
@@ -72,6 +88,12 @@ export class ReactionEngine {
   private hostilityManager: HostilityManager;
   private sessionStopped = false;
   private sessionStopReason = '';
+
+  // 3-Bucket system manager (MAIN/WAITING/BNS)
+  private bucketManager: BucketManager;
+
+  // ZZ Strategy state manager (corrected implementation)
+  private zzStateManager: ZZStateManager;
 
   // Three-column profit tracking (AP, AAP, BSP)
   private profitTracking: SessionProfitState = {
@@ -88,17 +110,25 @@ export class ReactionEngine {
     gameState: GameStateEngine,
     config?: Partial<EvaluatorConfig>,
     healthConfig?: Partial<SessionHealthConfig>,
-    hostilityConfig?: Partial<HostilityConfig>
+    hostilityConfig?: Partial<HostilityConfig>,
+    bucketConfig?: Partial<BucketConfig>
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.healthConfig = { ...DEFAULT_SESSION_HEALTH_CONFIG, ...healthConfig };
     this.hostilityConfig = { ...DEFAULT_HOSTILITY_CONFIG, ...hostilityConfig };
+    this.bucketConfig = { ...DEFAULT_BUCKET_CONFIG, ...bucketConfig };
     this.gameState = gameState;
 
     // Initialize health, recovery, and hostility managers
     this.healthManager = createSessionHealthManager(this.healthConfig);
     this.recoveryManager = createRecoveryManager(this.healthConfig);
     this.hostilityManager = createHostilityManager(this.hostilityConfig);
+
+    // Initialize 3-Bucket system
+    this.bucketManager = createBucketManager(this.bucketConfig);
+
+    // Initialize ZZ Strategy state manager (corrected implementation)
+    this.zzStateManager = createZZStateManager();
   }
 
   /**
@@ -113,12 +143,25 @@ export class ReactionEngine {
       };
     }
 
-    // Check if session is locked by hostility manager (PRIMARY CHECK)
-    if (this.hostilityManager.isLocked()) {
-      return {
-        hasPrediction: false,
-        reason: `LOCKED — ${this.hostilityManager.getStatusMessage()}`,
-      };
+    // Check if session is locked by hostility manager
+    const isLocked = this.hostilityManager.isLocked();
+
+    if (isLocked) {
+      // Check if we have any playable patterns (MAIN or BNS bucket)
+      const mainPatterns = this.bucketManager.getPatternsInBucket('MAIN');
+      const bnsPatterns = this.bucketManager.getPatternsInBucket('BNS');
+      const hasPlayablePatterns = mainPatterns.length > 0 || bnsPatterns.length > 0;
+
+      if (!hasPlayablePatterns) {
+        // No playable patterns - stay locked
+        return {
+          hasPrediction: false,
+          reason: `LOCKED — ${this.hostilityManager.getStatusMessage()}`,
+        };
+      }
+
+      // Has playable patterns - continue to selection (allow Bucket 1 & 3 plays)
+      console.log(`[Prediction] Locked but has playable patterns (M:${mainPatterns.length} B:${bnsPatterns.length}) - continuing`);
     }
 
     // Check if session is stopped due to hard limits (drawdown abort)
@@ -153,17 +196,15 @@ export class ReactionEngine {
       // The modified prediction will indicate re-entry mode
     }
 
-    // Show hostility warning if score is elevated (but not locked)
-    const hostilityScore = this.hostilityManager.getHostilityScore();
-    const hostilityWarning = hostilityScore > 0
-      ? ` [Hostility: ${hostilityScore.toFixed(1)}/${this.hostilityConfig.lockThreshold}]`
-      : '';
+    // Show bucket status in prediction
+    const bucketSummary = this.bucketManager.getBucketSummary();
+    const bucketStatus = `[M:${bucketSummary.stats.mainCount} W:${bucketSummary.stats.waitingCount} B:${bucketSummary.stats.bnsCount}]`;
 
     // Check cooldown after consecutive losses
     if (this.cooldownRemaining > 0) {
       return {
         hasPrediction: false,
-        reason: `COOLDOWN — ${this.cooldownRemaining} block(s) remaining${hostilityWarning}`,
+        reason: `COOLDOWN — ${this.cooldownRemaining} block(s) remaining ${bucketStatus}`,
       };
     }
 
@@ -171,37 +212,167 @@ export class ReactionEngine {
     if (this.gameState.isP1Mode()) {
       return {
         hasPrediction: false,
-        reason: 'P1 MODE — Waiting for profitable pattern to clear',
+        reason: `P1 MODE — Waiting for profitable pattern to clear ${bucketStatus}`,
       };
     }
 
     const lifecycle = this.gameState.getLifecycle();
     const pendingSignals = this.gameState.getPendingSignals();
 
+    // === ZZ STRATEGY SPECIAL HANDLING ===
+    // RULE: ZZ NEVER goes to bait-and-switch. It ignores B&S entirely.
+    // During B&S, ZZ continues with main strategy patterns.
+    const isZZSystemActive = this.zzStateManager.isSystemActive();
+
+    // Check if game is in bait-and-switch mode (from hostility manager)
+    const isInBaitSwitch = this.hostilityManager.isLocked();
+    this.zzStateManager.setBaitSwitchMode(isInBaitSwitch);
+
     // Sort patterns by cumulative profit (highest first)
     const sortedPatterns = lifecycle.getAllPatternsByProfit();
 
     for (const pattern of sortedPatterns) {
-      // Check if pattern is active
-      if (!lifecycle.isActive(pattern)) continue;
-
-      // Check if should switch to opposite
-      if (lifecycle.shouldSwitchToOpposite(pattern)) continue;
-
-      // Check for pending signals
+      // Check for pending signals first
       const signals = pendingSignals.filter(s => s.pattern === pattern);
       if (signals.length === 0) continue;
 
       const signal = signals[0];
+
+      // === ZZ/AntiZZ SPECIAL HANDLING ===
+      const isZZPattern = pattern === 'ZZ' || pattern === 'AntiZZ';
+
+      if (isZZPattern) {
+        // RULE: ZZ ignores bait-and-switch entirely
+        // During B&S, ZZ continues with main strategy (doesn't change state)
+        if (isInBaitSwitch && this.zzStateManager.shouldIgnoreBaitSwitch()) {
+          // ZZ ignores B&S - continue to next pattern (main strategy takes over)
+          console.log(`[Prediction] ZZ ignores B&S - deferring to main strategy`);
+          continue;
+        }
+
+        // Check if ZZ is active in lifecycle (even if ZZStateManager not yet synced)
+        const zzCycle = lifecycle.getCycle('ZZ');
+        const isZZActiveInLifecycle = zzCycle?.state === 'active';
+
+        // If ZZStateManager is not active but lifecycle has active ZZ, sync it now
+        if (!isZZSystemActive && isZZActiveInLifecycle) {
+          const previousRunProfit = zzCycle?.lastRunProfit ?? 0;
+          const indicatorDirection = zzCycle?.savedIndicatorDirection ?? this.gameState.getCurrentRunDirection();
+          this.zzStateManager.activateZZ(this.gameState.getBlockCount(), previousRunProfit, indicatorDirection);
+          console.log(`[Prediction] Syncing ZZStateManager with lifecycle - ZZ now active`);
+        }
+
+        // Re-check after potential sync
+        const isZZNowActive = this.zzStateManager.isSystemActive();
+
+        // Use ZZ state manager for direction (not bucket system for ZZ)
+        if (isZZNowActive) {
+          const currentZZState = this.zzStateManager.getCurrentState();
+          const currentPocket = this.zzStateManager.getCurrentPocket();
+
+          // RULE: If in Pocket 2 (last run negative), DON'T bet - just observe
+          // Only bet when in Pocket 1 OR when Anti-ZZ is active
+          if (!this.zzStateManager.shouldBet() && currentZZState !== 'anti_zz_active') {
+            console.log(`[Prediction] ZZ P${currentPocket} - observing only (last run negative), no bet`);
+            continue; // Skip to next pattern, don't generate ZZ prediction
+          }
+
+          const currentDirection = this.gameState.getCurrentRunDirection();
+          const zzDirection = this.zzStateManager.getPredictedDirection(currentDirection);
+
+          if (zzDirection) {
+            const profit = lifecycle.getCumulativeProfit('ZZ');
+            const confidence = calculateConfidence('ZZ', profit);
+            const directionLabel = zzDirection > 0 ? 'Up' : 'Down';
+            const stateLabel = currentZZState === 'anti_zz_active' ? '[Anti-ZZ]' : '[ZZ]';
+            const pocketLabel = `P${currentPocket}`;
+
+            let prediction: Prediction = {
+              hasPrediction: true,
+              direction: zzDirection,
+              confidence,
+              pattern: currentZZState === 'anti_zz_active' ? 'AntiZZ' : 'ZZ',
+              reason: `${stateLabel} ${pocketLabel} → ${directionLabel} (Cum: ${profit.toFixed(0)}%) ${bucketStatus}`,
+            };
+
+            // Modify prediction if in re-entry mode
+            const modified = this.recoveryManager.modifyPrediction(prediction);
+            return modified ?? prediction;
+          }
+        }
+
+        // IMPORTANT: Skip AntiZZ patterns from lifecycle - AntiZZ only comes from ZZStateManager
+        // This prevents the old bucket-based AntiZZ logic from interfering
+        continue;
+      }
+
+      // === 3-BUCKET SYSTEM CHECK (for non-ZZ patterns) ===
+      const bucket = this.bucketManager.getBucket(pattern);
+
+      // Debug: Log bucket check for patterns with signals
+      console.log(`[Prediction] Pattern ${pattern} has signal, bucket=${bucket}`);
+
+      // Check if blocked by opposite pattern's B&S
+      if (this.bucketManager.isBlockedByOpposite(pattern)) {
+        console.log(`[Prediction] ${pattern} blocked by opposite B&S - skipping`);
+        continue;
+      }
+
+      // WAITING bucket = no play (pattern not activated or broke with profit)
+      if (bucket === 'WAITING') {
+        continue;
+      }
+
+      // B&S bucket: Pattern must be ACTIVE in lifecycle (bait must be confirmed)
+      // A B&S pattern in "observing" state means it's waiting for the bait (70%+ observation)
+      // Only after re-activation (bait confirmed) can we play inverse
+      if (bucket === 'BNS') {
+        const isActive = lifecycle.isActive(pattern);
+        if (!isActive) {
+          console.log(`[Prediction] B&S pattern ${pattern} waiting for bait (not active yet)`);
+          continue;
+        }
+        console.log(`[Prediction] B&S pattern ${pattern} BAIT CONFIRMED (active) - playing inverse`);
+      }
+
+      // NOTE: Opposite patterns can both be active at the same time
+      // e.g., 2A2 in B&S and Anti2A2 in MAIN can both generate predictions
+      // They are independent strategies - B&S waits for bait, MAIN works normally
+
+      // Get the play direction based on bucket
+      const mainDirection = signal.expectedDirection;
+      let playDirection: Direction;
+
+      if (bucket === 'MAIN') {
+        // MAIN bucket = play the pattern's predicted direction
+        playDirection = mainDirection;
+      } else {
+        // BNS bucket = play the INVERSE of pattern's predicted direction
+        playDirection = (mainDirection * -1) as Direction;
+      }
+
       const profit = lifecycle.getCumulativeProfit(pattern);
       const confidence = calculateConfidence(pattern, profit);
 
+      // Determine bucket label for display
+      const isInverse = bucket === 'BNS';
+      const directionLabel = playDirection > 0 ? 'Up' : 'Down';
+      const bucketLabel = isInverse ? '[B&S]' : '[MAIN]';
+
+      // IMPORTANT: Mark the signal as inverse so lifecycle evaluates it correctly
+      // When B&S inverse wins, we need the profit to be positive, not negative
+      if (isInverse) {
+        signal.isBnsInverse = true;
+        // Mark switch as started for bucket manager tracking
+        this.bucketManager.markSwitchStarted(pattern);
+      }
+
       let prediction: Prediction = {
         hasPrediction: true,
-        direction: signal.expectedDirection,
+        direction: playDirection,
         confidence,
         pattern,
-        reason: `${pattern} → ${signal.expectedDirection > 0 ? 'Up' : 'Down'} (Active: ${profit.toFixed(0)}%)`,
+        reason: `${pattern} ${bucketLabel} → ${directionLabel} (Cum: ${profit.toFixed(0)}%) ${bucketStatus}`,
       };
 
       // Modify prediction if in re-entry mode
@@ -211,7 +382,7 @@ export class ReactionEngine {
 
     return {
       hasPrediction: false,
-      reason: 'HOLD — no working pattern meets strict gates',
+      reason: `HOLD — no pattern ready ${bucketStatus}`,
     };
   }
 
@@ -274,8 +445,24 @@ export class ReactionEngine {
     // Update session health with trade result (for drawdown tracking)
     this.healthManager.updateAfterTrade(trade);
 
-    // Update hostility manager with trade result (PRIMARY tracking)
+    // Update hostility manager with trade result (legacy)
     this.hostilityManager.processTradeResult(trade);
+
+    // Update bucket manager with trade result for consecutive win tracking
+    // This is used to determine when B&S should break (2+ consecutive opposite wins)
+    const tradeProfit = isWin ? block.pct : -block.pct;
+    this.bucketManager.recordTradeResult(
+      trade.pattern,
+      isWin,
+      tradeProfit,
+      block.index
+    );
+
+    // If this was a B&S inverse trade, mark switch completed
+    const tradeBucket = this.bucketManager.getBucket(trade.pattern);
+    if (tradeBucket === 'BNS') {
+      this.bucketManager.markSwitchCompleted(trade.pattern, isWin, tradeProfit, block.index);
+    }
 
     // Record trial trade if in re-entry mode
     if (this.recoveryManager.isInReentryMode()) {
@@ -293,13 +480,13 @@ export class ReactionEngine {
       }
     }
 
-    // Track consecutive losses for cooldown (but don't stop - let hostility decide)
+    // Track consecutive losses for cooldown (but don't stop - let bucket manager decide)
     if (isWin) {
       this.consecutiveLosses = 0;
     } else {
       this.consecutiveLosses++;
       // Trigger cooldown after 2 consecutive losses (skip 3 blocks)
-      // This is a PAUSE, not a stop - hostility accumulates but we're just cooling down
+      // This is a PAUSE, not a stop - bucket manager handles stop logic
       if (this.consecutiveLosses >= 2) {
         this.cooldownRemaining = 3;
         this.consecutiveLosses = 0; // Reset after triggering cooldown
@@ -315,6 +502,13 @@ export class ReactionEngine {
     }
 
     return trade;
+  }
+
+  /**
+   * Get the opposite pattern for a given pattern
+   */
+  private getOppositePattern(pattern: PatternName): PatternName | null {
+    return OPPOSITE_PATTERNS[pattern] ?? null;
   }
 
   /**
@@ -378,8 +572,11 @@ export class ReactionEngine {
 
   /**
    * Process a new block (detect, evaluate, predict, trade)
+   * @param dir - Block direction (1 = up, -1 = down)
+   * @param pct - Block percentage
+   * @param skipTrades - If true, don't open/evaluate trades (preload mode)
    */
-  processBlock(dir: Direction, pct: number): {
+  processBlock(dir: Direction, pct: number, skipTrades = false): {
     blockResult: ReturnType<GameStateEngine['addBlock']>;
     prediction: Prediction;
     closedTrade: CompletedTrade | null;
@@ -389,8 +586,11 @@ export class ReactionEngine {
     recoveryMode: string;
     hostilityState: ReturnType<HostilityManager['getState']>;
     profitTracking: SessionProfitState;
+    bucketSummary: ReturnType<BucketManager['getBucketSummary']>;
+    zzState: ZZStrategyState;
   } {
     // Add block to game state
+    // Note: B&S patterns must re-activate through normal lifecycle (observe 70%+) before generating signals
     const blockResult = this.gameState.addBlock(dir, pct);
 
     // Update health manager with evaluated results
@@ -403,12 +603,62 @@ export class ReactionEngine {
 
     // Check for pattern run completions (breaks)
     const lifecycle = this.gameState.getLifecycle();
+
+    // === ZZ STRATEGY STATE MANAGEMENT ===
+    // Process ZZ-related results for first prediction evaluation and run tracking
+    this.processZZResults(blockResult.evaluatedResults, blockResult.block.index);
+
+    // Check for ZZ pattern detection and activation
+    this.checkZZActivation(blockResult.newSignals, blockResult.block.index, lifecycle);
+
+    // === PROCESS BUCKET MANAGER UPDATES ===
+    // Track blocked pattern accumulation and bait loss detection BEFORE lifecycle update
+    for (const result of blockResult.evaluatedResults) {
+      // Skip ZZ/AntiZZ - managed by ZZStateManager
+      if (result.pattern === 'ZZ' || result.pattern === 'AntiZZ') continue;
+
+      const bucket = this.bucketManager.getBucket(result.pattern);
+      const opposite = this.getOppositePattern(result.pattern);
+
+      // Track accumulation for blocked patterns
+      if (opposite && this.bucketManager.isBlockedByOpposite(result.pattern)) {
+        // Pattern is blocked - accumulate its profit for activation check when unblocked
+        this.bucketManager.addBlockedAccumulation(result.pattern, result.profit);
+      }
+
+      // Check for bait loss (RRR detection) for patterns in B&S waiting for bait
+      if (bucket === 'BNS' && result.profit < 0) {
+        const baitFailed = this.bucketManager.recordBaitLoss(
+          result.pattern,
+          result.profit,
+          blockResult.block.index
+        );
+        if (baitFailed) {
+          console.log(`[Reaction] ${result.pattern} bait failed - exited to WAITING`);
+        }
+      }
+    }
+
+    // === UPDATE BUCKET MANAGER FROM LIFECYCLE ===
+    // The bucket system reads from lifecycle state - it doesn't track separately
+    // Call this AFTER lifecycle has processed all results
+    // NOTE: ZZ/AntiZZ are now managed by ZZStateManager, not bucket manager
+    this.bucketManager.updateFromLifecycle(lifecycle, blockResult.block.index);
     for (const result of blockResult.evaluatedResults) {
       // If pattern just broke, check its net profit
       const cycle = lifecycle.getCycle(result.pattern);
       if (cycle && cycle.state === 'observing' && result.wasBet) {
         // Pattern just broke (was active, now observing)
         this.processPatternRunCompletion(result.pattern, cycle.lastRunProfit);
+
+        // === ZZ RUN RESOLUTION ===
+        // If ZZ or AntiZZ just broke, resolve the ZZ run
+        if ((result.pattern === 'ZZ' || result.pattern === 'AntiZZ') && this.zzStateManager.isSystemActive()) {
+          const zzRunRecord = this.zzStateManager.resolveZZRun(blockResult.block.index);
+          if (zzRunRecord) {
+            console.log(`[ZZ Run] Completed: ${zzRunRecord.wasAntiZZ ? 'Anti-ZZ' : 'ZZ'} P${zzRunRecord.pocket} Profit=${zzRunRecord.profit.toFixed(0)}%`);
+          }
+        }
       }
     }
 
@@ -458,19 +708,24 @@ export class ReactionEngine {
       }
     }
 
-    // Evaluate any pending trade
-    const closedTrade = this.evaluateTrade(blockResult.block);
+    // Evaluate any pending trade (skip in preload mode)
+    const closedTrade = skipTrades ? null : this.evaluateTrade(blockResult.block);
 
     // Decrement cooldown if active (after evaluating trade, before prediction)
-    if (this.cooldownRemaining > 0) {
+    if (this.cooldownRemaining > 0 && !skipTrades) {
       this.cooldownRemaining--;
     }
 
     // Generate new prediction
     const prediction = this.predictNext();
 
-    // Open trade if prediction exists and no pending trade
-    const openedTrade = this.openTrade(prediction);
+    // Open trade if prediction exists and no pending trade (skip in preload mode)
+    const openedTrade = skipTrades ? null : this.openTrade(prediction);
+
+    // Clear any pending trade in preload mode (we don't want stale trades)
+    if (skipTrades && this.pendingTrade) {
+      this.pendingTrade = null;
+    }
 
     // Update profit tracking (AP, AAP, BSP)
     const actualProfitDelta = closedTrade ? closedTrade.pnl : 0;
@@ -485,8 +740,117 @@ export class ReactionEngine {
       sessionHealth: this.healthManager.getHealth(),
       recoveryMode: this.recoveryManager.getCurrentMode(),
       hostilityState: this.hostilityManager.getState(),
-      profitTracking: this.getProfitTracking(), // Include profit tracking in response
+      profitTracking: this.getProfitTracking(),
+      bucketSummary: this.bucketManager.getBucketSummary(),
+      zzState: this.zzStateManager.getState(),
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // ZZ STRATEGY METHODS
+  // --------------------------------------------------------------------------
+
+  /**
+   * Process ZZ-related evaluated results.
+   *
+   * Handles:
+   * 1. First prediction evaluation (Anti-ZZ trigger)
+   * 2. Subsequent prediction tracking
+   *
+   * RULE: ZZ ignores bait-and-switch - no state changes during B&S
+   */
+  private processZZResults(results: EvaluatedResult[], _blockIndex: number): void {
+    // Don't process ZZ results during bait-and-switch
+    if (this.hostilityManager.isLocked()) {
+      return;
+    }
+
+    for (const result of results) {
+      // Only process ZZ/AntiZZ results
+      if (result.pattern !== 'ZZ' && result.pattern !== 'AntiZZ') {
+        continue;
+      }
+
+      // Only process results where a bet was placed
+      if (!result.wasBet) {
+        continue;
+      }
+
+      // Record the prediction result in ZZ state manager
+      // This handles first prediction evaluation (Anti-ZZ trigger) automatically
+      this.zzStateManager.recordPredictionResult(result);
+    }
+  }
+
+  /**
+   * Check for ZZ pattern detection and activation.
+   *
+   * Called when new signals are detected OR when lifecycle has active ZZ.
+   * Activates ZZ system if:
+   * 1. ZZ pattern is active in lifecycle OR ZZ signal detected
+   * 2. ZZ system is not already active in ZZStateManager
+   * 3. Not in bait-and-switch mode
+   */
+  private checkZZActivation(
+    signals: ReturnType<GameStateEngine['addBlock']>['newSignals'],
+    blockIndex: number,
+    lifecycle: ReturnType<GameStateEngine['getLifecycle']>
+  ): void {
+    // Don't activate ZZ during bait-and-switch
+    if (this.hostilityManager.isLocked()) {
+      return;
+    }
+
+    // Already active in ZZStateManager - no need to re-activate
+    if (this.zzStateManager.isSystemActive()) {
+      return;
+    }
+
+    // Check if ZZ is active in lifecycle (primary check)
+    const zzCycle = lifecycle.getCycle('ZZ');
+    const isZZActiveInLifecycle = zzCycle?.state === 'active';
+
+    // Also check for new ZZ signal
+    const zzSignal = signals.find(s => s.pattern === 'ZZ');
+
+    // Activate if either lifecycle has active ZZ or new signal detected
+    if (!isZZActiveInLifecycle && !zzSignal) {
+      return;
+    }
+
+    // Get previous run profit from ZZ cycle
+    const previousRunProfit = zzCycle?.lastRunProfit ?? 0;
+
+    // Get indicator direction from signal or saved direction
+    const indicatorDirection = zzSignal?.indicatorDirection
+      ?? zzCycle?.savedIndicatorDirection
+      ?? this.gameState.getCurrentRunDirection();
+
+    // Activate ZZ with previous run profit and indicator direction
+    this.zzStateManager.activateZZ(blockIndex, previousRunProfit, indicatorDirection);
+
+    console.log(`[ZZ] Activated at block ${blockIndex}, Previous profit: ${previousRunProfit.toFixed(0)}%`);
+  }
+
+  /**
+   * Get ZZ state manager (for external access)
+   */
+  getZZStateManager(): ZZStateManager {
+    return this.zzStateManager;
+  }
+
+  /**
+   * Get ZZ strategy state (for display)
+   */
+  getZZState(): ZZStrategyState {
+    return this.zzStateManager.getState();
+  }
+
+  /**
+   * Get ZZ strategy statistics
+   */
+  getZZStatistics(): ReturnType<ZZStateManager['getStatistics']> {
+    return this.zzStateManager.getStatistics();
   }
 
   /**
@@ -709,6 +1073,13 @@ export class ReactionEngine {
   }
 
   /**
+   * Get bucket manager (3-Bucket system)
+   */
+  getBucketManager(): BucketManager {
+    return this.bucketManager;
+  }
+
+  /**
    * Check if session is stopped
    */
   isSessionStopped(): boolean {
@@ -744,6 +1115,8 @@ export class ReactionEngine {
     this.healthManager.reset();
     this.recoveryManager.reset();
     this.hostilityManager.reset();
+    this.bucketManager.reset();
+    this.zzStateManager.reset();
 
     // Reset profit tracking
     this.profitTracking = {
@@ -755,6 +1128,74 @@ export class ReactionEngine {
       history: [],
       bspSimulations: [],
     };
+  }
+
+  /**
+   * Rebuild all manager states after undo operation
+   * This ensures all managers are synchronized with game state
+   */
+  rebuildAllState(): void {
+    // Reset all managers
+    this.healthManager.reset();
+    this.recoveryManager.reset();
+    this.hostilityManager.reset();
+    this.zzStateManager.reset();
+
+    this.sessionStopped = false;
+    this.sessionStopReason = '';
+    this.cooldownRemaining = 0;
+    this.consecutiveLosses = 0;
+
+    // Reset profit tracking - will be recalculated
+    this.profitTracking = {
+      totals: {
+        actualProfit: this.pnlTotal, // This is still valid from remaining trades
+        activationAccumulatedProfit: 0,
+        baitSwitchProfit: 0,
+      },
+      history: [],
+      bspSimulations: [],
+    };
+
+    // Replay trades for health and hostility
+    for (const trade of this.completedTrades) {
+      this.healthManager.updateAfterTrade(trade);
+      this.hostilityManager.processTradeResult(trade);
+      if (!trade.isWin) {
+        this.consecutiveLosses++;
+      } else {
+        this.consecutiveLosses = 0;
+      }
+    }
+
+    // Rebuild divergences from results
+    const results = this.gameState.getResults();
+    this.healthManager.rebuildResultsState(results);
+
+    // Rebuild bucket manager from results history (NOT from lifecycle state)
+    // This preserves BNS bucket state across undo operations
+    // IMPORTANT: Do NOT call updateFromLifecycle() here!
+    // The bucket state should only come from historical results during undo.
+    // Calling updateFromLifecycle() would cause new pattern activations from
+    // the replayed lifecycle state, which is the bug that causes 7+ patterns
+    // to activate unexpectedly on undo.
+    this.bucketManager.rebuildFromResults(results);
+
+    // NOTE: Do NOT trigger new cooldown here!
+    // Cooldown was already reset to 0 at the start.
+    // We only track consecutiveLosses for future reference, not to trigger cooldown.
+    // Cooldown is only triggered by NEW losses, not by replaying history.
+
+    // Recalculate AAP from current lifecycle state
+    this.profitTracking.totals.activationAccumulatedProfit = this.calculateAap();
+
+    // Check session health
+    if (this.healthManager.isAborted()) {
+      this.sessionStopped = true;
+      this.sessionStopReason = this.healthManager.getStopReason();
+    }
+
+    console.log('[ReactionEngine] State rebuilt after undo');
   }
 
   /**
@@ -773,6 +1214,7 @@ export class ReactionEngine {
     recoveryState: ReturnType<RecoveryManager['exportState']>;
     hostilityState: ReturnType<HostilityManager['exportState']>;
     profitTracking: SessionProfitState;
+    zzState: ZZStrategyState;
   } {
     return {
       pendingTrade: this.getPendingTrade(),
@@ -787,6 +1229,7 @@ export class ReactionEngine {
       recoveryState: this.recoveryManager.exportState(),
       hostilityState: this.hostilityManager.exportState(),
       profitTracking: this.getProfitTracking(),
+      zzState: this.zzStateManager.exportState(),
     };
   }
 
@@ -831,6 +1274,11 @@ export class ReactionEngine {
         history: [],
         bspSimulations: [],
       };
+    }
+
+    // Import ZZ state (with defaults for older sessions)
+    if (state.zzState) {
+      this.zzStateManager.importState(state.zzState);
     }
   }
 
@@ -978,7 +1426,8 @@ export function createReactionEngine(
   gameState: GameStateEngine,
   config?: Partial<EvaluatorConfig>,
   healthConfig?: Partial<SessionHealthConfig>,
-  hostilityConfig?: Partial<HostilityConfig>
+  hostilityConfig?: Partial<HostilityConfig>,
+  bucketConfig?: Partial<BucketConfig>
 ): ReactionEngine {
-  return new ReactionEngine(gameState, config, healthConfig, hostilityConfig);
+  return new ReactionEngine(gameState, config, healthConfig, hostilityConfig, bucketConfig);
 }

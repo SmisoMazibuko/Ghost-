@@ -44,6 +44,9 @@ export function startWebServer(port = 3000, configPath?: string) {
   // Store connected clients
   const clients: Set<WebSocket> = new Set();
 
+  // Trading mode: false = preload (no trades), true = live (trades opened)
+  let isLiveMode = false;
+
   // Broadcast to all clients
   function broadcast(data: object) {
     const message = JSON.stringify(data);
@@ -62,6 +65,7 @@ export function startWebServer(port = 3000, configPath?: string) {
     const lifecycle = gameState.getLifecycle();
     const healthReport = session.getHealthReport();
     const hostilityManager = reaction.getHostilityManager();
+    const bucketManager = reaction.getBucketManager();
 
     return {
       type: 'full_state',
@@ -90,6 +94,13 @@ export function startWebServer(port = 3000, configPath?: string) {
         },
         // Profit tracking (AP, AAP, BSP)
         profitTracking: reaction.getProfitTracking(),
+        // 3-Bucket system data
+        buckets: {
+          summary: bucketManager.getBucketSummary(),
+          patternStates: bucketManager.getAllPatternStates(),
+        },
+        // Trading mode
+        isLiveMode,
       }
     };
   }
@@ -135,7 +146,7 @@ export function startWebServer(port = 3000, configPath?: string) {
   function handleWebSocketMessage(ws: WebSocket, data: { action: string; payload?: any }) {
     switch (data.action) {
       case 'add_block': {
-        const { direction, percentage } = data.payload;
+        const { direction, percentage, preloadMode } = data.payload;
         const dir: Direction = direction === 'up' ? 1 : -1;
         const pct = parseFloat(percentage);
 
@@ -145,9 +156,14 @@ export function startWebServer(port = 3000, configPath?: string) {
         }
 
         const reaction = session.getReactionEngine();
-        const result = reaction.processBlock(dir, pct);
+
+        // Use the preload flag from client, fallback to server isLiveMode
+        const skipTrades = preloadMode !== undefined ? preloadMode : !isLiveMode;
+
+        const result = reaction.processBlock(dir, pct, skipTrades);
         const healthReport = session.getHealthReport();
         const hostilityManager = reaction.getHostilityManager();
+        const bucketManager = reaction.getBucketManager();
 
         // Broadcast update to all clients
         broadcast({
@@ -181,6 +197,11 @@ export function startWebServer(port = 3000, configPath?: string) {
             },
             // Profit tracking (AP, AAP, BSP)
             profitTracking: result.profitTracking,
+            // 3-Bucket system data
+            buckets: {
+              summary: result.bucketSummary,
+              patternStates: bucketManager.getAllPatternStates(),
+            },
           }
         });
         break;
@@ -201,10 +222,8 @@ export function startWebServer(port = 3000, configPath?: string) {
         // Now undo the block (this rebuilds game state by replaying remaining blocks)
         const removed = gameState.undoLastBlock();
         if (removed) {
-          // Rebuild health manager's results state from rebuilt game state results
-          const healthManager = reaction.getHealthManager();
-          const rebuiltResults = gameState.getResults();
-          healthManager.rebuildResultsState(rebuiltResults);
+          // Rebuild all state after undo (health, hostility, buckets, etc.)
+          reaction.rebuildAllState();
 
           // After undo, regenerate prediction and re-open trade if applicable
           const prediction = reaction.predictNext();
@@ -226,7 +245,18 @@ export function startWebServer(port = 3000, configPath?: string) {
 
       case 'clear': {
         session.newSession();
+        isLiveMode = false; // Reset to preload mode on clear
         broadcast(getFullState());
+        break;
+      }
+
+      case 'set_mode': {
+        const { isLiveMode: newMode } = data.payload || {};
+        if (typeof newMode === 'boolean') {
+          isLiveMode = newMode;
+          console.log(`[Server] Trading mode changed to: ${isLiveMode ? 'LIVE' : 'PRELOAD'}`);
+          broadcast({ type: 'mode_changed', data: { isLiveMode } });
+        }
         break;
       }
 
@@ -254,6 +284,72 @@ export function startWebServer(port = 3000, configPath?: string) {
       case 'list_sessions': {
         const sessions = session.listSessions();
         ws.send(JSON.stringify({ type: 'sessions_list', data: sessions }));
+        break;
+      }
+
+      case 'preload': {
+        // Pre-load historical blocks
+        // Payload: { blocks: [{ dir: 'up'|'down', pct: number }, ...] }
+        const { blocks } = data.payload || {};
+
+        if (!Array.isArray(blocks) || blocks.length === 0) {
+          ws.send(JSON.stringify({ type: 'error', message: 'Invalid preload data - expected array of blocks' }));
+          return;
+        }
+
+        // Start fresh session
+        session.newSession();
+
+        const reaction = session.getReactionEngine();
+        const gameState = session.getGameState();
+
+        // Process each block (without opening trades - preload is for setup only)
+        for (const block of blocks) {
+          const dir: Direction = block.dir === 'up' ? 1 : -1;
+          const pct = parseFloat(block.pct);
+
+          if (isNaN(pct) || pct < 0 || pct > 100) {
+            ws.send(JSON.stringify({
+              type: 'preload_error',
+              message: `Invalid percentage: ${block.pct}`,
+              processedCount: gameState.getBlockCount()
+            }));
+            return;
+          }
+
+          // Process block without creating trades (preload mode)
+          reaction.processBlock(dir, pct);
+        }
+
+        // Send complete state after preload
+        const healthReport = session.getHealthReport();
+        const hostilityManager = reaction.getHostilityManager();
+        const bucketManager = reaction.getBucketManager();
+
+        ws.send(JSON.stringify({
+          type: 'preload_complete',
+          data: {
+            blocksLoaded: blocks.length,
+            summary: session.getSummary(),
+            patterns: gameState.getLifecycle().getStatistics(),
+            prediction: reaction.predictNext(),
+            sessionHealth: healthReport.health,
+            hostility: {
+              state: hostilityManager.getState(),
+              activeIndicators: hostilityManager.getActiveIndicators(gameState.getBlockCount()),
+              patternRecovery: hostilityManager.getAllPatternRecoveryStates(),
+              statusMessage: hostilityManager.getStatusMessage(),
+            },
+            profitTracking: reaction.getProfitTracking(),
+            buckets: {
+              summary: bucketManager.getBucketSummary(),
+              patternStates: bucketManager.getAllPatternStates(),
+            },
+          }
+        }));
+
+        // Also broadcast full state to all clients
+        broadcast(getFullState());
         break;
       }
 

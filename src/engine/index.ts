@@ -8,3 +8,4 @@ export * from './state';
 export * from './reaction';
 export * from './session-health';
 export * from './recovery';
+export * from './bucket-manager';

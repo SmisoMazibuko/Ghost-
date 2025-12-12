@@ -71,6 +71,8 @@ export class GameStateEngine {
   /**
    * Add a new block to the sequence
    * Returns all evaluated results and new signals
+   * @param dir - Block direction
+   * @param pct - Block percentage
    */
   addBlock(dir: Direction, pct: number): {
     block: Block;
@@ -173,17 +175,14 @@ export class GameStateEngine {
     }
 
     // ST CONFIRMATION: Check if we just hit 2 blocks (double) and previous run was 2+
-    // This is: 2+ → flip → 2 (double with 70% on 1st) → ACTIVATE
+    // This is: 2+ → flip → RR (check 70% on 2nd R) → ACTIVATE
     if (this.runData.currentLength === 2 && this.runData.lengths.length >= 2) {
       const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
       if (previousRunLength >= 2) {
-        // Previous was 2+ - this is ST setup (like AP5 but for doubles)
-        // Get the 1st block of current run (confirmation block)
-        const firstBlockIndex = index - 1;
-        if (firstBlockIndex >= 0 && firstBlockIndex < this.blocks.length) {
-          const firstBlockPct = this.blocks[firstBlockIndex].pct;
-          this.lifecycle.confirmSTPattern(firstBlockPct);
-        }
+        // Previous was 2+ - this is ST setup
+        // Get the 2nd block of current run (the current block - confirmation block)
+        const secondBlockPct = this.blocks[index].pct;
+        this.lifecycle.confirmSTPattern(secondBlockPct);
       }
     }
 
@@ -193,7 +192,10 @@ export class GameStateEngine {
       this.lifecycle.breakSTPattern();
     }
 
-    // Build set of active patterns for OZ threshold check
+    // Build set of active patterns for signal detection
+    // Only include patterns that are actually active in lifecycle
+    // B&S patterns need to re-activate through normal lifecycle (observe 70%+ = bait confirmed)
+    // before they can generate signals for inverse play
     const activePatterns = new Set<PatternName>(
       PATTERN_NAMES.filter(p => this.lifecycle.isActive(p))
     );
@@ -310,7 +312,16 @@ export class GameStateEngine {
         continue;
       }
 
-      const isCorrect = block.dir === signal.expectedDirection;
+      // For B&S inverse bets, we bet OPPOSITE of expectedDirection
+      // So "correct" means block went OPPOSITE of expectedDirection
+      const isCorrect = signal.isBnsInverse
+        ? block.dir !== signal.expectedDirection  // Inverse: correct if block is OPPOSITE of expected
+        : block.dir === signal.expectedDirection; // Normal: correct if block matches expected
+
+      // DEBUG: Log B&S inverse signal evaluation
+      if (signal.isBnsInverse) {
+        console.log(`[State] B&S inverse signal ${signal.pattern}: expected=${signal.expectedDirection}, actual=${block.dir}, isCorrect=${isCorrect}`);
+      }
       const verdict = calculateVerdict(block.pct, isCorrect, this.config.neutralBand);
       const profit = calculateProfit(block.pct, isCorrect);
       const wasBet = this.lifecycle.isActive(signal.pattern);
@@ -328,6 +339,7 @@ export class GameStateEngine {
         wasBet,
         ts: new Date().toISOString(),
         indicatorDirection: signal.indicatorDirection, // Pass for ZZ/AntiZZ persistence
+        isBnsInverse: signal.isBnsInverse, // Pass for B&S break handling
       };
 
       evaluated.push(result);

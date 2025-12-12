@@ -144,6 +144,7 @@ export class SessionManager {
         history: [],
         bspSimulations: [],
       },
+      zzState: this.reactionEngine.getZZStateManager().exportState(),
     };
 
     this.reactionEngine.importState(reactionState);

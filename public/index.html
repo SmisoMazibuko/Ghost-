@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Evaluator v15.1</title>
+    <title>Ghost Evaluator v15.2</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root { --bg: #0a0a0f; --bg2: #12121a; --card: #1a1a24; --border: #2a2a3a; --text: #fff; --dim: #888; --green: #00ff88; --red: #ff4466; --yellow: #ffaa00; --cyan: #00ccff; --purple: #aa66ff; }
+        :root { --bg: #0a0a0f; --bg2: #12121a; --card: #1a1a24; --border: #2a2a3a; --text: #fff; --dim: #888; --green: #00ff88; --red: #ff4466; --yellow: #ffaa00; --cyan: #00ccff; --purple: #aa66ff; --orange: #ff8800; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 11px; }
         .container { max-width: 1100px; margin: 0 auto; padding: 4px; }
 
@@ -16,6 +16,7 @@
         .alert.warning { background: rgba(255, 170, 0, 0.15); border: 1px solid var(--yellow); color: var(--yellow); }
         .alert.danger { background: rgba(255, 68, 102, 0.15); border: 1px solid var(--red); color: var(--red); }
         .alert.info { background: rgba(0, 204, 255, 0.15); border: 1px solid var(--cyan); color: var(--cyan); }
+        .alert.preload { background: rgba(255, 136, 0, 0.15); border: 1px solid var(--orange); color: var(--orange); }
 
         /* Stats Row - single card with inline items */
         .stats-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; }
@@ -36,6 +37,8 @@
         .badge.yellow { background: rgba(255, 170, 0, 0.2); color: var(--yellow); }
         .badge.red { background: rgba(255, 68, 102, 0.2); color: var(--red); }
         .badge.cyan { background: rgba(0, 204, 255, 0.2); color: var(--cyan); }
+        .badge.orange { background: rgba(255, 136, 0, 0.2); color: var(--orange); }
+        .badge.purple { background: rgba(170, 102, 255, 0.2); color: var(--purple); }
 
         /* Health bar inline */
         .health-bar { width: 40px; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 4px; }
@@ -75,6 +78,12 @@
         .act-btn:hover { border-color: var(--cyan); }
         .act-btn.danger:hover { border-color: var(--red); color: var(--red); }
 
+        /* Start Auto-bet Button */
+        .start-btn { width: 100%; padding: 8px; margin-top: 6px; background: linear-gradient(135deg, var(--green), var(--cyan)); border: none; border-radius: 4px; color: #000; font-weight: bold; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
+        .start-btn:hover { transform: scale(1.02); box-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
+        .start-btn.stop { background: linear-gradient(135deg, var(--red), var(--yellow)); color: #fff; }
+        .start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
         /* Blocks Display */
         .blocks-grid { display: flex; flex-wrap: wrap; gap: 2px; max-height: 80px; overflow-y: auto; }
         .blk { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 2px; font-size: 0.55rem; font-weight: bold; }
@@ -106,6 +115,23 @@
         .p-dot.active { background: var(--green); }
         .p-dot.observing { background: var(--yellow); }
         .p-dot.broken { background: var(--red); }
+
+        /* Bucket badges */
+        .bucket-badge { padding: 1px 4px; border-radius: 3px; font-size: 0.5rem; font-weight: 600; }
+        .bucket-badge.main { background: rgba(0, 255, 136, 0.2); color: var(--green); }
+        .bucket-badge.waiting { background: rgba(255, 170, 0, 0.2); color: var(--yellow); }
+        .bucket-badge.bns { background: rgba(170, 102, 255, 0.2); color: var(--purple); }
+
+        /* Bucket Summary Card */
+        .bucket-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-top: 6px; }
+        .bucket-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .bucket-col { text-align: center; padding: 6px; background: var(--bg2); border-radius: 4px; }
+        .bucket-label { font-size: 0.55rem; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+        .bucket-count { font-size: 1.2rem; font-weight: bold; }
+        .bucket-count.main { color: var(--green); }
+        .bucket-count.waiting { color: var(--yellow); }
+        .bucket-count.bns { color: var(--purple); }
+        .bucket-patterns { font-size: 0.5rem; color: var(--dim); margin-top: 2px; max-height: 30px; overflow-y: auto; }
 
         /* Profit Tracking Card (AP, AAP, BSP) */
         .profit-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-top: 6px; }
@@ -159,10 +185,10 @@
         <!-- Stats Card -->
         <div class="stats-card">
             <div class="stats-row">
-                <div class="stat"><span class="stat-label">State</span><span id="state"><span class="badge yellow">UNPLAY</span></span></div>
+                <div class="stat"><span class="stat-label">Mode</span><span id="tradingMode" class="badge orange">PRELOAD</span></div>
                 <div class="stat-divider"></div>
+                <div class="stat"><span class="stat-label">State</span><span id="state"><span class="badge yellow">UNPLAY</span></span></div>
                 <div class="stat"><span class="stat-label">Health</span><span class="stat-value green" id="health">100</span><div class="health-bar"><div class="health-bar-fill" id="healthBar" style="width:100%;background:var(--green)"></div></div></div>
-                <div class="stat"><span class="stat-label">Mode</span><span id="mode" class="badge green">NORMAL</span></div>
                 <div class="stat-divider"></div>
                 <div class="stat"><span class="stat-label">Blk</span><span class="stat-value cyan" id="blocks">0</span><span class="stat-sub">(run:<span id="run">0</span>)</span></div>
                 <div class="stat"><span class="stat-label">Trades</span><span class="stat-value" id="trades">0</span><span class="stat-sub">(<span id="winRate">0%</span>)</span></div>
@@ -193,6 +219,8 @@
                     <button class="quick-btn" onclick="setPct(65)">65</button>
                     <button class="quick-btn" onclick="setPct(75)">75</button>
                 </div>
+                <!-- Start/Stop Auto-bet Button -->
+                <button class="start-btn" id="startBtn" onclick="toggleAutobet()">▶ START AUTO-BET</button>
                 <div class="actions">
                     <button class="act-btn" onclick="undo()">↩</button>
                     <button class="act-btn" onclick="save()">💾</button>
@@ -250,9 +278,31 @@
                     </div>
                 </div>
 
+                <!-- 3-Bucket System -->
+                <div class="bucket-card">
+                    <div class="card-title">3-Bucket System</div>
+                    <div class="bucket-grid">
+                        <div class="bucket-col">
+                            <div class="bucket-label">MAIN (Play)</div>
+                            <div class="bucket-count main" id="bucketMain">0</div>
+                            <div class="bucket-patterns" id="bucketMainList">-</div>
+                        </div>
+                        <div class="bucket-col">
+                            <div class="bucket-label">WAITING (No Play)</div>
+                            <div class="bucket-count waiting" id="bucketWaiting">0</div>
+                            <div class="bucket-patterns" id="bucketWaitingList">-</div>
+                        </div>
+                        <div class="bucket-col">
+                            <div class="bucket-label">B&S (Inverse)</div>
+                            <div class="bucket-count bns" id="bucketBns">0</div>
+                            <div class="bucket-patterns" id="bucketBnsList">-</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Patterns -->
                 <div class="card patterns" style="margin-top:6px">
-                    <table><thead><tr><th>Pattern</th><th>St</th><th>Cum</th><th>All</th></tr></thead><tbody id="patternsTable"></tbody></table>
+                    <table><thead><tr><th>Pattern</th><th>Bucket</th><th>M%</th><th>I%</th></tr></thead><tbody id="patternsTable"></tbody></table>
                 </div>
             </div>
 
@@ -264,7 +314,7 @@
         </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal - Load Session -->
     <div class="modal-bg hidden" id="modal" onclick="if(event.target===this)closeLoad()">
         <div class="modal">
             <div class="modal-title">Load Session <button class="modal-close" onclick="closeLoad()">×</button></div>
@@ -274,6 +324,7 @@
 
     <script>
         let ws, dir = null, state = {};
+        let isLiveMode = false; // false = preload mode, true = live auto-bet mode
 
         function connect() {
             ws = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host);
@@ -283,23 +334,65 @@
         }
 
         function handle(msg) {
-            if (msg.type === 'full_state') { state = msg.data; update(); }
+            if (msg.type === 'full_state') {
+                state = msg.data;
+                // Restore mode from server state if available
+                if (msg.data.isLiveMode !== undefined) {
+                    isLiveMode = msg.data.isLiveMode;
+                }
+                update();
+            }
             else if (msg.type === 'block_added') { Object.assign(state, msg.data); state.blocks = [...(state.blocks||[]), msg.data.block]; update(); }
             else if (msg.type === 'block_undone') { state = msg.data; update(); }
             else if (msg.type === 'sessions_list') { renderSessions(msg.data || []); }
+            else if (msg.type === 'mode_changed') { isLiveMode = msg.data.isLiveMode; update(); }
         }
 
         function send(action, payload = {}) { if (ws?.readyState === 1) ws.send(JSON.stringify({ action, payload })); }
         function selDir(d) { dir = d; document.getElementById('btnUp').classList.toggle('selected', d === 'up'); document.getElementById('btnDown').classList.toggle('selected', d === 'down'); document.getElementById('pctIn').focus(); }
         function setPct(v) { document.getElementById('pctIn').value = v; }
-        function addBlock() { const p = document.getElementById('pctIn').value; if (!dir) return alert('Select direction'); if (!p || p < 0 || p > 100) return alert('Invalid %'); send('add_block', { direction: dir, percentage: p }); document.getElementById('pctIn').value = ''; }
+
+        function addBlock() {
+            const p = document.getElementById('pctIn').value;
+            if (!dir) return alert('Select direction');
+            if (!p || p < 0 || p > 100) return alert('Invalid %');
+            // Send block with current mode
+            send('add_block', { direction: dir, percentage: p, preloadMode: !isLiveMode });
+            document.getElementById('pctIn').value = '';
+        }
+
         function undo() { send('undo'); }
         function save() { if (!state.blocks?.length) return alert('No data'); send('save'); }
         function openLoad() { document.getElementById('modal').classList.remove('hidden'); send('list_sessions'); }
         function closeLoad() { document.getElementById('modal').classList.add('hidden'); }
         function loadSession(p) { send('load', { path: p }); closeLoad(); }
-        function clear() { if (confirm('Clear session?')) send('clear'); }
+        function clear() {
+            if (confirm('Clear session?')) {
+                send('clear');
+                isLiveMode = false; // Reset to preload mode
+                update();
+            }
+        }
         function renderSessions(list) { const el = document.getElementById('sessions'); if (!list.length) { el.innerHTML = '<span style="color:var(--dim)">No sessions</span>'; return; } el.innerHTML = list.map(s => `<div class="session-item" onclick="loadSession('${s.path.replace(/\\/g,'\\\\')}')"><div>${new Date(s.timestamp).toLocaleString()}</div><div style="color:${s.pnl>=0?'var(--green)':'var(--red)'}">${s.pnl>=0?'+':''}R${s.pnl.toFixed(2)}</div></div>`).join(''); }
+
+        // Toggle between preload and live mode
+        function toggleAutobet() {
+            if (!isLiveMode) {
+                // Starting live mode
+                if (confirm('Start auto-betting? Trades will be opened from now on.')) {
+                    isLiveMode = true;
+                    send('set_mode', { isLiveMode: true });
+                    update();
+                }
+            } else {
+                // Stopping live mode (back to preload)
+                if (confirm('Stop auto-betting? Return to preload mode?')) {
+                    isLiveMode = false;
+                    send('set_mode', { isLiveMode: false });
+                    update();
+                }
+            }
+        }
 
         function update() {
             const sum = state.summary || {};
@@ -307,6 +400,26 @@
             const dd = state.drawdown || {};
             const rec = state.recovery || {};
             const reentry = state.reentry || {};
+
+            // Trading Mode indicator
+            const modeEl = document.getElementById('tradingMode');
+            if (isLiveMode) {
+                modeEl.textContent = 'LIVE';
+                modeEl.className = 'badge green';
+            } else {
+                modeEl.textContent = 'PRELOAD';
+                modeEl.className = 'badge orange';
+            }
+
+            // Start button state
+            const startBtn = document.getElementById('startBtn');
+            if (isLiveMode) {
+                startBtn.textContent = '⏹ STOP AUTO-BET';
+                startBtn.className = 'start-btn stop';
+            } else {
+                startBtn.textContent = '▶ START AUTO-BET';
+                startBtn.className = 'start-btn';
+            }
 
             // State badge
             const st = sum.sessionState || 'unplayable';
@@ -328,12 +441,6 @@
             const hBadge = document.getElementById('healthBadge');
             hBadge.textContent = lvl.toUpperCase();
             hBadge.className = 'badge ' + (lvl === 'playable' ? 'green' : lvl === 'caution' ? 'yellow' : 'red');
-
-            // Mode
-            const mode = sum.recoveryMode || state.recoveryMode || 'normal';
-            const modeEl = document.getElementById('mode');
-            modeEl.textContent = mode.toUpperCase();
-            modeEl.className = 'badge ' + (mode === 'normal' ? 'green' : mode === 'recovery' ? 'yellow' : 'cyan');
 
             // Blocks & Run
             document.getElementById('blocks').textContent = sum.blockCount || 0;
@@ -388,29 +495,63 @@
             else { predDir.textContent = 'HOLD'; predDir.className = 'pred-dir none'; document.getElementById('predPat').textContent = '-'; }
             document.getElementById('predReason').textContent = pred.reason || '';
 
-            // Pending
+            // Pending (only show in live mode)
             const pendEl = document.getElementById('pending');
-            if (state.pendingTrade) { pendEl.classList.remove('hidden'); const pd = document.getElementById('pendingDir'); pd.textContent = state.pendingTrade.direction > 0 ? '▲' : '▼'; pd.className = 'pending-dir ' + (state.pendingTrade.direction > 0 ? 'up' : 'down'); document.getElementById('pendingPat').textContent = state.pendingTrade.pattern; document.getElementById('pendingReason').textContent = state.pendingTrade.reason; }
+            if (state.pendingTrade && isLiveMode) { pendEl.classList.remove('hidden'); const pd = document.getElementById('pendingDir'); pd.textContent = state.pendingTrade.direction > 0 ? '▲' : '▼'; pd.className = 'pending-dir ' + (state.pendingTrade.direction > 0 ? 'up' : 'down'); document.getElementById('pendingPat').textContent = state.pendingTrade.pattern; document.getElementById('pendingReason').textContent = state.pendingTrade.reason; }
             else pendEl.classList.add('hidden');
 
-            // Patterns
+            // 3-Bucket System
+            const buckets = state.buckets || {};
+            const bucketSummary = buckets.summary || { main: [], waiting: [], bns: [], stats: { mainCount: 0, waitingCount: 0, bnsCount: 0 } };
+            const patternBucketStates = buckets.patternStates || {};
+
+            // Bucket counts
+            document.getElementById('bucketMain').textContent = bucketSummary.stats.mainCount || 0;
+            document.getElementById('bucketWaiting').textContent = bucketSummary.stats.waitingCount || 0;
+            document.getElementById('bucketBns').textContent = bucketSummary.stats.bnsCount || 0;
+
+            // Bucket pattern lists
+            document.getElementById('bucketMainList').textContent = bucketSummary.main?.length ? bucketSummary.main.join(', ') : '-';
+            document.getElementById('bucketWaitingList').textContent = bucketSummary.waiting?.length ? bucketSummary.waiting.join(', ') : '-';
+            document.getElementById('bucketBnsList').textContent = bucketSummary.bns?.length ? bucketSummary.bns.join(', ') : '-';
+
+            // Patterns with bucket info
             const pt = document.getElementById('patternsTable');
-            if (state.patterns?.length) { pt.innerHTML = state.patterns.sort((a,b) => (b.allTimeProfit||0) - (a.allTimeProfit||0)).map(p => `<tr><td><span class="p-dot ${p.state}"></span>${p.pattern}</td><td>${p.state[0].toUpperCase()}</td><td style="color:${p.cumulativeProfit>=0?'var(--green)':'var(--red)'}">${p.cumulativeProfit>=0?'+':''}${p.cumulativeProfit.toFixed(0)}%</td><td style="color:${p.allTimeProfit>=0?'var(--green)':'var(--red)'}">${p.allTimeProfit>=0?'+':''}${p.allTimeProfit.toFixed(0)}%</td></tr>`).join(''); }
+            if (state.patterns?.length) {
+                pt.innerHTML = state.patterns.sort((a,b) => (b.allTimeProfit||0) - (a.allTimeProfit||0)).map(p => {
+                    const bucketState = patternBucketStates[p.pattern] || { bucket: 'WAITING', lastRunProfit: 0, cumulativeProfit: 0 };
+                    const bucket = bucketState.bucket || 'WAITING';
+                    const bucketClass = bucket === 'MAIN' ? 'main' : bucket === 'BNS' ? 'bns' : 'waiting';
+                    const bucketLabel = bucket === 'MAIN' ? 'M' : bucket === 'BNS' ? 'B' : 'W';
+                    return `<tr>
+                        <td><span class="p-dot ${p.state}"></span>${p.pattern}</td>
+                        <td><span class="bucket-badge ${bucketClass}">${bucketLabel}</span></td>
+                        <td style="color:${p.cumulativeProfit>=0?'var(--green)':'var(--red)'}">${p.cumulativeProfit.toFixed(0)}</td>
+                        <td style="color:${p.lastRunProfit>=0?'var(--green)':'var(--red)'}">${p.lastRunProfit.toFixed(0)}</td>
+                    </tr>`;
+                }).join('');
+            }
 
             // Trades
             const tl = document.getElementById('tradesList');
             if (state.trades?.length) { tl.innerHTML = state.trades.slice().reverse().slice(0,12).map(t => `<div class="trade"><span>#${t.id} ${t.pattern}</span><span class="${t.isWin?'trade-win':'trade-loss'}">${t.isWin?'W':'L'} ${t.isWin?'+':''}R${t.pnl.toFixed(0)}</span></div>`).join(''); }
             else tl.innerHTML = '<span style="color:var(--dim)">No trades</span>';
 
-            // Alert
-            const alert = document.getElementById('alert');
+            // Alert - show preload mode alert when in preload
+            const alertEl = document.getElementById('alert');
             const alertIcon = document.getElementById('alertIcon');
             const alertMsg = document.getElementById('alertMsg');
-            if (sum.isSessionStopped && sum.sessionStopReason) { alert.classList.remove('hidden'); alert.className = 'alert danger'; alertIcon.textContent = '🚫'; alertMsg.textContent = sum.sessionStopReason; }
-            else if (mode === 'recovery') { alert.classList.remove('hidden'); alert.className = 'alert info'; alertIcon.textContent = '🔄'; alertMsg.textContent = 'Recovery - Shadow trading'; }
-            else if (mode === 'reentry') { alert.classList.remove('hidden'); alert.className = 'alert warning'; alertIcon.textContent = '⚡'; alertMsg.textContent = `Re-entry at ${Math.round(stake*100)}% stake`; }
-            else if (lvl === 'caution') { alert.classList.remove('hidden'); alert.className = 'alert warning'; alertIcon.textContent = '⚠️'; alertMsg.textContent = `Health declining: ${score.toFixed(0)}/100`; }
-            else alert.classList.add('hidden');
+
+            if (!isLiveMode && state.blocks?.length > 0) {
+                // Preload mode with blocks
+                alertEl.classList.remove('hidden');
+                alertEl.className = 'alert preload';
+                alertIcon.textContent = '⏸';
+                alertMsg.textContent = `PRELOAD MODE - ${state.blocks.length} blocks loaded. Click "Start Auto-bet" to begin trading.`;
+            }
+            else if (sum.isSessionStopped && sum.sessionStopReason) { alertEl.classList.remove('hidden'); alertEl.className = 'alert danger'; alertIcon.textContent = '🚫'; alertMsg.textContent = sum.sessionStopReason; }
+            else if (lvl === 'caution') { alertEl.classList.remove('hidden'); alertEl.className = 'alert warning'; alertIcon.textContent = '⚠️'; alertMsg.textContent = `Health declining: ${score.toFixed(0)}/100`; }
+            else alertEl.classList.add('hidden');
 
             // Profit Tracking (AP, AAP, BSP)
             const profitData = state.profitTracking?.totals || sum.profitTracking || { actualProfit: 0, activationAccumulatedProfit: 0, baitSwitchProfit: 0 };
@@ -455,7 +596,8 @@
             if (e.key.toLowerCase() === 'g') { selDir('up'); document.getElementById('pctIn').focus(); }
             if (e.key.toLowerCase() === 'r') { selDir('down'); document.getElementById('pctIn').focus(); }
             if (e.key.toLowerCase() === 'u') undo();
-            if (e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+            if (e.key.toLowerCase() === 's' && !e.ctrlKey) { e.preventDefault(); save(); }
+            if (e.key === ' ') { e.preventDefault(); toggleAutobet(); } // Spacebar to toggle
         });
 
         connect();
