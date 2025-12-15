@@ -581,6 +581,111 @@ export class ZZStateManager {
     this.state = createInitialZZState();
   }
 
+  /**
+   * Rebuild ZZ state from evaluated results history (used after undo).
+   *
+   * This method reconstructs the ZZ/AntiZZ pocket positions and state
+   * by replaying the historical results. After undo, no pattern should
+   * be active - the system waits for the next indicator.
+   *
+   * Key state rebuilt:
+   * - zzPocket: Based on last ZZ run's runProfitZZ (>0 → P1, ≤0 → P2)
+   * - antiZZPocket: Based on last AntiZZ bet outcome (≥0 → P1, <0 → P2)
+   * - runProfitZZ: Preserved from last ZZ run
+   * - antiZZLastBetOutcome: Preserved from last AntiZZ bet
+   * - runHistory/movementHistory: Rebuilt from results
+   *
+   * @param results - All evaluated results remaining after undo
+   */
+  rebuildFromResults(results: EvaluatedResult[]): void {
+    console.log(`[ZZ] Rebuilding state from ${results.length} results`);
+
+    // Reset to initial state first
+    this.state = createInitialZZState();
+
+    // Filter ZZ and AntiZZ results
+    const zzResults = results.filter(r => r.pattern === 'ZZ');
+    const antiZZResults = results.filter(r => r.pattern === 'AntiZZ');
+
+    console.log(`[ZZ] Found ${zzResults.length} ZZ results, ${antiZZResults.length} AntiZZ results`);
+
+    // Rebuild ZZ state from ZZ results
+    if (zzResults.length > 0) {
+      // Find runs by looking for negative results (run ends on negative)
+      let currentRunProfit = 0;
+      let runCount = 0;
+
+      for (const result of zzResults) {
+        currentRunProfit += result.profit;
+
+        if (result.profit < 0) {
+          // Run ended
+          runCount++;
+          this.state.runHistory.push({
+            runNumber: runCount,
+            wasAntiZZ: false,
+            pocket: currentRunProfit > 0 ? 1 : 2,
+            firstPredictionNegative: false,
+            profit: currentRunProfit,
+            predictionCount: 1,
+            startBlockIndex: result.signalIndex,
+            endBlockIndex: result.evalIndex,
+            ts: new Date().toISOString(),
+          });
+
+          // Update runProfitZZ from this run
+          this.state.runProfitZZ = currentRunProfit;
+          currentRunProfit = 0;
+        }
+      }
+
+      // If there's remaining profit (run didn't end), track it
+      if (currentRunProfit !== 0) {
+        this.state.runProfitZZ = currentRunProfit;
+      }
+
+      // Calculate ZZ pocket from runProfitZZ
+      this.state.zzPocket = this.state.runProfitZZ > 0 ? 1 : 2;
+      console.log(`[ZZ] Rebuilt ZZ: runProfitZZ=${this.state.runProfitZZ.toFixed(0)}%, pocket=P${this.state.zzPocket}`);
+    }
+
+    // Rebuild AntiZZ state from AntiZZ results
+    if (antiZZResults.length > 0) {
+      // AntiZZ uses LAST BET ONLY for pocket decision
+      const lastAntiZZResult = antiZZResults[antiZZResults.length - 1];
+      this.state.antiZZLastBetOutcome = lastAntiZZResult.profit;
+
+      // AntiZZ pocket based on last bet (≥0 → P1, <0 → P2)
+      this.state.antiZZPocket = lastAntiZZResult.profit >= 0 ? 1 : 2;
+
+      // Record AntiZZ runs
+      for (const result of antiZZResults) {
+        this.state.runHistory.push({
+          runNumber: this.state.runHistory.length + 1,
+          wasAntiZZ: true,
+          pocket: result.profit >= 0 ? 1 : 2,
+          firstPredictionNegative: false,
+          profit: result.profit,
+          predictionCount: 1,
+          startBlockIndex: result.signalIndex,
+          endBlockIndex: result.evalIndex,
+          ts: new Date().toISOString(),
+        });
+      }
+
+      console.log(`[ZZ] Rebuilt AntiZZ: lastBet=${this.state.antiZZLastBetOutcome?.toFixed(0)}%, pocket=P${this.state.antiZZPocket}`);
+    }
+
+    // After undo, no pattern should be active - wait for next indicator
+    this.state.activePattern = null;
+    this.state.waitingForFirstBet = false;
+    this.state.antiZZIsCandidate = false;
+    this.state.zzFirstBetEvaluated = false;
+    this.state.zzCurrentRunProfit = 0;
+
+    console.log(`[ZZ] State rebuilt: ZZ=P${this.state.zzPocket}, AntiZZ=P${this.state.antiZZPocket}, activePattern=none`);
+  }
+
   // --------------------------------------------------------------------------
   // STATISTICS
   // --------------------------------------------------------------------------

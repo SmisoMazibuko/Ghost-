@@ -1263,7 +1263,7 @@ export class ReactionEngine {
    * 1. healthManager.reset() + replay trades + rebuildResultsState()
    * 2. recoveryManager.reset()
    * 3. hostilityManager.reset() + replay trades
-   * 4. zzStateManager.reset() (synced in predictNext())
+   * 4. zzStateManager.rebuildFromResults() - rebuilds pocket positions & runProfitZZ
    * 5. bucketManager.rebuildFromResults() + sync lastKnownStates with lifecycle
    * 6. consecutiveLosses - recalculated from trade history
    * 7. cooldownRemaining - reset to 0
@@ -1283,11 +1283,10 @@ export class ReactionEngine {
    * ============================================================================
    */
   rebuildAllState(): void {
-    // Reset all managers
+    // Reset all managers (except ZZ - rebuilt from results below)
     this.healthManager.reset();
     this.recoveryManager.reset();
     this.hostilityManager.reset();
-    this.zzStateManager.reset();
 
     this.sessionStopped = false;
     this.sessionStopReason = '';
@@ -1339,6 +1338,11 @@ export class ReactionEngine {
     // This prevents false activations when the next block arrives.
     const lifecycle = this.gameState.getLifecycle();
     this.bucketManager.rebuildFromResults(results, lifecycle);
+
+    // v16.0 FIX: Rebuild ZZ state from results history
+    // This preserves pocket positions and runProfitZZ across undo operations.
+    // Uses rebuildFromResults() instead of reset() to maintain ZZ/AntiZZ state.
+    this.zzStateManager.rebuildFromResults(results);
 
     // NOTE: Do NOT trigger new cooldown here!
     // Cooldown was already reset to 0 at the start.
