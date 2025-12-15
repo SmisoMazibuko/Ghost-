@@ -1,28 +1,35 @@
 /**
- * Ghost Evaluator v15.1 - ZZ Strategy State Manager
+ * Ghost Evaluator v16.0 - ZZ Strategy State Manager
  * ==================================================
- * Implements the CORRECTED ZZ/Anti-ZZ strategy rules.
  *
- * CORE RULES (Non-Negotiable):
- * 1. ZZ NEVER goes to bait-and-switch - it ignores B&S entirely
- * 2. Anti-ZZ is activated ONLY when first predicted ZZ bet is negative
- * 3. Pocket placement (1 or 2) is for confirmation only, NOT for triggering Anti-ZZ
- * 4. ZZ continues with main strategy patterns during B&S periods
+ * !! AUTHORITATIVE SPECIFICATION: docs/POCKET-SYSTEM-SPEC.md !!
  *
- * State Machine:
- * - inactive → zz_active: On ZZ trigger detection
- * - zz_active → anti_zz_active: When first prediction is negative for ZZ
- * - anti_zz_active → zz_active: After Anti-ZZ run completes
- * - zz_active/anti_zz_active → suspended: During bait-and-switch (ZZ ignores, main strategy takes over)
- * - suspended → zz_active: When game becomes playable again
+ * This file implements the STRICT POCKET SYSTEM for ZZ/AntiZZ patterns.
+ * All behavior must conform exactly to POCKET-SYSTEM-SPEC.md.
+ *
+ * CORE PRINCIPLES (NON-NEGOTIABLE):
+ * - POCKET1 = ACTIVE (allowed to place real bets)
+ * - POCKET2 = OBSERVE (NOT allowed to place real bets)
+ * - Pocket position is the ONLY truth
+ * - Imaginary first bet is MANDATORY (always computed, always counted)
+ * - runProfitZZ applies ONLY to ZZ (Anti-ZZ uses last bet outcome only)
+ *
+ * CRITICAL RULES:
+ * - ZZ: runProfitZZ > 0 → P1, runProfitZZ <= 0 → P2
+ * - ZZ: runProfitZZ ALWAYS updated on every indicator (even imaginary)
+ * - AntiZZ: Last bet positive → stay P1, Last bet negative → P2
+ * - AntiZZ: Waits for NEXT indicator after becoming candidate
+ * - AntiZZ: Places MAX 1 bet per indicator (NOT continuous)
+ *
+ * See POCKET-SYSTEM-SPEC.md for complete rules and examples.
  */
 
 import {
   Direction,
-  ZZState,
   ZZPocket,
   ZZStrategyState,
   ZZRunRecord,
+  ZZMovementRecord,
   EvaluatedResult,
 } from '../types';
 
@@ -31,22 +38,34 @@ import {
 // ============================================================================
 
 /**
- * Create initial ZZ strategy state
+ * Create initial ZZ strategy state (v16.0 - STRICT SPEC)
  */
 export function createInitialZZState(): ZZStrategyState {
   return {
-    currentState: 'inactive',
-    currentPocket: 1, // Default to Pocket 1 at start
-    previousRunProfit: 0,
-    firstPredictionNegative: false,
-    firstPredictionEvaluated: false,
-    currentRunProfit: 0,
-    currentRunPredictions: 0,
+    // ZZ Pattern State
+    zzPocket: 1,                    // ZZ starts in POCKET1 (per spec Section B)
+    zzCurrentRunProfit: 0,
+    zzFirstBetEvaluated: false,
+
+    // AntiZZ Pattern State (NO runProfit - per spec Section A.4)
+    antiZZPocket: 2,                // AntiZZ starts in POCKET2 (per spec Section B)
+    antiZZLastBetOutcome: null,     // Only last bet, not cumulative
+    antiZZIsCandidate: false,       // Not waiting to activate
+
+    // Active Pattern Tracking
+    activePattern: null,            // No pattern active initially
+
+    // Shared State
     savedIndicatorDirection: null,
+    runProfitZZ: 0,                 // INVARIANT: Updated on EVERY indicator
     activationBlockIndex: -1,
-    antiZZActivationBlockIndex: -1,
     isInBaitSwitch: false,
     runHistory: [],
+    movementHistory: [],
+
+    // First Bet Evaluation State
+    waitingForFirstBet: false,
+    firstBetBlockIndex: -1,
   };
 }
 
@@ -62,6 +81,20 @@ export class ZZStateManager {
   }
 
   // --------------------------------------------------------------------------
+  // LOGGING HELPERS (per spec Section H)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Log indicator state (required by spec Section H)
+   */
+  private logIndicatorState(phase: 'BEFORE' | 'AFTER', _blockIndex: number): void {
+    console.log(`[ZZ] Pockets ${phase}: ZZ=P${this.state.zzPocket}, AntiZZ=P${this.state.antiZZPocket}`);
+    console.log(`[ZZ] runProfitZZ: ${this.state.runProfitZZ.toFixed(0)}%`);
+    console.log(`[ZZ] activePattern: ${this.state.activePattern || 'none'}`);
+    console.log(`[ZZ] antiZZIsCandidate: ${this.state.antiZZIsCandidate}`);
+  }
+
+  // --------------------------------------------------------------------------
   // STATE ACCESSORS
   // --------------------------------------------------------------------------
 
@@ -69,323 +102,423 @@ export class ZZStateManager {
     return { ...this.state };
   }
 
-  getCurrentState(): ZZState {
-    return this.state.currentState;
+  getZZPocket(): ZZPocket {
+    return this.state.zzPocket;
   }
 
-  getCurrentPocket(): ZZPocket {
-    return this.state.currentPocket;
+  getAntiZZPocket(): ZZPocket {
+    return this.state.antiZZPocket;
+  }
+
+  getActivePattern(): 'ZZ' | 'AntiZZ' | null {
+    return this.state.activePattern;
   }
 
   isZZActive(): boolean {
-    return this.state.currentState === 'zz_active';
+    return this.state.activePattern === 'ZZ';
   }
 
   isAntiZZActive(): boolean {
-    return this.state.currentState === 'anti_zz_active';
+    return this.state.activePattern === 'AntiZZ';
   }
 
-  isSuspended(): boolean {
-    return this.state.currentState === 'suspended';
-  }
-
-  isInactive(): boolean {
-    return this.state.currentState === 'inactive';
-  }
-
-  /**
-   * Check if ZZ system is active (either ZZ or Anti-ZZ)
-   */
   isSystemActive(): boolean {
-    return this.state.currentState === 'zz_active' || this.state.currentState === 'anti_zz_active';
+    return this.state.activePattern !== null;
+  }
+
+  isZZInPocket1(): boolean {
+    return this.state.zzPocket === 1;
+  }
+
+  isAntiZZInPocket1(): boolean {
+    return this.state.antiZZPocket === 1;
+  }
+
+  areBothInPocket2(): boolean {
+    return this.state.zzPocket === 2 && this.state.antiZZPocket === 2;
+  }
+
+  isWaitingForFirstBet(): boolean {
+    return this.state.waitingForFirstBet;
+  }
+
+  getFirstBetBlockIndex(): number {
+    return this.state.firstBetBlockIndex;
+  }
+
+  /** Check if AntiZZ is a candidate waiting for next indicator */
+  isAntiZZCandidate(): boolean {
+    return this.state.antiZZIsCandidate;
+  }
+
+  /** Get runProfitZZ (INVARIANT: always up-to-date) */
+  getRunProfitZZ(): number {
+    return this.state.runProfitZZ;
   }
 
   getRunHistory(): ZZRunRecord[] {
     return [...this.state.runHistory];
   }
 
+  getMovementHistory(): ZZMovementRecord[] {
+    return [...this.state.movementHistory];
+  }
+
+  getCurrentRunProfit(): number {
+    if (this.state.activePattern === 'ZZ') {
+      return this.state.zzCurrentRunProfit;
+    }
+    return 0; // AntiZZ has no run profit
+  }
+
   // --------------------------------------------------------------------------
-  // ACTIVATION LOGIC
+  // POCKET CALCULATION (per spec Section D.4)
   // --------------------------------------------------------------------------
 
   /**
-   * Activate ZZ based on pattern signal detection.
-   *
-   * Called when:
-   * - Game start / session entry
-   * - After a completed ZZ run (full cycle with resolved profit/loss)
-   *
-   * Activation uses:
-   * - Profit of the previous run → assigns pocket
-   * - First predicted bet location → will evaluate for Anti-ZZ trigger
+   * Calculate ZZ pocket based on runProfitZZ.
+   * Per spec D.4: runProfitZZ > 0 → P1, runProfitZZ <= 0 → P2
    */
-  activateZZ(
-    blockIndex: number,
-    previousRunProfit: number,
-    indicatorDirection: Direction
-  ): void {
-    // Don't activate if in bait-and-switch mode
-    if (this.state.isInBaitSwitch) {
-      console.log('[ZZ State] Cannot activate ZZ during bait-and-switch - suspended');
-      return;
-    }
-
-    // Assign pocket based on previous run profit
-    const pocket = this.assignPocket(previousRunProfit);
-
-    // Reset run state
-    this.state.currentState = 'zz_active';
-    this.state.currentPocket = pocket;
-    this.state.previousRunProfit = previousRunProfit;
-    this.state.firstPredictionNegative = false;
-    this.state.firstPredictionEvaluated = false;
-    this.state.currentRunProfit = 0;
-    this.state.currentRunPredictions = 0;
-    this.state.savedIndicatorDirection = indicatorDirection;
-    this.state.activationBlockIndex = blockIndex;
-    this.state.antiZZActivationBlockIndex = -1;
-
-    console.log(`[ZZ State] ZZ activated at block ${blockIndex}, Pocket ${pocket}, Previous profit: ${previousRunProfit.toFixed(0)}%`);
+  private calculateZZPocket(): ZZPocket {
+    return this.state.runProfitZZ > 0 ? 1 : 2;
   }
 
   /**
-   * Check if ZZ should bet (not just observe).
+   * Move a pattern to a new pocket and record the movement.
+   */
+  private movePatternToPocket(
+    pattern: 'ZZ' | 'AntiZZ',
+    newPocket: ZZPocket,
+    blockIndex: number,
+    triggerProfit: number
+  ): void {
+    const currentPocket = pattern === 'ZZ' ? this.state.zzPocket : this.state.antiZZPocket;
+
+    if (currentPocket === newPocket) return;
+
+    this.state.movementHistory.push({
+      blockIndex,
+      pattern,
+      fromPocket: currentPocket,
+      toPocket: newPocket,
+      triggerProfit,
+      ts: new Date().toISOString(),
+    });
+
+    console.log(`[ZZ POCKET] ${pattern}: P${currentPocket} → P${newPocket} (profit: ${triggerProfit.toFixed(0)}%)`);
+
+    if (pattern === 'ZZ') {
+      this.state.zzPocket = newPocket;
+    } else {
+      this.state.antiZZPocket = newPocket;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // INDICATOR HANDLING (per spec Section C, D, E, F)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Handle indicator detection.
    *
-   * RULE: If last run profit was negative (Pocket 2), we DON'T bet.
-   * We just observe and calculate profit for the next run.
-   * Betting only happens when in Pocket 1 (last run was profitable).
+   * Per spec Section C: ZZ indicator is the ONLY trigger for both patterns.
+   *
+   * Logic:
+   * 1. If AntiZZ is candidate and in P1 → AntiZZ plays this indicator
+   * 2. If ZZ in P1 → ZZ activates and bets
+   * 3. If ZZ in P2 → Wait for imaginary first bet evaluation
+   */
+  handleIndicator(
+    blockIndex: number,
+    currentBlockDirection: Direction
+  ): void {
+    if (this.state.isInBaitSwitch) return;
+
+    console.log(`[ZZ] === INDICATOR AT BLOCK ${blockIndex} ===`);
+    this.logIndicatorState('BEFORE', blockIndex);
+
+    // Save current block direction - ZZ predicts OPPOSITE for next block
+    this.state.savedIndicatorDirection = currentBlockDirection;
+    this.state.activationBlockIndex = blockIndex;
+
+    // Case 1: AntiZZ is in P1 → AntiZZ plays (per spec E.3)
+    // This covers both: (a) AntiZZ was candidate and moved to P1, or (b) AntiZZ won and stayed P1
+    if (this.state.antiZZPocket === 1) {
+      this.state.activePattern = 'AntiZZ';
+      this.state.antiZZIsCandidate = false;  // Clear candidate flag if set
+      console.log(`[ZZ] AntiZZ in P1, plays ONE bet this indicator`);
+      this.logIndicatorState('AFTER', blockIndex);
+      return;
+    }
+
+    // Case 2: ZZ is in P1 → ZZ activates (per spec D.2)
+    // CRITICAL: Do NOT set waitingForFirstBet - that's only for imaginary (P2)
+    // ZZ in P1 bets REAL and first bet is handled by recordZZResult()
+    if (this.state.zzPocket === 1) {
+      this.state.activePattern = 'ZZ';
+      this.state.zzCurrentRunProfit = 0;
+      this.state.zzFirstBetEvaluated = false;
+      this.state.waitingForFirstBet = false;  // Real bet, not imaginary
+      this.state.firstBetBlockIndex = -1;
+      console.log(`[ZZ] ZZ in P1, activating ZZ - will bet on next block`);
+      this.logIndicatorState('AFTER', blockIndex);
+      return;
+    }
+
+    // Case 3: ZZ is in P2 → need imaginary first bet evaluation (per spec F)
+    if (this.state.zzPocket === 2) {
+      this.state.waitingForFirstBet = true;
+      this.state.firstBetBlockIndex = blockIndex + 1;
+      console.log(`[ZZ] ZZ in P2, waiting for imaginary first bet at block ${this.state.firstBetBlockIndex}`);
+      this.logIndicatorState('AFTER', blockIndex);
+      return;
+    }
+  }
+
+  /**
+   * Evaluate IMAGINARY first bet when ZZ is in P2.
+   *
+   * Per spec D.3: runProfitZZ is ALWAYS updated, even for imaginary.
+   * Per spec E.2: If negative, AntiZZ becomes candidate for NEXT indicator.
+   * Per spec F: If positive, ZZ moves P2→P1 and bets.
+   */
+  evaluateImaginaryFirstBet(
+    actualDirection: Direction,
+    pct: number,
+    blockIndex: number
+  ): {
+    pattern: 'ZZ' | 'AntiZZ' | null;
+    shouldBet: boolean;
+    imaginaryProfit: number;
+  } {
+    if (!this.state.waitingForFirstBet) {
+      return { pattern: null, shouldBet: false, imaginaryProfit: 0 };
+    }
+
+    if (blockIndex !== this.state.firstBetBlockIndex) {
+      return { pattern: null, shouldBet: false, imaginaryProfit: 0 };
+    }
+
+    this.state.waitingForFirstBet = false;
+
+    // ZZ predicts OPPOSITE of current block at indicator time (alternation continues)
+    // savedIndicatorDirection = direction of block N (when indicator detected)
+    // First bet block = N+1, so ZZ predicts opposite of block N
+    const zzPrediction = this.state.savedIndicatorDirection
+      ? ((-this.state.savedIndicatorDirection) as Direction)
+      : actualDirection;
+
+    const zzWouldWin = zzPrediction === actualDirection;
+    const imaginaryProfit = zzWouldWin ? pct : -pct;
+
+    // INVARIANT (spec D.3): runProfitZZ is ALWAYS updated, even for imaginary
+    this.state.runProfitZZ = imaginaryProfit;
+
+    console.log(`[ZZ] Imaginary first bet at block ${blockIndex}:`);
+    console.log(`[ZZ]   ZZ predicted: ${zzPrediction > 0 ? 'UP' : 'DOWN'}`);
+    console.log(`[ZZ]   Actual: ${actualDirection > 0 ? 'UP' : 'DOWN'}`);
+    console.log(`[ZZ]   firstOutcomeZZ: ${imaginaryProfit.toFixed(0)}% (IMAGINARY)`);
+    console.log(`[ZZ]   runProfitZZ updated to: ${this.state.runProfitZZ.toFixed(0)}%`);
+
+    if (imaginaryProfit >= 0) {
+      // POSITIVE imaginary → ZZ moves P2→P1, ZZ bets (per spec F)
+      this.movePatternToPocket('ZZ', 1, blockIndex, imaginaryProfit);
+      this.state.zzPocket = 1;
+      this.state.activePattern = 'ZZ';
+      this.state.zzCurrentRunProfit = imaginaryProfit;
+      this.state.zzFirstBetEvaluated = true;
+      this.state.antiZZIsCandidate = false;
+
+      console.log(`[ZZ] Positive imaginary → ZZ moves P2→P1, bets`);
+      console.log(`[ZZ] ZZ activated: YES, AntiZZ played: NO`);
+      this.logIndicatorState('AFTER', blockIndex);
+
+      return { pattern: 'ZZ', shouldBet: true, imaginaryProfit };
+    } else {
+      // NEGATIVE imaginary → ZZ stays P2, AntiZZ becomes CANDIDATE (per spec E.2, F)
+      // CRITICAL: AntiZZ does NOT play immediately - waits for NEXT indicator
+      this.state.zzPocket = 2;
+      this.state.antiZZIsCandidate = true;
+      this.state.antiZZPocket = 1;  // Will be P1 for next indicator
+      this.state.activePattern = null;  // NO ONE plays this indicator
+
+      console.log(`[ZZ] Negative imaginary → ZZ stays P2`);
+      console.log(`[ZZ] AntiZZ becomes CANDIDATE for NEXT indicator (does NOT play now)`);
+      console.log(`[ZZ] ZZ activated: NO, AntiZZ played: NO (candidate for next)`);
+      this.logIndicatorState('AFTER', blockIndex);
+
+      return { pattern: null, shouldBet: false, imaginaryProfit };
+    }
+  }
+
+  /**
+   * Check if the active pattern should bet.
    */
   shouldBet(): boolean {
-    if (!this.isSystemActive()) {
-      return false;
+    if (this.state.activePattern === 'ZZ') {
+      return this.state.zzPocket === 1;
+    } else if (this.state.activePattern === 'AntiZZ') {
+      return this.state.antiZZPocket === 1;
     }
-    // Only bet when in Pocket 1 (last run was profitable)
-    // Pocket 2 = observe only, don't bet
-    return this.state.currentPocket === 1;
-  }
-
-  /**
-   * Assign pocket based on previous run profit.
-   *
-   * CORRECT LOGIC:
-   * - profit > 0 → Pocket 1 (can bet)
-   * - profit < 0 → Pocket 2 (observe only, don't bet)
-   * - profit = 0 → Keep current pocket (or default to 1)
-   *
-   * NOTE: Pocket 2 means we observe and track but DON'T bet.
-   */
-  private assignPocket(previousRunProfit: number): ZZPocket {
-    if (previousRunProfit > 0) {
-      return 1;
-    } else if (previousRunProfit < 0) {
-      return 2;
-    }
-    // Breakeven - keep current pocket
-    return this.state.currentPocket;
+    return false;
   }
 
   // --------------------------------------------------------------------------
-  // FIRST PREDICTION EVALUATION (Anti-ZZ Trigger)
+  // RESULT RECORDING
   // --------------------------------------------------------------------------
 
   /**
-   * Evaluate the first prediction of a ZZ run.
+   * Record ZZ result and handle first bet / run logic.
    *
-   * THIS IS THE CORRECT ANTI-ZZ TRIGGER:
-   * - If first prediction is NEGATIVE (unfavorable for ZZ) → Activate Anti-ZZ
-   * - If first prediction is POSITIVE (favorable for ZZ) → Continue normal ZZ
-   *
-   * "Negative for ZZ" means: The predicted alternation did NOT happen,
-   * i.e., the result was opposite of what ZZ predicted.
-   *
-   * @param result - The evaluated result of the first prediction
-   * @returns true if Anti-ZZ was activated
+   * Per spec D.2: ZZ continues until negative result.
+   * Per spec D.3: runProfitZZ includes all bets in the run.
+   * Per spec D.4: After run, pocket based on runProfitZZ > 0.
+   * Per spec D.5: If first bet negative, AntiZZ becomes CANDIDATE.
    */
-  evaluateFirstPrediction(result: EvaluatedResult): boolean {
-    // Only evaluate if ZZ is active and this is the first prediction
-    if (this.state.currentState !== 'zz_active') {
-      return false;
+  recordZZResult(result: EvaluatedResult, blockIndex: number): {
+    action: 'continue' | 'first_bet_negative' | 'run_ends';
+    newPattern?: 'AntiZZ' | null;
+  } {
+    if (this.state.activePattern !== 'ZZ') {
+      return { action: 'continue' };
     }
 
-    if (this.state.firstPredictionEvaluated) {
-      return false; // Already evaluated first prediction
+    // Update run profit
+    this.state.zzCurrentRunProfit += result.profit;
+    this.state.runProfitZZ = this.state.zzCurrentRunProfit;
+
+    console.log(`[ZZ] ZZ bet result: ${result.profit.toFixed(0)}%`);
+    console.log(`[ZZ] runProfitZZ: ${this.state.runProfitZZ.toFixed(0)}%`);
+
+    if (result.profit < 0) {
+      // Negative result
+      if (!this.state.zzFirstBetEvaluated) {
+        // FIRST BET NEGATIVE → AntiZZ becomes CANDIDATE (per spec D.5)
+        this.state.zzFirstBetEvaluated = true;
+
+        console.log(`[ZZ] ZZ first bet NEGATIVE`);
+        console.log(`[ZZ] AntiZZ becomes CANDIDATE for NEXT indicator`);
+
+        // ZZ → P2 based on runProfitZZ
+        const newZZPocket = this.calculateZZPocket();
+        this.movePatternToPocket('ZZ', newZZPocket, blockIndex, this.state.runProfitZZ);
+        this.state.zzPocket = newZZPocket;
+        this.state.activePattern = null;
+
+        // AntiZZ becomes CANDIDATE - plays on NEXT indicator (per spec E.2)
+        this.state.antiZZIsCandidate = true;
+        this.state.antiZZPocket = 1;
+
+        // Reset ZZ run state
+        this.state.zzCurrentRunProfit = 0;
+        this.state.zzFirstBetEvaluated = false;
+
+        this.logIndicatorState('AFTER', blockIndex);
+        return { action: 'first_bet_negative', newPattern: null };
+      } else {
+        // NOT first bet → Run ends (per spec D.4)
+        console.log(`[ZZ] ZZ run ends (negative result)`);
+
+        // Calculate new pocket from runProfitZZ (per spec D.4)
+        const newPocket = this.calculateZZPocket();
+        this.movePatternToPocket('ZZ', newPocket, blockIndex, this.state.runProfitZZ);
+        this.state.zzPocket = newPocket;
+
+        console.log(`[ZZ] runProfitZZ: ${this.state.runProfitZZ.toFixed(0)}% → P${newPocket}`);
+
+        // Record run
+        this.recordZZRunHistory(blockIndex);
+
+        // Deactivate
+        this.state.activePattern = null;
+        this.state.zzCurrentRunProfit = 0;
+        this.state.zzFirstBetEvaluated = false;
+
+        this.logIndicatorState('AFTER', blockIndex);
+        return { action: 'run_ends', newPattern: null };
+      }
     }
 
-    // Mark as evaluated
-    this.state.firstPredictionEvaluated = true;
-    this.state.currentRunPredictions++;
+    // Positive result → continue (per spec D.2)
+    this.state.zzFirstBetEvaluated = true;
+    return { action: 'continue' };
+  }
 
-    // Check if prediction was negative for ZZ
-    // Negative = result was opposite of what ZZ predicted (loss)
-    const isNegativeForZZ = result.profit < 0;
+  /**
+   * Record AntiZZ result.
+   *
+   * Per spec E.3: AntiZZ places exactly ONE bet per indicator.
+   * Per spec E.4: Pocket based on LAST BET only (not runProfit).
+   */
+  recordAntiZZResult(result: EvaluatedResult, blockIndex: number): {
+    action: 'wait_for_indicator';
+    didWin: boolean;
+  } {
+    if (this.state.activePattern !== 'AntiZZ') {
+      return { action: 'wait_for_indicator', didWin: false };
+    }
 
-    this.state.firstPredictionNegative = isNegativeForZZ;
-    this.state.currentRunProfit += result.profit;
+    // Record last bet outcome ONLY (per spec E.4 - no runProfit)
+    this.state.antiZZLastBetOutcome = result.profit;
+    const didWin = result.profit >= 0;
 
-    if (isNegativeForZZ) {
-      // ACTIVATE ANTI-ZZ
-      this.activateAntiZZ(result.evalIndex);
-      console.log(`[ZZ State] First prediction NEGATIVE (${result.profit.toFixed(0)}%) → Anti-ZZ activated`);
-      return true;
+    console.log(`[ZZ] AntiZZ bet result: ${result.profit.toFixed(0)}% - ${didWin ? 'WIN' : 'LOSS'}`);
+    console.log(`[ZZ] AntiZZ last bet result: ${result.profit.toFixed(0)}%`);
+
+    // AntiZZ pocket based on LAST BET only (per spec E.4)
+    if (result.profit < 0) {
+      // LOSS → AntiZZ moves to P2
+      this.movePatternToPocket('AntiZZ', 2, blockIndex, result.profit);
+      this.state.antiZZPocket = 2;
+      console.log(`[ZZ] AntiZZ lost → moves to P2`);
     } else {
-      console.log(`[ZZ State] First prediction POSITIVE (${result.profit.toFixed(0)}%) → Continue normal ZZ`);
-      return false;
+      // WIN → AntiZZ stays in P1
+      this.state.antiZZPocket = 1;
+      console.log(`[ZZ] AntiZZ won → stays P1`);
     }
-  }
 
-  /**
-   * Activate Anti-ZZ mode.
-   *
-   * Called ONLY when:
-   * - First predicted ZZ bet is negative (unfavorable)
-   *
-   * NEVER called from:
-   * - Previous run profit
-   * - Bait-and-switch
-   * - Trend or block behavior
-   */
-  private activateAntiZZ(blockIndex: number): void {
-    this.state.currentState = 'anti_zz_active';
-    this.state.antiZZActivationBlockIndex = blockIndex;
+    // AntiZZ ALWAYS deactivates after one bet (per spec E.3)
+    this.state.activePattern = null;
 
-    console.log(`[ZZ State] Anti-ZZ activated at block ${blockIndex}`);
+    // Record run
+    this.recordAntiZZRunHistory(blockIndex, result.profit);
+
+    this.logIndicatorState('AFTER', blockIndex);
+    return { action: 'wait_for_indicator', didWin };
   }
 
   // --------------------------------------------------------------------------
-  // SUBSEQUENT PREDICTIONS
+  // RUN HISTORY RECORDING
   // --------------------------------------------------------------------------
 
-  /**
-   * Record subsequent prediction results (after the first).
-   *
-   * @param result - The evaluated result
-   */
-  recordPredictionResult(result: EvaluatedResult): void {
-    if (!this.isSystemActive()) {
-      return; // ZZ system not active
-    }
-
-    // If this is the first prediction for ZZ, evaluate it for Anti-ZZ trigger
-    if (this.state.currentState === 'zz_active' && !this.state.firstPredictionEvaluated) {
-      this.evaluateFirstPrediction(result);
-      return;
-    }
-
-    // Record subsequent prediction
-    this.state.currentRunPredictions++;
-    this.state.currentRunProfit += result.profit;
-  }
-
-  // --------------------------------------------------------------------------
-  // RUN RESOLUTION
-  // --------------------------------------------------------------------------
-
-  /**
-   * Resolve the current ZZ/Anti-ZZ run.
-   *
-   * Called when:
-   * - ZZ/Anti-ZZ pattern breaks
-   * - Session ends
-   *
-   * Resolution:
-   * 1. Calculate actual profit for the run
-   * 2. Assign ZZ to Pocket 1 or 2 based on profit
-   * 3. Store values for next activation
-   * 4. Reset temporary states
-   * 5. Do NOT use bait-and-switch information
-   */
-  resolveZZRun(blockIndex: number): ZZRunRecord | null {
-    if (!this.isSystemActive()) {
-      return null; // Nothing to resolve
-    }
-
-    // Create run record
+  private recordZZRunHistory(blockIndex: number): void {
     const record: ZZRunRecord = {
       runNumber: this.state.runHistory.length + 1,
-      wasAntiZZ: this.state.currentState === 'anti_zz_active',
-      pocket: this.state.currentPocket,
-      firstPredictionNegative: this.state.firstPredictionNegative,
-      profit: this.state.currentRunProfit,
-      predictionCount: this.state.currentRunPredictions,
+      wasAntiZZ: false,
+      pocket: this.state.zzPocket,
+      firstPredictionNegative: false,
+      profit: this.state.runProfitZZ,
+      predictionCount: 1,
       startBlockIndex: this.state.activationBlockIndex,
       endBlockIndex: blockIndex,
       ts: new Date().toISOString(),
     };
-
-    // Add to history
     this.state.runHistory.push(record);
-
-    // Store profit for next activation's pocket assignment
-    this.state.previousRunProfit = this.state.currentRunProfit;
-
-    // Log the resolution
-    const runType = record.wasAntiZZ ? 'Anti-ZZ' : 'ZZ';
-    console.log(`[ZZ State] ${runType} run resolved: Profit=${record.profit.toFixed(0)}%, Predictions=${record.predictionCount}, Next Pocket=${this.assignPocket(record.profit)}`);
-
-    // Reset for next run
-    this.resetRunState();
-
-    return record;
   }
 
-  /**
-   * Reset run state for next ZZ cycle.
-   * Does NOT reset pocket or previous run profit (needed for next activation).
-   */
-  private resetRunState(): void {
-    this.state.currentState = 'inactive';
-    this.state.firstPredictionNegative = false;
-    this.state.firstPredictionEvaluated = false;
-    this.state.currentRunProfit = 0;
-    this.state.currentRunPredictions = 0;
-    this.state.antiZZActivationBlockIndex = -1;
-    // Keep: currentPocket, previousRunProfit, savedIndicatorDirection, runHistory
-  }
-
-  // --------------------------------------------------------------------------
-  // BAIT-AND-SWITCH HANDLING
-  // --------------------------------------------------------------------------
-
-  /**
-   * Set bait-and-switch mode.
-   *
-   * RULE: ZZ NEVER goes to bait-and-switch.
-   * When B&S is active:
-   * - ZZ continues with main strategy
-   * - ZZ continues pattern identification
-   * - ZZ does not freeze, disable, or switch states
-   * - Only main strategy rules apply during B&S
-   */
-  setBaitSwitchMode(isInBaitSwitch: boolean): void {
-    const wasInBaitSwitch = this.state.isInBaitSwitch;
-    this.state.isInBaitSwitch = isInBaitSwitch;
-
-    if (isInBaitSwitch && !wasInBaitSwitch) {
-      // Entering B&S - ZZ is now suspended but keeps its state
-      if (this.isSystemActive()) {
-        console.log('[ZZ State] Entering bait-and-switch - ZZ suspended (main strategy takes over)');
-        // Note: We do NOT change currentState here - ZZ ignores B&S
-        // The reaction engine will use main strategy instead
-      }
-    } else if (!isInBaitSwitch && wasInBaitSwitch) {
-      // Exiting B&S - ZZ resumes normally
-      if (this.isSystemActive()) {
-        console.log('[ZZ State] Exiting bait-and-switch - ZZ resumes normally');
-      }
-    }
-  }
-
-  /**
-   * Check if ZZ should ignore the current signal due to bait-and-switch.
-   *
-   * During B&S:
-   * - ZZ ignores bait-and-switch entirely
-   * - Continue with main strategy
-   * - No state changes for ZZ
-   */
-  shouldIgnoreBaitSwitch(): boolean {
-    // ZZ always ignores B&S - this method is for clarity
-    return this.state.isInBaitSwitch;
+  private recordAntiZZRunHistory(blockIndex: number, profit: number): void {
+    const record: ZZRunRecord = {
+      runNumber: this.state.runHistory.length + 1,
+      wasAntiZZ: true,
+      pocket: this.state.antiZZPocket,
+      firstPredictionNegative: false,
+      profit: profit,
+      predictionCount: 1,
+      startBlockIndex: this.state.activationBlockIndex,
+      endBlockIndex: blockIndex,
+      ts: new Date().toISOString(),
+    };
+    this.state.runHistory.push(record);
   }
 
   // --------------------------------------------------------------------------
@@ -393,51 +526,57 @@ export class ZZStateManager {
   // --------------------------------------------------------------------------
 
   /**
-   * Get the predicted direction based on current ZZ/Anti-ZZ state.
+   * Get the predicted direction based on pattern and CURRENT block direction.
    *
-   * ZZ: Predicts OPPOSITE of current direction (alternation continues)
-   * Anti-ZZ: Predicts SAME as current direction (alternation breaks)
+   * ZZ: Predicts OPPOSITE of current (alternation continues)
+   *     After DOWN, predict UP. After UP, predict DOWN.
    *
-   * @param currentDirection - The current run direction
-   * @returns The predicted direction, or null if ZZ is not active
+   * AntiZZ: Predicts SAME as current (alternation breaks)
+   *         After DOWN, predict DOWN. After UP, predict UP.
+   *
+   * @param currentDirection - The direction of the CURRENT/LAST block
+   * @param pattern - Optional pattern override (defaults to activePattern)
    */
-  getPredictedDirection(currentDirection: Direction): Direction | null {
-    if (!this.isSystemActive()) {
-      return null;
-    }
+  getPredictedDirection(currentDirection?: Direction, pattern?: 'ZZ' | 'AntiZZ'): Direction | null {
+    const targetPattern = pattern || this.state.activePattern;
 
-    if (this.state.currentState === 'zz_active') {
-      // ZZ predicts opposite (alternation continues)
+    // If no current direction provided, we can't predict
+    if (!currentDirection) return null;
+
+    if (targetPattern === 'ZZ') {
+      // ZZ predicts OPPOSITE of current (alternation continues)
       return (-currentDirection) as Direction;
-    } else if (this.state.currentState === 'anti_zz_active') {
-      // Anti-ZZ predicts same (alternation breaks)
+    } else if (targetPattern === 'AntiZZ') {
+      // AntiZZ predicts SAME as current (alternation breaks)
       return currentDirection;
     }
-
     return null;
   }
 
   // --------------------------------------------------------------------------
-  // PERSISTENCE
+  // BAIT-AND-SWITCH HANDLING
   // --------------------------------------------------------------------------
 
-  /**
-   * Export state for persistence
-   */
+  setBaitSwitchMode(isInBaitSwitch: boolean): void {
+    this.state.isInBaitSwitch = isInBaitSwitch;
+  }
+
+  shouldIgnoreBaitSwitch(): boolean {
+    return this.state.isInBaitSwitch;
+  }
+
+  // --------------------------------------------------------------------------
+  // PERSISTENCE & RESET
+  // --------------------------------------------------------------------------
+
   exportState(): ZZStrategyState {
     return { ...this.state };
   }
 
-  /**
-   * Import state from persistence
-   */
   importState(state: ZZStrategyState): void {
     this.state = { ...state };
   }
 
-  /**
-   * Reset all state
-   */
   reset(): void {
     this.state = createInitialZZState();
   }
@@ -446,9 +585,6 @@ export class ZZStateManager {
   // STATISTICS
   // --------------------------------------------------------------------------
 
-  /**
-   * Get ZZ strategy statistics
-   */
   getStatistics(): {
     totalRuns: number;
     zzRuns: number;
@@ -458,12 +594,8 @@ export class ZZStateManager {
     antiZZProfit: number;
     pocket1Runs: number;
     pocket2Runs: number;
-    pocket1Profit: number;
-    pocket2Profit: number;
-    firstPredictionNegativeCount: number;
   } {
     const history = this.state.runHistory;
-
     const zzRuns = history.filter(r => !r.wasAntiZZ);
     const antiZZRuns = history.filter(r => r.wasAntiZZ);
     const pocket1Runs = history.filter(r => r.pocket === 1);
@@ -478,10 +610,65 @@ export class ZZStateManager {
       antiZZProfit: antiZZRuns.reduce((sum, r) => sum + r.profit, 0),
       pocket1Runs: pocket1Runs.length,
       pocket2Runs: pocket2Runs.length,
-      pocket1Profit: pocket1Runs.reduce((sum, r) => sum + r.profit, 0),
-      pocket2Profit: pocket2Runs.reduce((sum, r) => sum + r.profit, 0),
-      firstPredictionNegativeCount: history.filter(r => r.firstPredictionNegative).length,
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // LEGACY COMPATIBILITY (DEPRECATED)
+  // --------------------------------------------------------------------------
+
+  /** @deprecated Use getActivePattern() instead */
+  getCurrentState(): 'inactive' | 'zz_active' | 'anti_zz_active' | 'suspended' {
+    if (this.state.isInBaitSwitch) return 'suspended';
+    if (this.state.activePattern === 'ZZ') return 'zz_active';
+    if (this.state.activePattern === 'AntiZZ') return 'anti_zz_active';
+    return 'inactive';
+  }
+
+  /** @deprecated Use getZZPocket() or getAntiZZPocket() instead */
+  getCurrentPocket(): ZZPocket {
+    if (this.state.activePattern === 'ZZ') return this.state.zzPocket;
+    if (this.state.activePattern === 'AntiZZ') return this.state.antiZZPocket;
+    return this.state.zzPocket;
+  }
+
+  /** @deprecated Use handleIndicator() instead */
+  startWaitingForFirstBet(blockIndex: number, indicatorDirection: Direction): void {
+    this.handleIndicator(blockIndex, indicatorDirection);
+  }
+
+  /** @deprecated Use handleIndicator() instead */
+  activateZZ(blockIndex: number, _previousRunProfit: number, indicatorDirection: Direction): void {
+    this.handleIndicator(blockIndex, indicatorDirection);
+  }
+
+  /** @deprecated Use recordZZResult() or recordAntiZZResult() instead */
+  recordPredictionResult(result: EvaluatedResult): void {
+    if (this.state.activePattern === 'ZZ') {
+      this.recordZZResult(result, result.evalIndex);
+    } else if (this.state.activePattern === 'AntiZZ') {
+      this.recordAntiZZResult(result, result.evalIndex);
+    }
+  }
+
+  /** @deprecated No longer needed - AntiZZ uses last bet only */
+  resolveZZRun(_blockIndex: number): ZZRunRecord | null {
+    return null;
+  }
+
+  /** @deprecated No longer needed - AntiZZ uses last bet only */
+  resolveAntiZZRun(_blockIndex: number): ZZRunRecord | null {
+    return null;
+  }
+
+  /** @deprecated No longer needed - AntiZZ deactivates after one bet */
+  continueAntiZZAfterWin(_indicatorDirection: Direction): void {
+    // No-op: AntiZZ deactivates after one bet per spec E.3
+  }
+
+  /** @deprecated No longer needed */
+  shouldSkipAntiZZResolution(): boolean {
+    return false;
   }
 }
 

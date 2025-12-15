@@ -1,9 +1,9 @@
 /**
- * Ghost Evaluator v15.2 - Reaction Engine
+ * Ghost Evaluator v15.3 - Reaction Engine
  * ========================================
  * Generates predictions and manages auto-betting
  *
- * v15.2 Changes:
+ * v15.3 Changes:
  * - Integrated new bucket manager methods for B&S lifecycle
  * - markSwitchStarted() called when B&S pattern plays switch
  * - recordBaitLoss() called for bait failed detection (RRR)
@@ -222,7 +222,6 @@ export class ReactionEngine {
     // === ZZ STRATEGY SPECIAL HANDLING ===
     // RULE: ZZ NEVER goes to bait-and-switch. It ignores B&S entirely.
     // During B&S, ZZ continues with main strategy patterns.
-    const isZZSystemActive = this.zzStateManager.isSystemActive();
 
     // Check if game is in bait-and-switch mode (from hostility manager)
     const isInBaitSwitch = this.hostilityManager.isLocked();
@@ -250,19 +249,13 @@ export class ReactionEngine {
           continue;
         }
 
-        // Check if ZZ is active in lifecycle (even if ZZStateManager not yet synced)
-        const zzCycle = lifecycle.getCycle('ZZ');
-        const isZZActiveInLifecycle = zzCycle?.state === 'active';
-
-        // If ZZStateManager is not active but lifecycle has active ZZ, sync it now
-        if (!isZZSystemActive && isZZActiveInLifecycle) {
-          const previousRunProfit = zzCycle?.lastRunProfit ?? 0;
-          const indicatorDirection = zzCycle?.savedIndicatorDirection ?? this.gameState.getCurrentRunDirection();
-          this.zzStateManager.activateZZ(this.gameState.getBlockCount(), previousRunProfit, indicatorDirection);
-          console.log(`[Prediction] Syncing ZZStateManager with lifecycle - ZZ now active`);
+        // If waiting for first bet evaluation, don't generate prediction yet
+        if (this.zzStateManager.isWaitingForFirstBet()) {
+          console.log(`[Prediction] ZZ waiting for first bet evaluation - skipping`);
+          continue;
         }
 
-        // Re-check after potential sync
+        // Check if ZZ system is active
         const isZZNowActive = this.zzStateManager.isSystemActive();
 
         // Use ZZ state manager for direction (not bucket system for ZZ)
@@ -271,12 +264,13 @@ export class ReactionEngine {
           const currentPocket = this.zzStateManager.getCurrentPocket();
 
           // RULE: If in Pocket 2 (last run negative), DON'T bet - just observe
-          // Only bet when in Pocket 1 OR when Anti-ZZ is active
-          if (!this.zzStateManager.shouldBet() && currentZZState !== 'anti_zz_active') {
-            console.log(`[Prediction] ZZ P${currentPocket} - observing only (last run negative), no bet`);
+          // SAME RULE for BOTH ZZ and Anti-ZZ - NO exceptions
+          if (!this.zzStateManager.shouldBet()) {
+            console.log(`[Prediction] ${currentZZState} P${currentPocket} - observing only (last run negative), no bet`);
             continue; // Skip to next pattern, don't generate ZZ prediction
           }
 
+          // Get current block direction for ZZ prediction
           const currentDirection = this.gameState.getCurrentRunDirection();
           const zzDirection = this.zzStateManager.getPredictedDirection(currentDirection);
 
@@ -606,7 +600,7 @@ export class ReactionEngine {
 
     // === ZZ STRATEGY STATE MANAGEMENT ===
     // Process ZZ-related results for first prediction evaluation and run tracking
-    this.processZZResults(blockResult.evaluatedResults, blockResult.block.index);
+    this.processZZResults(blockResult.evaluatedResults, blockResult.block);
 
     // Check for ZZ pattern detection and activation
     this.checkZZActivation(blockResult.newSignals, blockResult.block.index, lifecycle);
@@ -644,22 +638,71 @@ export class ReactionEngine {
     // Call this AFTER lifecycle has processed all results
     // NOTE: ZZ/AntiZZ are now managed by ZZStateManager, not bucket manager
     this.bucketManager.updateFromLifecycle(lifecycle, blockResult.block.index);
+
+    // === OZ B&S KILL CHECK ===
+    // Check if OZ should be killed in B&S based on run conditions
+    const runData = this.gameState.getRunData();
+    const isFlip = runData.currentLength === 1 && blockResult.block.index > 0;
+    const previousRunLength = runData.lengths.length >= 2
+      ? runData.lengths[runData.lengths.length - 2]
+      : 0;
+
+    const ozKillCheck = this.bucketManager.checkOZBnsKillConditions(
+      runData.currentLength,
+      previousRunLength,
+      isFlip,
+      blockResult.block.index
+    );
+    if (ozKillCheck?.shouldKill) {
+      this.bucketManager.killOZInBns(blockResult.block.index, ozKillCheck.reason);
+    }
+
+    // === AP5 B&S KILL CHECK ===
+    // Check if AP5 should be killed in B&S based on run conditions
+    const ap5KillCheck = this.bucketManager.checkAP5BnsKillConditions(
+      runData.currentLength,
+      previousRunLength,
+      isFlip,
+      blockResult.block.index
+    );
+    if (ap5KillCheck?.shouldKill) {
+      this.bucketManager.killAP5InBns(blockResult.block.index, ap5KillCheck.reason);
+    }
+
+    // === PP B&S KILL CHECK ===
+    // Check if PP should be killed in B&S based on run conditions
+    const ppKillCheck = this.bucketManager.checkPPBnsKillConditions(
+      runData.currentLength,
+      previousRunLength,
+      isFlip,
+      blockResult.block.index
+    );
+    if (ppKillCheck?.shouldKill) {
+      this.bucketManager.killPPInBns(blockResult.block.index, ppKillCheck.reason);
+    }
+
+    // === ST B&S KILL CHECK ===
+    // Check if ST should be killed in B&S based on run conditions
+    const stKillCheck = this.bucketManager.checkSTBnsKillConditions(
+      runData.currentLength,
+      previousRunLength,
+      isFlip,
+      blockResult.block.index
+    );
+    if (stKillCheck?.shouldKill) {
+      this.bucketManager.killSTInBns(blockResult.block.index, stKillCheck.reason);
+    }
+
     for (const result of blockResult.evaluatedResults) {
       // If pattern just broke, check its net profit
       const cycle = lifecycle.getCycle(result.pattern);
       if (cycle && cycle.state === 'observing' && result.wasBet) {
         // Pattern just broke (was active, now observing)
         this.processPatternRunCompletion(result.pattern, cycle.lastRunProfit);
-
-        // === ZZ RUN RESOLUTION ===
-        // If ZZ or AntiZZ just broke, resolve the ZZ run
-        if ((result.pattern === 'ZZ' || result.pattern === 'AntiZZ') && this.zzStateManager.isSystemActive()) {
-          const zzRunRecord = this.zzStateManager.resolveZZRun(blockResult.block.index);
-          if (zzRunRecord) {
-            console.log(`[ZZ Run] Completed: ${zzRunRecord.wasAntiZZ ? 'Anti-ZZ' : 'ZZ'} P${zzRunRecord.pocket} Profit=${zzRunRecord.profit.toFixed(0)}%`);
-          }
-        }
       }
+
+      // NOTE: ZZ/AntiZZ run resolution is handled in processZZResults()
+      // via recordZZResult() and recordAntiZZResult() - no duplicate logic needed
     }
 
     // Track whether we were locked BEFORE processing (for BSP)
@@ -751,17 +794,70 @@ export class ReactionEngine {
   // --------------------------------------------------------------------------
 
   /**
-   * Process ZZ-related evaluated results.
+   * Process ZZ-related results for a block.
    *
-   * Handles:
-   * 1. First prediction evaluation (Anti-ZZ trigger)
-   * 2. Subsequent prediction tracking
+   * CORRECT FLOW:
+   * 1. Check if waiting for imaginary first bet evaluation (ZZ was in P2)
+   * 2. If yes, evaluate imaginary first bet to determine ZZ vs AntiZZ activation
+   * 3. If ZZ already active, process results with recordZZResult()
+   * 4. If AntiZZ active, process result with recordAntiZZResult()
    *
-   * RULE: ZZ ignores bait-and-switch - no state changes during B&S
+   * KEY RULES:
+   * - ZZ ignores bait-and-switch
+   * - ZZ is CONTINUOUS (bets every block until negative result)
+   * - AntiZZ bets ONCE then waits for next indicator
+   * - First bet negative → AntiZZ activates immediately
    */
-  private processZZResults(results: EvaluatedResult[], _blockIndex: number): void {
+  private processZZResults(results: EvaluatedResult[], currentBlock: Block): void {
     // Don't process ZZ results during bait-and-switch
     if (this.hostilityManager.isLocked()) {
+      return;
+    }
+
+    const lifecycle = this.gameState.getLifecycle();
+    const blockIndex = currentBlock.index;
+
+    // === IMAGINARY FIRST BET EVALUATION (ZZ was in P2) ===
+    // This only runs when ZZ was in P2 and we're waiting for imaginary first bet
+    if (this.zzStateManager.isWaitingForFirstBet()) {
+      // Evaluate imaginary first bet with actual block direction and percentage
+      const evalResult = this.zzStateManager.evaluateImaginaryFirstBet(
+        currentBlock.dir,
+        currentBlock.pct,
+        blockIndex
+      );
+
+      if (evalResult.pattern) {
+        console.log(`[Reaction] Imaginary first bet: ${evalResult.pattern} activated`);
+        console.log(`[Reaction]   imaginaryProfit: ${evalResult.imaginaryProfit.toFixed(0)}%`);
+
+        // Sync with lifecycle
+        if (evalResult.pattern === 'AntiZZ') {
+          lifecycle.forceActivate('AntiZZ');
+          const indicatorDir = this.zzStateManager.getState().savedIndicatorDirection;
+          if (indicatorDir) {
+            lifecycle.setSavedIndicatorDirection('AntiZZ', indicatorDir);
+          }
+        } else if (evalResult.pattern === 'ZZ') {
+          lifecycle.forceActivate('ZZ');
+          const indicatorDir = this.zzStateManager.getState().savedIndicatorDirection;
+          if (indicatorDir) {
+            lifecycle.setSavedIndicatorDirection('ZZ', indicatorDir);
+          }
+        }
+      } else {
+        // Negative imaginary → AntiZZ becomes CANDIDATE (waits for NEXT indicator)
+        console.log(`[Reaction] Imaginary first bet NEGATIVE: ${evalResult.imaginaryProfit.toFixed(0)}%`);
+        console.log(`[Reaction] AntiZZ is now CANDIDATE - will play on NEXT indicator`);
+      }
+
+      // Imaginary first bet evaluation done - return
+      return;
+    }
+
+    // === PROCESS RESULTS FOR ACTIVE PATTERN ===
+    // Only process if ZZ system is active
+    if (!this.zzStateManager.isSystemActive()) {
       return;
     }
 
@@ -771,65 +867,87 @@ export class ReactionEngine {
         continue;
       }
 
-      // Only process results where a bet was placed
-      if (!result.wasBet) {
+      // Only record results that match the ACTIVE pattern
+      const activePattern = this.zzStateManager.getActivePattern();
+      if (result.pattern !== activePattern) {
         continue;
       }
 
-      // Record the prediction result in ZZ state manager
-      // This handles first prediction evaluation (Anti-ZZ trigger) automatically
-      this.zzStateManager.recordPredictionResult(result);
+      // === PROCESS ZZ RESULT ===
+      if (activePattern === 'ZZ') {
+        const zzResult = this.zzStateManager.recordZZResult(result, blockIndex);
+
+        if (zzResult.action === 'first_bet_negative') {
+          // First bet negative → AntiZZ activated
+          console.log(`[Reaction] ZZ first bet negative → AntiZZ activated`);
+          lifecycle.forceActivate('AntiZZ');
+          const indicatorDir = this.zzStateManager.getState().savedIndicatorDirection;
+          if (indicatorDir) {
+            lifecycle.setSavedIndicatorDirection('AntiZZ', indicatorDir);
+          }
+        } else if (zzResult.action === 'run_ends') {
+          // Run ended, wait for next indicator
+          console.log(`[Reaction] ZZ run ended → waiting for next indicator`);
+        }
+        // 'continue' → ZZ keeps betting (handled by predictNext)
+      }
+
+      // === PROCESS ANTIZZ RESULT ===
+      else if (activePattern === 'AntiZZ') {
+        const antiZZResult = this.zzStateManager.recordAntiZZResult(result, blockIndex);
+
+        // AntiZZ ALWAYS deactivates after one bet - waits for next indicator
+        console.log(`[Reaction] AntiZZ bet complete (${antiZZResult.didWin ? 'WIN' : 'LOSS'}) → waiting for next indicator`);
+
+        // Sync with lifecycle
+        if (!antiZZResult.didWin) {
+          // AntiZZ lost → stays in P2, ZZ activates on next indicator
+          console.log(`[Reaction] AntiZZ lost → ZZ activates on next indicator`);
+        }
+      }
     }
   }
 
   /**
-   * Check for ZZ pattern detection and activation.
+   * Check for ZZ indicator detection and handle activation.
    *
-   * Called when new signals are detected OR when lifecycle has active ZZ.
-   * Activates ZZ system if:
-   * 1. ZZ pattern is active in lifecycle OR ZZ signal detected
-   * 2. ZZ system is not already active in ZZStateManager
-   * 3. Not in bait-and-switch mode
+   * CORRECT FLOW (based on pocket):
+   * - ZZ in P1 → ZZ bets IMMEDIATELY (no waiting)
+   * - ZZ in P2 → Wait for imaginary first bet evaluation
+   *
+   * handleIndicator() does the right thing based on pocket.
    */
   private checkZZActivation(
     signals: ReturnType<GameStateEngine['addBlock']>['newSignals'],
     blockIndex: number,
-    lifecycle: ReturnType<GameStateEngine['getLifecycle']>
+    _lifecycle: ReturnType<GameStateEngine['getLifecycle']>
   ): void {
     // Don't activate ZZ during bait-and-switch
-    if (this.hostilityManager.isLocked()) {
+    if (this.hostilityManager.isLocked()) return;
+
+    // Already active or waiting - no need to start again
+    if (this.zzStateManager.isSystemActive() || this.zzStateManager.isWaitingForFirstBet()) {
       return;
     }
 
-    // Already active in ZZStateManager - no need to re-activate
-    if (this.zzStateManager.isSystemActive()) {
-      return;
-    }
-
-    // Check if ZZ is active in lifecycle (primary check)
-    const zzCycle = lifecycle.getCycle('ZZ');
-    const isZZActiveInLifecycle = zzCycle?.state === 'active';
-
-    // Also check for new ZZ signal
+    // Look for ZZ signal (indicator)
     const zzSignal = signals.find(s => s.pattern === 'ZZ');
+    if (!zzSignal) return;
 
-    // Activate if either lifecycle has active ZZ or new signal detected
-    if (!isZZActiveInLifecycle && !zzSignal) {
-      return;
+    // Get CURRENT block direction - needed for ZZ prediction (opposite of current)
+    const currentBlockDirection = this.gameState.getCurrentRunDirection();
+
+    // Handle indicator - this checks pocket and either:
+    // - ZZ in P1 → activates ZZ immediately (bets on next block)
+    // - ZZ in P2 → sets up waiting for imaginary first bet evaluation
+    this.zzStateManager.handleIndicator(blockIndex, currentBlockDirection);
+
+    const zzPocket = this.zzStateManager.getZZPocket();
+    if (zzPocket === 1) {
+      console.log(`[Reaction] ZZ indicator at block ${blockIndex} - ZZ in P1, betting immediately`);
+    } else {
+      console.log(`[Reaction] ZZ indicator at block ${blockIndex} - ZZ in P2, waiting for imaginary first bet`);
     }
-
-    // Get previous run profit from ZZ cycle
-    const previousRunProfit = zzCycle?.lastRunProfit ?? 0;
-
-    // Get indicator direction from signal or saved direction
-    const indicatorDirection = zzSignal?.indicatorDirection
-      ?? zzCycle?.savedIndicatorDirection
-      ?? this.gameState.getCurrentRunDirection();
-
-    // Activate ZZ with previous run profit and indicator direction
-    this.zzStateManager.activateZZ(blockIndex, previousRunProfit, indicatorDirection);
-
-    console.log(`[ZZ] Activated at block ${blockIndex}, Previous profit: ${previousRunProfit.toFixed(0)}%`);
   }
 
   /**
@@ -1133,6 +1251,36 @@ export class ReactionEngine {
   /**
    * Rebuild all manager states after undo operation
    * This ensures all managers are synchronized with game state
+   *
+   * ============================================================================
+   * UNDO SYNC CHECKLIST - UPDATE THIS WHEN ADDING NEW STATE/MANAGERS
+   * ============================================================================
+   * When adding new state or managers to ReactionEngine, you MUST update this
+   * function to ensure proper state rebuild after undo. Failure to do so will
+   * cause state desync bugs (e.g., false activations, stale data).
+   *
+   * Current state that gets rebuilt:
+   * 1. healthManager.reset() + replay trades + rebuildResultsState()
+   * 2. recoveryManager.reset()
+   * 3. hostilityManager.reset() + replay trades
+   * 4. zzStateManager.reset() (synced in predictNext())
+   * 5. bucketManager.rebuildFromResults() + sync lastKnownStates with lifecycle
+   * 6. consecutiveLosses - recalculated from trade history
+   * 7. cooldownRemaining - reset to 0
+   * 8. sessionStopped/sessionStopReason - recalculated from health
+   * 9. profitTracking - recalculated (AAP from lifecycle)
+   *
+   * If you add a NEW manager or state variable:
+   * - Add reset/rebuild logic here
+   * - If it depends on lifecycle state, sync AFTER bucketManager.rebuildFromResults()
+   * - If it depends on trade history, replay from this.completedTrades
+   * - If it depends on results history, use this.gameState.getResults()
+   *
+   * Related functions that may also need updates:
+   * - BucketManager.rebuildFromResults() - for bucket-related state
+   * - GameStateEngine.undoLastBlock() - for core game state
+   * - undoLastTrade() / rebuildHealthState() - for trade-related state
+   * ============================================================================
    */
   rebuildAllState(): void {
     // Reset all managers
@@ -1161,10 +1309,17 @@ export class ReactionEngine {
     for (const trade of this.completedTrades) {
       this.healthManager.updateAfterTrade(trade);
       this.hostilityManager.processTradeResult(trade);
-      if (!trade.isWin) {
+    }
+
+    // FIX BUG 6: Recalculate consecutive losses consistently (same as rebuildHealthState)
+    // Count from end, cap at 2 (cooldown trigger threshold)
+    this.consecutiveLosses = 0;
+    for (let i = this.completedTrades.length - 1; i >= 0; i--) {
+      if (!this.completedTrades[i].isWin) {
         this.consecutiveLosses++;
+        if (this.consecutiveLosses >= 2) break; // Cap at 2 for cooldown trigger
       } else {
-        this.consecutiveLosses = 0;
+        break;
       }
     }
 
@@ -1179,7 +1334,11 @@ export class ReactionEngine {
     // Calling updateFromLifecycle() would cause new pattern activations from
     // the replayed lifecycle state, which is the bug that causes 7+ patterns
     // to activate unexpectedly on undo.
-    this.bucketManager.rebuildFromResults(results);
+    //
+    // v15.5 FIX: Now passes lifecycle to sync lastKnownStates after rebuild.
+    // This prevents false activations when the next block arrives.
+    const lifecycle = this.gameState.getLifecycle();
+    this.bucketManager.rebuildFromResults(results, lifecycle);
 
     // NOTE: Do NOT trigger new cooldown here!
     // Cooldown was already reset to 0 at the start.

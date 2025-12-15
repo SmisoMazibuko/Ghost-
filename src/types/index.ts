@@ -151,6 +151,10 @@ export interface PatternCycle {
    * Whether ZZ is waiting for indicator (profitable run broke, waiting for next indicator)
    */
   waitingForIndicator?: boolean;
+  /**
+   * Whether the pattern was killed (stopped by B&S or other mechanism)
+   */
+  wasKilled?: boolean;
 }
 
 // ============================================================================
@@ -180,43 +184,91 @@ export type ZZState = 'inactive' | 'zz_active' | 'anti_zz_active' | 'suspended';
 
 /**
  * Complete ZZ strategy session state
+ *
+ * NEW DESIGN: ZZ and AntiZZ are tracked SEPARATELY, each with their own pocket.
+ * - Pocket 1 = Active (betting)
+ * - Pocket 2 = Inactive (observing)
+ * - Only ONE pattern can be in Pocket 1 at a time (they are opposites)
+ * - BOTH can be in Pocket 2 (neither active)
+ */
+/**
+ * ZZ Strategy State - STRICT POCKET SYSTEM (v16.0)
+ *
+ * See docs/POCKET-SYSTEM-SPEC.md for authoritative rules.
+ *
+ * KEY INVARIANTS:
+ * - runProfitZZ is ALWAYS updated on every indicator (even imaginary)
+ * - AntiZZ has NO runProfit - uses lastBetOutcome only
+ * - AntiZZ waits for NEXT indicator after becoming candidate
  */
 export interface ZZStrategyState {
-  /** Current ZZ state machine state */
-  currentState: ZZState;
+  // === ZZ Pattern State ===
+  /** ZZ's current pocket (1 = active/bet, 2 = inactive/observe) */
+  zzPocket: ZZPocket;
+  /** ZZ's current run profit accumulator */
+  zzCurrentRunProfit: number;
+  /** Whether ZZ's first bet has been evaluated this run */
+  zzFirstBetEvaluated: boolean;
 
-  /** Current pocket assignment (1 or 2) */
-  currentPocket: ZZPocket;
+  // === AntiZZ Pattern State ===
+  /** AntiZZ's current pocket (1 = active/bet, 2 = inactive/observe) */
+  antiZZPocket: ZZPocket;
+  /**
+   * AntiZZ's last bet outcome (NOT cumulative - single bet only)
+   * Used to determine pocket: positive = stay P1, negative = move to P2
+   */
+  antiZZLastBetOutcome: number | null;
+  /**
+   * Whether AntiZZ is a candidate waiting to activate on NEXT indicator.
+   * When true, AntiZZ will play on the next indicator (not immediate).
+   */
+  antiZZIsCandidate: boolean;
 
-  /** Previous ZZ run profit (used for pocket assignment) */
-  previousRunProfit: number;
+  // === Active Pattern Tracking ===
+  /** Which pattern is currently active/betting (null = neither) */
+  activePattern: 'ZZ' | 'AntiZZ' | null;
 
-  /** Whether the first prediction of current run was negative (triggers Anti-ZZ) */
-  firstPredictionNegative: boolean;
-
-  /** Whether first prediction has been evaluated for this run */
-  firstPredictionEvaluated: boolean;
-
-  /** Current run profit accumulator */
-  currentRunProfit: number;
-
-  /** Number of predictions made in current run */
-  currentRunPredictions: number;
-
+  // === Shared State ===
   /** Saved indicator direction from last ZZ trigger */
   savedIndicatorDirection: Direction | null;
-
-  /** Block index when ZZ was last activated */
+  /**
+   * INVARIANT: runProfitZZ is ALWAYS updated on every indicator.
+   * This includes imaginary first bets when ZZ is in P2.
+   * Used to determine ZZ pocket: >0 = P1, <=0 = P2
+   */
+  runProfitZZ: number;
+  /** Block index when current pattern was activated */
   activationBlockIndex: number;
-
-  /** Block index when Anti-ZZ was activated (if applicable) */
-  antiZZActivationBlockIndex: number;
-
   /** Whether game is currently in bait-and-switch mode */
   isInBaitSwitch: boolean;
-
-  /** History of ZZ runs for analysis */
+  /** History of ZZ/AntiZZ runs for analysis */
   runHistory: ZZRunRecord[];
+  /** Movement history for UI display */
+  movementHistory: ZZMovementRecord[];
+
+  // === First Bet Evaluation State ===
+  /** Whether we're waiting for first bet evaluation after indicator */
+  waitingForFirstBet: boolean;
+  /** Block index where first bet should be evaluated */
+  firstBetBlockIndex: number;
+}
+
+/**
+ * Record of ZZ/Anti-ZZ pocket movement for UI display
+ */
+export interface ZZMovementRecord {
+  /** Block index when movement occurred */
+  blockIndex: number;
+  /** Pattern that moved (ZZ or AntiZZ) */
+  pattern: 'ZZ' | 'AntiZZ';
+  /** Previous pocket before movement */
+  fromPocket: ZZPocket;
+  /** New pocket after movement */
+  toPocket: ZZPocket;
+  /** Run profit that caused the movement */
+  triggerProfit: number;
+  /** Timestamp */
+  ts: string;
 }
 
 /**
