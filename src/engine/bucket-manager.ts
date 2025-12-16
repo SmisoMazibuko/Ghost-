@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.2 - 3-Bucket System with Corrected B&S Lifecycle
+ * Ghost Evaluator v15.4 - 3-Bucket System with Corrected B&S Lifecycle
  * =====================================================================
  * Classifies patterns into buckets based on lifecycle state:
  *
@@ -16,11 +16,14 @@
  *    - R (making RRR) → BAIT FAILED → WAITING
  * 4. Play SWITCH (inverse bet)
  * 5. SWITCH result determines next bucket:
- *    - WIN → Stay in BNS, wait for next bait
+ *    - WIN → Stay in BNS, wait for NEXT FLIP, then look for bait again
  *    - LOSE <70% → WAITING (soft exit)
  *    - LOSE ≥70% → MAIN (B&S invalidated, hard exit)
  * 6. If 2+ consecutive Anti2A2 wins while waiting → WAITING (not stay broken)
  * 7. Anti2A2 unblocked, checks accumulated profit for MAIN activation
+ *
+ * v15.4 FIX: After switch WIN, pattern waits for NEXT FLIP before looking for bait.
+ * This prevents false kills when the run continues after the switch flip.
  *
  * Blocked Pattern Accumulation:
  * - While blocked, opposite pattern still accumulates profit
@@ -56,6 +59,85 @@ export interface BnsPatternState {
   switchPlayed: boolean;
   /** Profit from the switch trade (to determine exit bucket) */
   switchProfit: number;
+}
+
+/**
+ * OZ-specific B&S state tracking
+ *
+ * OZ BAIT pattern: [3+ run] → [single opposite] → [3+ flip back]
+ *
+ * OZ in B&S kill conditions:
+ * 1. Waiting for bait: expected single opposite, but got >=2 (no bait) -> KILL
+ * 2. After bait (single confirmed): flip back < 3 -> KILL
+ */
+export interface OZBnsState {
+  /** Whether we need to wait for the first flip after entering B&S */
+  waitingForFirstFlip: boolean;
+  /** Whether waiting for single (bait) after the first flip */
+  waitingForSingle: boolean;
+  /** Whether bait (single) was confirmed - now waiting for flip back */
+  baitConfirmed: boolean;
+  /** Block index when last switch was played */
+  lastSwitchBlock: number;
+}
+
+/**
+ * AP5-specific B&S state tracking
+ *
+ * AP5 BAIT pattern: [2+ setup] → [3+ opposite] → [flip]
+ *
+ * AP5 in B&S kill conditions:
+ * 1. Waiting for bait: expected 3+ opposite, but got <3 before flip (no bait)
+ * 2. After bait (3+ opposite confirmed): flip back < 3
+ */
+export interface AP5BnsState {
+  /** Whether we need to wait for the first flip after entering B&S */
+  waitingForFirstFlip: boolean;
+  /** Whether we're in the setup phase (waiting for 2+ same direction) */
+  waitingForSetup: boolean;
+  /** Whether we're waiting for 3+ opposite (bait formation) */
+  waitingForBait: boolean;
+  /** Whether bait (3+ opposite) was confirmed - now waiting for flip back */
+  baitConfirmed: boolean;
+  /** Current run length being monitored */
+  currentMonitoredRunLength: number;
+  /** Block index when last switch was played */
+  lastSwitchBlock: number;
+}
+
+/**
+ * PP-specific B&S state tracking
+ *
+ * PP pattern: alternating doubles (GRGGRGGRGGRGG = 1,1,2,1,2,1,2...)
+ *
+ * PP in B&S kill conditions:
+ * 1. After double (2), flip back is single (1) instead of double (2) -> KILL
+ * 2. Run exceeds 2 (reaches 3+) - no flip at 2 = no switch -> KILL
+ */
+export interface PPBnsState {
+  /** Whether we need to wait for the first flip after entering B&S */
+  waitingForFirstFlip: boolean;
+  /** Whether waiting for switch opportunity (run should stay at 2 then flip) */
+  waitingForSwitch: boolean;
+  /** Previous run length (to check flip back rule) */
+  previousRunLength: number;
+  /** Block index when last switch was played */
+  lastSwitchBlock: number;
+}
+
+/**
+ * ST-specific B&S state tracking
+ *
+ * ST pattern: alternating doubles (2-2-2-2...)
+ *
+ * ST in B&S kill conditions:
+ * 1. Run reaches 3+ (exits 2A2 rhythm) -> KILL
+ */
+export interface STBnsState {
+  /** Whether we need to wait for the first flip after entering B&S */
+  waitingForFirstFlip: boolean;
+  /** Block index when last switch was played */
+  lastSwitchBlock: number;
 }
 
 /** Pattern bucket state - derived from lifecycle */
@@ -119,6 +201,18 @@ export class BucketManager {
 
   // Track accumulated profit for blocked patterns (for activation check when unblocked)
   private blockedAccumulation: Map<PatternName, number>;
+
+  // OZ-specific B&S state tracking
+  private ozBnsState: OZBnsState | null = null;
+
+  // AP5-specific B&S state tracking
+  private ap5BnsState: AP5BnsState | null = null;
+
+  // PP-specific B&S state tracking
+  private ppBnsState: PPBnsState | null = null;
+
+  // ST-specific B&S state tracking
+  private stBnsState: STBnsState | null = null;
 
   constructor(config?: Partial<BucketConfig>) {
     this.config = { ...DEFAULT_BUCKET_CONFIG, ...config };
@@ -193,6 +287,17 @@ export class BucketManager {
       switchProfit: 0,
     };
     this.bnsStates.set(pattern, bnsState);
+
+    // Initialize pattern-specific B&S state tracking
+    if (pattern === 'OZ') {
+      this.initializeOZBnsState(blockIndex);
+    } else if (pattern === 'AP5') {
+      this.initializeAP5BnsState(blockIndex);
+    } else if (pattern === 'PP') {
+      this.initializePPBnsState(blockIndex);
+    } else if (pattern === 'ST') {
+      this.initializeSTBnsState(blockIndex);
+    }
 
     // Block the opposite pattern
     const opposite = this.getOppositePattern(pattern);
@@ -369,6 +474,57 @@ export class BucketManager {
   }
 
   /**
+   * Record an imaginary result for a blocked pattern.
+   * This is called for patterns that are blocked by their opposite being in B&S.
+   *
+   * When the blocked pattern gets an imaginary WIN, it counts towards killing
+   * the opposite's B&S. After consecutiveWinsToBreakBns imaginary wins,
+   * the opposite B&S is killed → WAITING.
+   *
+   * @param pattern - The blocked pattern that got an imaginary result
+   * @param isWin - Whether the imaginary result was a win
+   * @param blockIndex - Current block index
+   * @returns true if the opposite B&S was killed
+   */
+  recordBlockedPatternResult(pattern: PatternName, isWin: boolean, blockIndex: number): boolean {
+    // Skip ZZ/AntiZZ
+    if (pattern === 'ZZ' || pattern === 'AntiZZ') return false;
+
+    // Only process if this pattern is actually blocked
+    if (!this.isBlockedByOpposite(pattern)) return false;
+
+    const opposite = this.getOppositePattern(pattern);
+    if (!opposite) return false;
+
+    // Verify opposite is in B&S
+    const oppositeBucket = this.patternBuckets.get(opposite);
+    const oppositeBnsState = this.bnsStates.get(opposite);
+    if (oppositeBucket !== 'BNS' || !oppositeBnsState) return false;
+
+    if (isWin) {
+      // Blocked pattern got an imaginary win - increment consecutive wins counter
+      const currentCount = this.consecutiveOppositeWins.get(opposite) ?? 0;
+      const newCount = currentCount + 1;
+      this.consecutiveOppositeWins.set(opposite, newCount);
+
+      console.log(`[Bucket] ${pattern} (blocked) imaginary WIN - ${opposite} B&S consecutive: ${newCount}/${this.config.consecutiveWinsToBreakBns}`);
+
+      // Check if B&S should be killed
+      if (newCount >= this.config.consecutiveWinsToBreakBns) {
+        console.log(`[Bucket] ${opposite} B&S KILLED by ${newCount} consecutive ${pattern} imaginary wins`);
+        this.exitBnsToWaiting(opposite, blockIndex, `${newCount} consecutive ${pattern} imaginary wins`);
+        return true;
+      }
+    } else {
+      // Blocked pattern got an imaginary loss - reset consecutive counter
+      this.consecutiveOppositeWins.set(opposite, 0);
+      console.log(`[Bucket] ${pattern} (blocked) imaginary LOSS - ${opposite} B&S consecutive reset to 0`);
+    }
+
+    return false;
+  }
+
+  /**
    * Get accumulated profit for a blocked pattern
    */
   getBlockedAccumulation(pattern: PatternName): number {
@@ -383,23 +539,41 @@ export class BucketManager {
   }
 
   /**
-   * Check if an unblocked pattern should immediately activate in MAIN
-   * Called when opposite exits B&S and unblocks this pattern
+   * Check if an unblocked pattern should immediately activate in MAIN.
+   * Called when opposite exits B&S and unblocks this pattern.
+   *
+   * IMPORTANT: If the pattern has accumulated enough profit (≥70% single or ≥100% cumulative),
+   * it MUST activate to MAIN immediately in the SAME BLOCK - not wait for next block.
+   * This is the kill switch rule: when B&S is killed, opposite activates immediately if ready.
+   *
+   * @param pattern - The pattern that was just unblocked
+   * @param blockIndex - Current block index
+   * @returns true if pattern was immediately activated to MAIN
    */
-  private checkUnblockedActivation(pattern: PatternName, _blockIndex: number): void {
+  private checkUnblockedActivation(pattern: PatternName, blockIndex: number): boolean {
     const accumulated = this.blockedAccumulation.get(pattern) ?? 0;
+    const currentBucket = this.patternBuckets.get(pattern);
 
-    // Check if accumulated profit meets threshold for activation
+    // Check if accumulated profit meets threshold for IMMEDIATE activation
     if (accumulated >= this.config.singleBaitThreshold) {
-      console.log(`[Bucket] ${pattern} unblocked with ${accumulated.toFixed(0)}% accumulated → ready for MAIN activation`);
-      // Pattern will activate on next formation detection via lifecycle
-      // The accumulated profit indicates it should activate immediately when formation appears
+      // Pattern has ≥70% accumulated - IMMEDIATELY activate to MAIN
+      if (currentBucket !== 'MAIN') {
+        this.recordBucketChange(pattern, currentBucket!, 'MAIN', blockIndex,
+          `Immediate activation: ${accumulated.toFixed(0)}% accumulated while blocked`);
+        this.patternBuckets.set(pattern, 'MAIN');
+      }
+      console.log(`[Bucket] ${pattern} IMMEDIATELY ACTIVATED to MAIN (${accumulated.toFixed(0)}% accumulated while blocked)`);
+
+      // Reset accumulation after activation
+      this.resetBlockedAccumulation(pattern);
+      return true;
     } else if (accumulated > 0) {
-      console.log(`[Bucket] ${pattern} unblocked with ${accumulated.toFixed(0)}% accumulated (below ${this.config.singleBaitThreshold}% threshold)`);
+      console.log(`[Bucket] ${pattern} unblocked with ${accumulated.toFixed(0)}% accumulated (below ${this.config.singleBaitThreshold}% threshold) - stays WAITING`);
     }
 
     // Reset accumulation after check (will start fresh)
     this.resetBlockedAccumulation(pattern);
+    return false;
   }
 
   // --------------------------------------------------------------------------
@@ -492,19 +666,437 @@ export class BucketManager {
   /**
    * Mark switch trade completed - B&S pattern should break and wait for next bait
    */
-  markSwitchCompleted(pattern: PatternName, _isWin: boolean, _profit: number, _blockIndex: number): void {
+  markSwitchCompleted(pattern: PatternName, _isWin: boolean, _profit: number, blockIndex: number): void {
     const bnsState = this.bnsStates.get(pattern);
     if (!bnsState) return;
 
     // Reset bait confirmation (need new bait for next switch)
     bnsState.baitConfirmed = false;
     bnsState.cumulativeBaitProfit = 0;
+    bnsState.switchPlayed = false;  // Reset switch flag for next cycle
+
+    // Sync pattern-specific state - after switch completes, wait for NEXT flip before looking for bait
+    // The switch is played AT the flip, so we need to wait for the subsequent flip
+    // to start the new bait detection cycle
+    // Also update lastSwitchBlock so kill checks skip this block
+    if (pattern === 'OZ' && this.ozBnsState) {
+      this.ozBnsState.baitConfirmed = false;
+      this.ozBnsState.waitingForFirstFlip = true;  // Wait for next flip before looking for single (bait)
+      this.ozBnsState.waitingForSingle = false;    // Not yet looking for single
+      this.ozBnsState.lastSwitchBlock = blockIndex;  // Skip kill checks for this block
+      console.log(`[OZ B&S] Switch completed at block ${blockIndex} - waiting for next flip`);
+    } else if (pattern === 'AP5' && this.ap5BnsState) {
+      this.ap5BnsState.baitConfirmed = false;
+      this.ap5BnsState.waitingForSetup = true;  // Ready for setup (no kill condition in this state)
+      this.ap5BnsState.lastSwitchBlock = blockIndex;
+    } else if (pattern === 'PP' && this.ppBnsState) {
+      this.ppBnsState.lastSwitchBlock = blockIndex;
+    } else if (pattern === 'ST' && this.stBnsState) {
+      this.stBnsState.lastSwitchBlock = blockIndex;
+    }
 
     // If switch won, stay in B&S waiting for next bait
     // If switch lost big (70%+), flip to MAIN (handled by updateFromLifecycle)
     // If switch lost small, stay in B&S
 
-    console.log(`[Bucket] ${pattern} SWITCH completed - waiting for next bait`);
+    console.log(`[Bucket] ${pattern} SWITCH completed at block ${blockIndex} - waiting for next bait`);
+  }
+
+  // --------------------------------------------------------------------------
+  // OZ-SPECIFIC B&S STATE TRACKING
+  // --------------------------------------------------------------------------
+
+  initializeOZBnsState(blockIndex: number): void {
+    this.ozBnsState = {
+      waitingForFirstFlip: true,
+      waitingForSingle: false,
+      baitConfirmed: false,
+      lastSwitchBlock: blockIndex,
+    };
+    console.log(`[OZ B&S] Initialized - waiting for bait (single)`);
+  }
+
+  checkOZBnsKillConditions(
+    currentRunLength: number,
+    previousRunLength: number,
+    isFlip: boolean,
+    blockIndex: number
+  ): { shouldKill: boolean; reason: string } | null {
+    const ozBucket = this.patternBuckets.get('OZ');
+    if (ozBucket !== 'BNS' || !this.ozBnsState) return null;
+
+    const state = this.ozBnsState;
+    if (blockIndex <= state.lastSwitchBlock) return { shouldKill: false, reason: '' };
+
+    if (state.waitingForFirstFlip) {
+      if (isFlip) {
+        state.waitingForFirstFlip = false;
+        state.waitingForSingle = true;
+        console.log('[OZ B&S] First flip detected - now waiting for single (bait)');
+      }
+      return { shouldKill: false, reason: '' };
+    }
+
+    if (state.waitingForSingle && currentRunLength >= 2) {
+      return { shouldKill: true, reason: `Expected single (bait), but run reached ${currentRunLength} (no bait)` };
+    }
+
+    if (state.waitingForSingle && isFlip && previousRunLength === 1) {
+      state.waitingForSingle = false;
+      state.baitConfirmed = true;
+      console.log('[OZ B&S] Bait confirmed (single) - now waiting for flip back >= 3');
+      return { shouldKill: false, reason: '' };
+    }
+
+    if (state.baitConfirmed && isFlip && previousRunLength < 3) {
+      return { shouldKill: true, reason: `Flip back was ${previousRunLength} (< 3) after bait` };
+    }
+
+    if (state.baitConfirmed && isFlip && previousRunLength >= 3) {
+      // Switch will be played at this flip - don't immediately look for single
+      // Wait for the NEXT flip before starting bait detection again
+      state.baitConfirmed = false;
+      state.waitingForFirstFlip = true;  // Wait for next flip
+      state.waitingForSingle = false;    // Not yet looking for single
+      console.log('[OZ B&S] Flip back >= 3 - switch opportunity, waiting for next flip');
+    }
+
+    return { shouldKill: false, reason: '' };
+  }
+
+  markOZSwitchPlayed(blockIndex: number): void {
+    if (!this.ozBnsState) this.initializeOZBnsState(blockIndex);
+    this.ozBnsState!.waitingForFirstFlip = true;
+    this.ozBnsState!.waitingForSingle = false;
+    this.ozBnsState!.baitConfirmed = false;
+    this.ozBnsState!.lastSwitchBlock = blockIndex;
+    console.log(`[OZ B&S] Switch played at block ${blockIndex}`);
+  }
+
+  markOZBaitDetected(): void {
+    if (!this.ozBnsState) return;
+    this.ozBnsState.waitingForSingle = false;
+    this.ozBnsState.baitConfirmed = true;
+    console.log(`[OZ B&S] Bait detected (single)`);
+  }
+
+  killOZInBns(blockIndex: number, reason: string): void {
+    if (this.patternBuckets.get('OZ') !== 'BNS') return;
+    console.log(`[OZ B&S] KILL OZ - ${reason}`);
+    this.exitBnsToWaiting('OZ', blockIndex, `OZ killed: ${reason}`);
+    this.ozBnsState = null;
+  }
+
+  getOZBnsState(): OZBnsState | null {
+    return this.ozBnsState;
+  }
+
+  resetOZBnsState(): void {
+    this.ozBnsState = null;
+  }
+
+  // --------------------------------------------------------------------------
+  // AP5-SPECIFIC B&S STATE TRACKING
+  // --------------------------------------------------------------------------
+
+  initializeAP5BnsState(blockIndex: number): void {
+    this.ap5BnsState = {
+      waitingForFirstFlip: true,
+      waitingForSetup: false,
+      waitingForBait: false,
+      baitConfirmed: false,
+      currentMonitoredRunLength: 0,
+      lastSwitchBlock: blockIndex,
+    };
+    console.log(`[AP5 B&S] Initialized - waiting for bait (2+ → 3+ → flip)`);
+  }
+
+  /**
+   * Check AP5 B&S kill conditions based on run data
+   * Returns: { shouldKill: boolean, reason: string } or null if AP5 not in B&S
+   *
+   * AP5 BAIT pattern: [2+ setup] → [3+ opposite] → [flip]
+   *
+   * Kill conditions:
+   * 1. Waiting for bait: expected 3+ opposite, but got <3 before flip (no bait)
+   * 2. After bait (3+ opposite confirmed): flip back < 3
+   */
+  checkAP5BnsKillConditions(
+    currentRunLength: number,
+    previousRunLength: number,
+    isFlip: boolean,
+    blockIndex: number
+  ): { shouldKill: boolean; reason: string } | null {
+    const ap5Bucket = this.patternBuckets.get('AP5');
+    if (ap5Bucket !== 'BNS' || !this.ap5BnsState) return null;
+
+    const state = this.ap5BnsState;
+    if (blockIndex <= state.lastSwitchBlock) return { shouldKill: false, reason: '' };
+
+    // Wait for the first flip after entering B&S
+    if (state.waitingForFirstFlip) {
+      if (isFlip) {
+        state.waitingForFirstFlip = false;
+        state.waitingForSetup = true;
+        console.log('[AP5 B&S] First flip detected - now waiting for setup (2+)');
+      }
+      return { shouldKill: false, reason: '' };
+    }
+
+    // Phase 1: Waiting for setup (2+ same direction)
+    if (state.waitingForSetup) {
+      if (currentRunLength >= 2) {
+        // Setup complete (2+ same direction), now wait for 3+ opposite
+        state.waitingForSetup = false;
+        state.waitingForBait = true;
+        state.currentMonitoredRunLength = 0;
+        console.log(`[AP5 B&S] Setup detected (${currentRunLength}+) - now waiting for 3+ opposite`);
+      }
+      // Keep waiting for setup
+      return { shouldKill: false, reason: '' };
+    }
+
+    // Phase 2: Waiting for bait (3+ opposite)
+    if (state.waitingForBait) {
+      state.currentMonitoredRunLength = currentRunLength;
+
+      // Kill Condition 1: Flip happens before reaching 3
+      if (isFlip && previousRunLength < 3) {
+        return {
+          shouldKill: true,
+          reason: `Expected 3+ opposite (bait), but flipped at ${previousRunLength} (no bait)`,
+        };
+      }
+
+      // Check if 3+ reached - bait confirmed
+      if (currentRunLength >= 3) {
+        state.waitingForBait = false;
+        state.baitConfirmed = true;
+        console.log(`[AP5 B&S] Bait confirmed (3+ opposite: ${currentRunLength}) - now waiting for flip back >= 3`);
+      }
+
+      return { shouldKill: false, reason: '' };
+    }
+
+    // Phase 3: Bait confirmed, waiting for flip back >= 3
+    if (state.baitConfirmed) {
+      // Kill Condition 2: Flip back < 3
+      if (isFlip && previousRunLength < 3) {
+        return {
+          shouldKill: true,
+          reason: `Flip back was ${previousRunLength} (< 3) after bait`,
+        };
+      }
+
+      // Successful flip back >= 3 - reset for next bait cycle
+      if (isFlip && previousRunLength >= 3) {
+        state.baitConfirmed = false;
+        state.waitingForSetup = true;
+        state.currentMonitoredRunLength = 0;
+        console.log('[AP5 B&S] Flip back >= 3 - reset, waiting for next bait');
+      }
+    }
+
+    return { shouldKill: false, reason: '' };
+  }
+
+  markAP5SwitchPlayed(blockIndex: number): void {
+    if (!this.ap5BnsState) this.initializeAP5BnsState(blockIndex);
+    this.ap5BnsState!.waitingForFirstFlip = true;
+    this.ap5BnsState!.waitingForSetup = false;
+    this.ap5BnsState!.waitingForBait = false;
+    this.ap5BnsState!.baitConfirmed = false;
+    this.ap5BnsState!.currentMonitoredRunLength = 0;
+    this.ap5BnsState!.lastSwitchBlock = blockIndex;
+    console.log(`[AP5 B&S] Switch played at block ${blockIndex}`);
+  }
+
+  markAP5BaitDetected(): void {
+    if (!this.ap5BnsState) return;
+    this.ap5BnsState.waitingForBait = false;
+    this.ap5BnsState.baitConfirmed = true;
+    console.log(`[AP5 B&S] Bait detected (3+ opposite)`);
+  }
+
+  killAP5InBns(blockIndex: number, reason: string): void {
+    if (this.patternBuckets.get('AP5') !== 'BNS') return;
+    console.log(`[AP5 B&S] KILL AP5 - ${reason}`);
+    this.exitBnsToWaiting('AP5', blockIndex, `AP5 killed: ${reason}`);
+    this.ap5BnsState = null;
+  }
+
+  getAP5BnsState(): AP5BnsState | null {
+    return this.ap5BnsState;
+  }
+
+  resetAP5BnsState(): void {
+    this.ap5BnsState = null;
+  }
+
+  // --------------------------------------------------------------------------
+  // PP-SPECIFIC B&S STATE TRACKING
+  // --------------------------------------------------------------------------
+
+  initializePPBnsState(blockIndex: number): void {
+    this.ppBnsState = {
+      waitingForFirstFlip: true,
+      waitingForSwitch: false,
+      previousRunLength: 0,
+      lastSwitchBlock: blockIndex,
+    };
+    console.log(`[PP B&S] Initialized - waiting for bait (double pattern)`);
+  }
+
+  /**
+   * Check PP B&S kill conditions based on run data
+   * Returns: { shouldKill: boolean, reason: string } or null if PP not in B&S
+   *
+   * PP pattern: alternating doubles (1,2,1,2,1,2...)
+   *
+   * Kill conditions:
+   * 1. After double (2), flip back is single (1) instead of double (2)
+   * 2. Run exceeds 2 (reaches 3+) - no flip at 2 = no switch
+   */
+  checkPPBnsKillConditions(
+    currentRunLength: number,
+    previousRunLength: number,
+    isFlip: boolean,
+    blockIndex: number
+  ): { shouldKill: boolean; reason: string } | null {
+    const ppBucket = this.patternBuckets.get('PP');
+    if (ppBucket !== 'BNS' || !this.ppBnsState) return null;
+
+    const state = this.ppBnsState;
+    if (blockIndex <= state.lastSwitchBlock) return { shouldKill: false, reason: '' };
+
+    // Wait for the first flip after entering B&S
+    if (state.waitingForFirstFlip) {
+      if (isFlip) {
+        state.waitingForFirstFlip = false;
+        state.waitingForSwitch = true;
+        state.previousRunLength = previousRunLength;
+        console.log(`[PP B&S] First flip detected (prev run: ${previousRunLength}) - now monitoring PP rhythm`);
+      }
+      return { shouldKill: false, reason: '' };
+    }
+
+    // Kill Condition 2: Run exceeds 2 (reaches 3+) - no switch opportunity
+    if (currentRunLength >= 3) {
+      return {
+        shouldKill: true,
+        reason: `Run reached ${currentRunLength} (>2) - exited PP rhythm, no switch`,
+      };
+    }
+
+    // Kill Condition 2: Two singles in a row (1-1) - PP rhythm broken
+    // PP expects alternating 1-2-1-2... pattern, two singles means expected double didn't happen
+    if (currentRunLength === 1 && previousRunLength === 1) {
+      return {
+        shouldKill: true,
+        reason: `Two singles in a row - PP rhythm broken (expected double after single)`,
+      };
+    }
+
+    return { shouldKill: false, reason: '' };
+  }
+
+  markPPSwitchPlayed(blockIndex: number): void {
+    if (!this.ppBnsState) this.initializePPBnsState(blockIndex);
+    this.ppBnsState!.waitingForFirstFlip = true;
+    this.ppBnsState!.waitingForSwitch = false;
+    this.ppBnsState!.previousRunLength = 0;
+    this.ppBnsState!.lastSwitchBlock = blockIndex;
+    console.log(`[PP B&S] Switch played at block ${blockIndex}`);
+  }
+
+  killPPInBns(blockIndex: number, reason: string): void {
+    if (this.patternBuckets.get('PP') !== 'BNS') return;
+    console.log(`[PP B&S] KILL PP - ${reason}`);
+    this.exitBnsToWaiting('PP', blockIndex, `PP killed: ${reason}`);
+    this.ppBnsState = null;
+  }
+
+  getPPBnsState(): PPBnsState | null {
+    return this.ppBnsState;
+  }
+
+  resetPPBnsState(): void {
+    this.ppBnsState = null;
+  }
+
+  // --------------------------------------------------------------------------
+  // ST-SPECIFIC B&S STATE TRACKING
+  // --------------------------------------------------------------------------
+
+  initializeSTBnsState(blockIndex: number): void {
+    this.stBnsState = {
+      waitingForFirstFlip: true,
+      lastSwitchBlock: blockIndex,
+    };
+    console.log(`[ST B&S] Initialized - waiting for bait (2A2 pattern)`);
+  }
+
+  /**
+   * Check ST B&S kill conditions based on run data
+   * Returns: { shouldKill: boolean, reason: string } or null if ST not in B&S
+   *
+   * ST pattern: alternating doubles (2-2-2-2...)
+   *
+   * Kill conditions:
+   * 1. Run reaches 3+ (exits 2A2 rhythm) -> KILL
+   */
+  checkSTBnsKillConditions(
+    currentRunLength: number,
+    _previousRunLength: number,
+    isFlip: boolean,
+    blockIndex: number
+  ): { shouldKill: boolean; reason: string } | null {
+    const stBucket = this.patternBuckets.get('ST');
+    if (stBucket !== 'BNS' || !this.stBnsState) return null;
+
+    const state = this.stBnsState;
+    if (blockIndex <= state.lastSwitchBlock) return { shouldKill: false, reason: '' };
+
+    // Wait for the first flip after entering B&S
+    if (state.waitingForFirstFlip) {
+      if (isFlip) {
+        state.waitingForFirstFlip = false;
+        console.log(`[ST B&S] First flip detected - now monitoring 2A2 rhythm`);
+      }
+      return { shouldKill: false, reason: '' };
+    }
+
+    // Kill Condition: Run reaches 3+ (exits 2A2 rhythm)
+    if (currentRunLength >= 3) {
+      return {
+        shouldKill: true,
+        reason: `Run reached ${currentRunLength} - exited 2A2 rhythm`,
+      };
+    }
+
+    return { shouldKill: false, reason: '' };
+  }
+
+  markSTSwitchPlayed(blockIndex: number): void {
+    if (!this.stBnsState) this.initializeSTBnsState(blockIndex);
+    this.stBnsState!.waitingForFirstFlip = true;
+    this.stBnsState!.lastSwitchBlock = blockIndex;
+    console.log(`[ST B&S] Switch played at block ${blockIndex}`);
+  }
+
+  killSTInBns(blockIndex: number, reason: string): void {
+    if (this.patternBuckets.get('ST') !== 'BNS') return;
+    console.log(`[ST B&S] KILL ST - ${reason}`);
+    this.exitBnsToWaiting('ST', blockIndex, `ST killed: ${reason}`);
+    this.stBnsState = null;
+  }
+
+  getSTBnsState(): STBnsState | null {
+    return this.stBnsState;
+  }
+
+  resetSTBnsState(): void {
+    this.stBnsState = null;
   }
 
   // --------------------------------------------------------------------------
@@ -868,6 +1460,11 @@ export class BucketManager {
   reset(): void {
     this.initializePatterns();
     this.bnsStates.clear();
+    // Reset pattern-specific B&S states
+    this.ozBnsState = null;
+    this.ap5BnsState = null;
+    this.ppBnsState = null;
+    this.stBnsState = null;
   }
 
   /**
@@ -887,7 +1484,7 @@ export class BucketManager {
    * Rebuild bucket state from evaluation results history.
    * This is called after undo to restore correct bucket positions.
    *
-   * Updated Logic (v15.2):
+   * Updated Logic (v15.3):
    * - All patterns start in WAITING
    * - MAIN breaks with ≤-70% → BNS
    * - MAIN breaks with >-70% → WAITING
@@ -895,11 +1492,47 @@ export class BucketManager {
    * - BNS switch loses <70% → WAITING
    * - BNS switch loses ≥70% → MAIN (B&S invalidated)
    * - 2+ consecutive opposite wins → WAITING (not stay broken in BNS)
+   *
+   * v15.5 FIX: Now accepts lifecycle parameter to sync lastKnownStates
+   * and properly resets pattern-specific BNS states.
+   *
+   * ============================================================================
+   * UNDO SYNC CHECKLIST - UPDATE THIS WHEN ADDING NEW BUCKET STATE
+   * ============================================================================
+   * When adding new state to BucketManager, you MUST update this function.
+   *
+   * Current state that gets reset/rebuilt:
+   * 1. patternBuckets - via initializePatterns(), then rebuilt from results
+   * 2. bucketHistory - via initializePatterns()
+   * 3. lastKnownStates - via initializePatterns(), then SYNCED with lifecycle at end
+   * 4. bnsStates - cleared, rebuilt when entering BNS
+   * 5. consecutiveOppositeWins - via initializePatterns(), rebuilt from imaginary wins
+   * 6. oppositeBlocked - via initializePatterns(), set by enterBnsMode()
+   * 7. blockedAccumulation - via initializePatterns() (NOTE: not rebuilt from history)
+   * 8. ozBnsState/ap5BnsState/ppBnsState/stBnsState - reset to null, rebuilt by enterBnsMode()
+   *
+   * v15.6 FIX: Now tracks imaginary wins for blocked patterns (wasBet === false).
+   * When a blocked pattern gets consecutive imaginary wins, it kills the opposite B&S.
+   *
+   * If you add NEW state:
+   * - Reset it at the start (either here or ensure initializePatterns() handles it)
+   * - If it needs rebuilding from results, add logic in the results loop
+   * - If it depends on lifecycle, sync it at the END after results processing
+   *
+   * CRITICAL: At the end, lastKnownStates MUST be synced with lifecycle to prevent
+   * false activations when the next block arrives. See the sync loop at the bottom.
+   * ============================================================================
    */
-  rebuildFromResults(results: EvaluatedResult[]): void {
+  rebuildFromResults(results: EvaluatedResult[], lifecycle: PatternLifecycleManager): void {
     // Reset all to WAITING first
     this.initializePatterns();
     this.bnsStates.clear();
+
+    // FIX BUG 2: Reset pattern-specific BNS states (was missing, causing stale state)
+    this.ozBnsState = null;
+    this.ap5BnsState = null;
+    this.ppBnsState = null;
+    this.stBnsState = null;
 
     // Track run profits per pattern (resets each activation cycle)
     const runProfits = new Map<PatternName, number>();
@@ -1045,11 +1678,58 @@ export class BucketManager {
           wasActive.set(pattern, false);
           runProfits.set(pattern, 0);
         }
+      } else {
+        // wasBet === false - this is an imaginary result
+        // Check if this pattern is blocked and track imaginary wins/losses
+        if (opposite && this.isBlockedByOpposite(pattern)) {
+          const oppBucket = this.patternBuckets.get(opposite);
+          if (oppBucket === 'BNS') {
+            if (result.profit > 0) {
+              // Imaginary win - increment consecutive counter
+              const count = (this.consecutiveOppositeWins.get(opposite) ?? 0) + 1;
+              this.consecutiveOppositeWins.set(opposite, count);
+
+              if (count >= this.config.consecutiveWinsToBreakBns) {
+                // B&S killed by imaginary wins → WAITING
+                this.patternBuckets.set(opposite, 'WAITING');
+                this.bnsStates.delete(opposite);
+                this.oppositeBlocked.set(pattern, false);
+                this.consecutiveOppositeWins.set(opposite, 0);
+                console.log(`[Bucket Rebuild] ${opposite} B&S KILLED (${count} consecutive ${pattern} imaginary wins) → WAITING`);
+
+                // Check if the now-unblocked pattern should immediately activate to MAIN
+                const blockedAccum = this.blockedAccumulation.get(pattern) ?? 0;
+                if (blockedAccum >= this.config.singleBaitThreshold) {
+                  this.patternBuckets.set(pattern, 'MAIN');
+                  console.log(`[Bucket Rebuild] ${pattern} IMMEDIATELY ACTIVATED to MAIN (${blockedAccum.toFixed(0)}% accumulated while blocked)`);
+                }
+                this.resetBlockedAccumulation(pattern);
+              }
+            } else {
+              // Imaginary loss - reset consecutive counter
+              this.consecutiveOppositeWins.set(opposite, 0);
+            }
+          }
+        }
       }
+    }
+
+    // FIX BUG 1: Sync lastKnownStates with actual lifecycle state
+    // This prevents false activations when next block arrives after undo.
+    // Without this, updateFromLifecycle() sees isActive=false but lifecycle has active patterns,
+    // causing it to think patterns "just became active" and move WAITING → MAIN incorrectly.
+    for (const pattern of PATTERN_NAMES) {
+      if (pattern === 'ZZ' || pattern === 'AntiZZ') continue;
+      const cycle = lifecycle.getCycle(pattern);
+      this.lastKnownStates.set(pattern, {
+        isActive: cycle.state === 'active',
+        lastRunProfit: cycle.breakRunProfit,
+      });
     }
 
     console.log('[Bucket Rebuild] Complete. Buckets:', Object.fromEntries(this.patternBuckets));
     console.log('[Bucket Rebuild] Blocked:', Object.fromEntries(this.oppositeBlocked));
+    console.log('[Bucket Rebuild] lastKnownStates synced with lifecycle');
   }
 }
 

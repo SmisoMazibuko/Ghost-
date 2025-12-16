@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Main Entry Point
+ * Ghost Evaluator v15.3 - Main Entry Point
  * =========================================
  * Exports all public API
  */

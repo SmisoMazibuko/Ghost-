@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Research Testing Framework
+ * Ghost Evaluator v15.3 - Research Testing Framework
  * ===================================================
  *
  * Methodology to test assumptions about P1 and B&S modes,

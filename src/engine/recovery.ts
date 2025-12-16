@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Recovery Manager
+ * Ghost Evaluator v15.3 - Recovery Manager
  * =========================================
  * Manages recovery mode and gradual re-entry after unplayable sessions
  * Based on PLAN-unplayable-sessions.md

@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Research Logger
+ * Ghost Evaluator v15.3 - Research Logger
  * ========================================
  * Data collection for P1, Bait-and-Switch, and Early Detection research.
  *

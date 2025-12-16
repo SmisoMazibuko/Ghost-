@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Session Manager
+ * Ghost Evaluator v15.3 - Session Manager
  * ========================================
  * Manages session persistence and data
  */
@@ -92,7 +92,7 @@ export class SessionManager {
     const reactionExport = this.reactionEngine.exportState();
 
     return {
-      version: '15.1',
+      version: '15.3',
       blocks: gameExport.blocks,
       results: gameExport.results,
       patternCycles: gameExport.patternCycles,

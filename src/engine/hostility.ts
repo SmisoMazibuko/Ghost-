@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Hostility Manager
+ * Ghost Evaluator v15.3 - Hostility Manager
  * ==========================================
  * Accumulative hostility detection with decay and reset logic.
  *

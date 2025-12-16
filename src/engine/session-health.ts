@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Session Health Manager
+ * Ghost Evaluator v15.3 - Session Health Manager
  * ===============================================
  * Loss-based stopping and bait & switch detection
  *

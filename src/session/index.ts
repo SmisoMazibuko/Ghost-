@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Session Module
+ * Ghost Evaluator v15.3 - Session Module
  * =======================================
  * Exports session management functionality
  */

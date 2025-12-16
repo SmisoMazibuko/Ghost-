@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - CLI Entry Point
+ * Ghost Evaluator v15.3 - CLI Entry Point
  * ========================================
  * Interactive command-line interface
  */
@@ -74,7 +74,7 @@ export class GhostEvaluatorCLI {
     console.log(`
 ${COLORS.cyan}╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║   ${COLORS.bright}Ghost Evaluator v15.1${COLORS.cyan}                                 ║
+║   ${COLORS.bright}Ghost Evaluator v15.3${COLORS.cyan}                                 ║
 ║   ${COLORS.dim}Pattern Detection & Auto-Betting System${COLORS.cyan}                ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝${COLORS.reset}

@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - CLI Commands
+ * Ghost Evaluator v15.3 - CLI Commands
  * =====================================
  * Command handlers for the CLI interface
  */
@@ -525,7 +525,7 @@ export class CommandHandler {
    */
   help(): void {
     console.log(`
-${COLORS.bright}Ghost Evaluator v15.1 - Commands${COLORS.reset}
+${COLORS.bright}Ghost Evaluator v15.3 - Commands${COLORS.reset}
 ${'─'.repeat(50)}
 
 ${COLORS.cyan}Block Entry:${COLORS.reset}

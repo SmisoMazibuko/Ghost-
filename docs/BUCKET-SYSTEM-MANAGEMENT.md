@@ -1,5 +1,5 @@
 # Bucket System Management - Complete Ruleset
-## Ghost Evaluator v15.1
+## Ghost Evaluator v15.4
 
 ---
 
@@ -187,7 +187,63 @@ Once BAIT is confirmed:
 
 **Key Point:** A big switch loss (≥70%) means the inverse strategy also failed - the entire B&S premise is invalidated, so the pattern goes back to MAIN to play normally.
 
-### 4.6 B&S Exit Conditions Summary
+### 4.6 Pattern-Specific B&S State Machines
+
+Each pattern has its own bait detection logic:
+
+#### OZ (One-Zero) B&S State Machine
+
+```
+OZ BAIT pattern: [3+ run] → [single opposite] → [flip back to 3+]
+
+State Transitions:
+  waitingForFirstFlip → (flip detected) → waitingForSingle
+  waitingForSingle → (single seen, then flip) → baitConfirmed
+  baitConfirmed → (flip with run >= 3) → SWITCH OPPORTUNITY
+
+Kill Conditions:
+  - waitingForSingle AND run reaches 2+ → KILL (no single/bait formed)
+  - baitConfirmed AND flip back < 3 → KILL (weak flip back)
+```
+
+**v15.4 Fix:** After detecting "flip back >= 3" (switch opportunity), OZ now sets `waitingForFirstFlip = true` instead of immediately `waitingForSingle = true`. This prevents false kills when the run continues after the switch flip.
+
+#### AP5 B&S State Machine
+
+```
+AP5 BAIT pattern: [2+ setup] → [3+ opposite] → [flip back]
+
+State Transitions:
+  waitingForFirstFlip → (flip) → waitingForSetup
+  waitingForSetup → (run >= 2) → waitingForBait
+  waitingForBait → (run >= 3) → baitConfirmed
+  baitConfirmed → (flip with run >= 3) → SWITCH OPPORTUNITY
+
+Kill Conditions:
+  - waitingForBait AND flip before run reaches 3 → KILL
+  - baitConfirmed AND flip back < 3 → KILL
+```
+
+#### PP (Ping-Pong) B&S State Machine
+
+```
+PP pattern: alternating 1-2-1-2... rhythm
+
+Kill Conditions:
+  - Run reaches 3+ → KILL (exited PP rhythm)
+  - Two singles in a row (1-1) → KILL (expected double after single)
+```
+
+#### ST (Stutter) B&S State Machine
+
+```
+ST pattern: alternating 2-2-2-2... rhythm
+
+Kill Conditions:
+  - Run reaches 3+ → KILL (exited 2A2 rhythm)
+```
+
+### 4.7 B&S Exit Conditions Summary
 
 | Condition | Destination | Explanation |
 |-----------|-------------|-------------|
@@ -312,7 +368,14 @@ The consecutive counter resets to 0 when:
                        │    │    ▼                              │
                        │    │  Play SWITCH                      │
                        │    │    │                              │
-                       │    │    ├─── Win ──────▶ Stay B&S (wait next bait)
+                       │    │    │
+                       │    │    ├─── Win ──────▶ Stay B&S ──┐
+                       │    │    │                           │
+                       │    │    │    ┌──────────────────────┘
+                       │    │    │    │  Wait for NEXT FLIP (v15.4)
+                       │    │    │    │  then look for single (bait)
+                       │    │    │    ▼
+                       │    │    │  Wait for Bait (repeat cycle)
                        │    │    │                              │
                        │    │    ├─── Lose <70% ──▶ WAITING     │
                        │    │    │                              │
@@ -454,7 +517,29 @@ Result:
 - Anti2A2 checks if it should activate in MAIN
 ```
 
-### Example 7: Blocked Pattern Accumulation
+### Example 7: OZ B&S Cycle (v15.4 Behavior)
+
+```
+OZ is in B&S after losing -85% in MAIN
+
+Block 10: Flip detected → waitingForSingle = true
+Block 11: Single (run=1) seen, then flip → baitConfirmed = true
+Block 12: Run continues (run=2)
+Block 13: Run continues (run=3)
+Block 14: Flip detected with previousRun=3 → SWITCH OPPORTUNITY!
+          OZ plays SWITCH (inverse), WINS +85%
+          v15.4: Sets waitingForFirstFlip = true (NOT waitingForSingle)
+Block 15: Run continues (run=2)
+          v15.4: waitingForFirstFlip=true, so NO KILL (waiting for next flip)
+Block 16: Run continues (run=3)
+Block 17: Flip detected → waitingForSingle = true (now looking for bait)
+Block 18: Single (run=1) seen → baitConfirmed = true
+...cycle repeats until killed or broken...
+```
+
+**v15.4 Fix:** Without the fix, Block 15 would trigger KILL because `waitingForSingle=true` and `run=2`. The fix ensures OZ waits for the next flip before starting bait detection.
+
+### Example 8: Blocked Pattern Accumulation
 
 ```
 2A2 is in B&S, Anti2A2 is BLOCKED
@@ -514,6 +599,17 @@ Anti2A2 checks activation:
 
 ---
 
-*Document Version: 2.0*
+*Document Version: 3.0*
 *Last Updated: December 2024*
-*For Ghost Evaluator v15.2*
+*For Ghost Evaluator v15.4*
+
+---
+
+## 12. VERSION HISTORY
+
+| Version | Changes |
+|---------|---------|
+| v15.4 | Fixed OZ B&S state machine: after switch opportunity (flip back >= 3), now waits for next flip before looking for single. Prevents false kills when run continues after switch. |
+| v15.3 | Added pattern-specific B&S state machines (OZ, AP5, PP, ST). Enhanced data collection. |
+| v15.2 | Fixed B&S switch win behavior to stay in B&S and wait for next bait. |
+| v15.1 | Initial 3-bucket system implementation. |

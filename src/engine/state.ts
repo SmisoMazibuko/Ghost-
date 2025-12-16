@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Game State Engine
+ * Ghost Evaluator v15.3 - Game State Engine
  * ==========================================
  * Manages blocks, runs, and overall game state
  */
@@ -62,6 +62,15 @@ export class GameStateEngine {
   private detector: PatternDetector;
   private lifecycle: PatternLifecycleManager;
 
+  /**
+   * OZ structural kill tracking:
+   * - Set to block index when OZ bet is evaluated and wins (flip back started)
+   * - When NEXT flip happens (after the monitoring start block), check if flip back was < 3
+   * - This prevents killing OZ on the single (which is always length 1)
+   * - Value of -1 means not monitoring
+   */
+  private ozMonitoringStartBlock: number = -1;
+
   constructor(config?: Partial<EvaluatorConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.detector = createPatternDetector();
@@ -112,17 +121,7 @@ export class GameStateEngine {
       }
     }
 
-    // AP5 BREAK: Check if AP5 is active and flip just happened with 2 or fewer blocks
-    if (this.lifecycle.isActive('AP5') && this.runData.currentLength === 1) {
-      // A flip just happened (currentLength === 1 means new run started)
-      // Check if previous run was 2 or fewer
-      if (this.runData.lengths.length >= 2) {
-        const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
-        if (previousRunLength <= 2) {
-          this.lifecycle.breakAP5Pattern();
-        }
-      }
-    }
+    // NOTE: AP5 BREAK moved to after evaluatePendingSignals() so bet losses are counted
 
     // OZ CONFIRMATION: Check if we just hit 3 blocks and previous run was a single (1)
     // This is: 1+ same → single → 3+ flip back (confirm 70% on 1st block)
@@ -140,17 +139,7 @@ export class GameStateEngine {
       }
     }
 
-    // OZ BREAK: Check if OZ is active and flip just happened with previous run < 3 blocks
-    if (this.lifecycle.isActive('OZ') && this.runData.currentLength === 1) {
-      // A flip just happened (currentLength === 1 means new run started)
-      // Check if previous run was less than 3 blocks
-      if (this.runData.lengths.length >= 2) {
-        const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
-        if (previousRunLength < 3) {
-          this.lifecycle.breakOZPattern();
-        }
-      }
-    }
+    // NOTE: OZ BREAK moved to after evaluatePendingSignals() so bet losses are counted
 
     // PP CONFIRMATION: Check if we just hit 2 blocks (double) and previous run was a single (1)
     // This is: 1+ same → single → 2 flip back (confirm 70% on 1st block)
@@ -168,10 +157,25 @@ export class GameStateEngine {
       }
     }
 
-    // PP BREAK: PP is continuous during 2A2 rhythm, breaks on 3+ (enters OZ territory)
+    // PP BREAK: PP is continuous during 1-2-1-2 rhythm, breaks when:
+    // 1. Run reaches 3+ (exits PP rhythm, enters OZ territory)
+    // 2. Two singles in a row (1-1) - expected double after single
     // Loss-based breaks are handled by lifecycle via recordResult()
-    if (this.lifecycle.isActive('PP') && this.runData.currentLength >= 3) {
-      this.lifecycle.breakPPPattern();
+    if (this.lifecycle.isActive('PP')) {
+      // Kill condition 1: Run reaches 3+
+      if (this.runData.currentLength >= 3) {
+        this.lifecycle.breakPPPattern();
+      }
+      // Kill condition 2: Two singles in a row (rhythm broken)
+      else if (this.runData.currentLength === 1 && this.runData.lengths.length >= 2) {
+        const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+        if (previousRunLength === 1) {
+          // Previous was single, current is single = two singles in a row
+          // PP rhythm broken (expected double after single)
+          console.log(`[State] PP broken - two singles in a row (rhythm broken)`);
+          this.lifecycle.breakPPPattern();
+        }
+      }
     }
 
     // ST CONFIRMATION: Check if we just hit 2 blocks (double) and previous run was 2+
@@ -192,6 +196,49 @@ export class GameStateEngine {
       this.lifecycle.breakSTPattern();
     }
 
+    // =========================================================================
+    // OZ LIFECYCLE - Order matters! Must be: structural kill → evaluate → set monitoring → detect
+    // =========================================================================
+
+    // STEP 1: OZ STRUCTURAL KILL CHECK (resets monitoring if flip back ended)
+    // This must happen BEFORE signal detection so new singles can be detected
+    if (this.lifecycle.isActive('OZ') && this.runData.currentLength === 1) {
+      // A flip just happened (currentLength === 1 means new run started)
+      // Only check if we're monitoring AND this is a SUBSEQUENT flip (not the same block)
+      if (this.ozMonitoringStartBlock >= 0 && index > this.ozMonitoringStartBlock) {
+        // We were monitoring a flip back, now it ended - check if < 3
+        if (this.runData.lengths.length >= 2) {
+          const flipBackLength = this.runData.lengths[this.runData.lengths.length - 2];
+          if (flipBackLength < 3) {
+            console.log(`[State] OZ structural kill - flip back was only ${flipBackLength} (< 3)`);
+            this.lifecycle.breakOZPattern();
+          } else {
+            console.log(`[State] OZ flip back was ${flipBackLength} - pattern survives`);
+          }
+        }
+        // Reset monitoring - will be set again when next OZ bet wins
+        this.ozMonitoringStartBlock = -1;
+      }
+    }
+
+    // STEP 2: Evaluate pending signals (this evaluates OZ bets)
+    const evaluatedResults = this.evaluatePendingSignals(block);
+
+    // STEP 3: Set monitoring if OZ bet won (flip back started)
+    // This must happen BEFORE signal detection so we suppress signals on flip back blocks
+    for (const result of evaluatedResults) {
+      if (result.pattern === 'OZ' && result.profit >= 0 && result.wasBet) {
+        // OZ bet won (flip back started), record the block index
+        // Structural kill will only be checked on flips AFTER this block
+        this.ozMonitoringStartBlock = index;
+        console.log(`[State] OZ bet won at block ${index} - monitoring flip back for structural kill`);
+      }
+    }
+
+    // =========================================================================
+    // SIGNAL DETECTION - Now happens AFTER OZ lifecycle management
+    // =========================================================================
+
     // Build set of active patterns for signal detection
     // Only include patterns that are actually active in lifecycle
     // B&S patterns need to re-activate through normal lifecycle (observe 70%+ = bait confirmed)
@@ -201,7 +248,18 @@ export class GameStateEngine {
     );
 
     // Detect new patterns (pass blocks for AP5, activePatterns for OZ/AP5 active check)
-    const newSignals = this.detector.detectAll(this.runData, index, this.blocks, activePatterns);
+    let newSignals = this.detector.detectAll(this.runData, index, this.blocks, activePatterns);
+
+    // STEP 4: OZ SIGNAL SUPPRESSION while monitoring flip back
+    // This prevents OZ from signaling on flip back blocks (which have currentLength === 1)
+    // OZ should only signal on actual singles, not on flip back starts
+    if (this.ozMonitoringStartBlock >= 0) {
+      const ozSignalCount = newSignals.filter(s => s.pattern === 'OZ').length;
+      if (ozSignalCount > 0) {
+        console.log(`[State] Suppressing OZ signal - currently monitoring flip back (started at block ${this.ozMonitoringStartBlock})`);
+        newSignals = newSignals.filter(s => s.pattern !== 'OZ');
+      }
+    }
 
     // Generate additional ZZ signals from saved indicator (for active+profitable ZZ)
     const zzIndicatorSignals = this.generateZZIndicatorSignals(index);
@@ -221,8 +279,18 @@ export class GameStateEngine {
       this.pendingSignals.push(signal);
     }
 
-    // Evaluate pending signals
-    const evaluatedResults = this.evaluatePendingSignals(block);
+    // AP5 BREAK: Check if AP5 is active and flip just happened with 2 or fewer blocks
+    // NOTE: This is checked AFTER evaluatePendingSignals so bet losses are counted in breakRunProfit
+    if (this.lifecycle.isActive('AP5') && this.runData.currentLength === 1) {
+      // A flip just happened (currentLength === 1 means new run started)
+      // Check if previous run was 2 or fewer
+      if (this.runData.lengths.length >= 2) {
+        const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+        if (previousRunLength <= 2) {
+          this.lifecycle.breakAP5Pattern();
+        }
+      }
+    }
 
     // Check if P1 should clear
     if (this.p1Mode) {
@@ -477,6 +545,7 @@ export class GameStateEngine {
     this.pendingSignals = [];
     this.results = [];
     this.p1Mode = false;
+    this.ozMonitoringStartBlock = -1;
     this.lifecycle.resetAll();
   }
 
@@ -489,6 +558,7 @@ export class GameStateEngine {
     pendingSignals: PatternSignal[];
     results: EvaluatedResult[];
     p1Mode: boolean;
+    ozMonitoringStartBlock: number;
     patternCycles: ReturnType<PatternLifecycleManager['getAllCycles']>;
   } {
     return {
@@ -497,6 +567,7 @@ export class GameStateEngine {
       pendingSignals: this.getPendingSignals(),
       results: this.getResults(),
       p1Mode: this.p1Mode,
+      ozMonitoringStartBlock: this.ozMonitoringStartBlock,
       patternCycles: this.lifecycle.getAllCycles(),
     };
   }
@@ -516,6 +587,7 @@ export class GameStateEngine {
     this.pendingSignals = state.pendingSignals;
     this.results = state.results;
     this.p1Mode = state.p1Mode;
+    this.ozMonitoringStartBlock = state.ozMonitoringStartBlock ?? -1;
     this.lifecycle.loadCycles(state.patternCycles);
   }
 }

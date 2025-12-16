@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Orchestration Module
+ * Ghost Evaluator v15.3 - Orchestration Module
  * =============================================
  * AI-powered development management system
  */
@@ -129,7 +129,7 @@ export class OrchestrationManager {
    */
   exportState(): OrchestrationState {
     return {
-      version: '15.1',
+      version: '15.3',
       changeLog: this.changeTracker.exportChangeLog(),
       ruleSets: this.ruleManager.getAllRuleSets(),
       activeRuleSetId: this.ruleManager.getActiveRuleSet()?.id || 'default',

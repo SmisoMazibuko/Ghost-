@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Evaluator v15.2</title>
+    <title>Ghost Evaluator v15.4</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root { --bg: #0a0a0f; --bg2: #12121a; --card: #1a1a24; --border: #2a2a3a; --text: #fff; --dim: #888; --green: #00ff88; --red: #ff4466; --yellow: #ffaa00; --cyan: #00ccff; --purple: #aa66ff; --orange: #ff8800; }
@@ -196,6 +196,10 @@
                 <div class="stat"><span class="stat-label">P/L</span><span class="stat-value" id="pnl">R0</span><span class="stat-sub">(<span id="target">0%</span>)</span></div>
                 <div class="stat"><span class="stat-label">DD</span><span class="stat-value" id="dd">R0</span><div class="dd-levels" id="ddLevels"><div class="dd-level"></div><div class="dd-level"></div><div class="dd-level"></div><div class="dd-level"></div></div></div>
                 <div class="stat"><span class="stat-label">Stake</span><span class="stat-value green" id="stake">100%</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat"><span class="stat-label">ZZ</span><span id="zzState" class="badge yellow">OFF</span></div>
+                <div class="stat"><span class="stat-label">Pocket</span><span class="stat-value cyan" id="zzPocket">1</span></div>
+                <div class="stat"><span class="stat-label">Next</span><span id="zzNext" class="badge yellow">ZZ</span></div>
             </div>
         </div>
 
@@ -225,7 +229,7 @@
                     <button class="act-btn" onclick="undo()">↩</button>
                     <button class="act-btn" onclick="save()">💾</button>
                     <button class="act-btn" onclick="openLoad()">📂</button>
-                    <button class="act-btn danger" onclick="clear()">🗑</button>
+                    <button class="act-btn danger" onclick="clearSession()">🗑</button>
                 </div>
                 <div class="card-title" style="margin-top:8px;margin-bottom:4px">Blocks</div>
                 <div class="blocks-grid" id="blocksGrid"><span style="color:var(--dim)">-</span></div>
@@ -302,14 +306,35 @@
 
                 <!-- Patterns -->
                 <div class="card patterns" style="margin-top:6px">
-                    <table><thead><tr><th>Pattern</th><th>Bucket</th><th>M%</th><th>I%</th></tr></thead><tbody id="patternsTable"></tbody></table>
+                    <table><thead><tr><th>Pattern</th><th>Bucket</th><th>Accum</th><th>Run</th><th>Break</th></tr></thead><tbody id="patternsTable"></tbody></table>
                 </div>
             </div>
 
-            <!-- Column 3 - Trades -->
-            <div class="card">
-                <div class="card-title">Trades</div>
-                <div class="trades" id="tradesList"><span style="color:var(--dim)">No trades</span></div>
+            <!-- Column 3 - Trades & Pocket -->
+            <div>
+                <div class="card">
+                    <div class="card-title">Trades</div>
+                    <div class="trades" id="tradesList"><span style="color:var(--dim)">No trades</span></div>
+                </div>
+
+                <!-- ZZ Pocket System -->
+                <div class="bucket-card" style="margin-top:6px">
+                    <div class="card-title">ZZ Pocket System <span id="zzMoveIndicator" class="badge" style="font-size:0.5rem"></span></div>
+                    <div class="bucket-grid" style="grid-template-columns:1fr 1fr">
+                        <div class="bucket-col" id="pocket1Box" style="border:2px solid transparent; transition:border-color 0.3s">
+                            <div class="bucket-label">POCKET 1 (BET)</div>
+                            <div id="pocket1Pattern" style="font-size:0.85rem; font-weight:bold"></div>
+                            <div class="bucket-patterns" id="pocket1Info"></div>
+                        </div>
+                        <div class="bucket-col" id="pocket2Box" style="border:2px solid transparent; transition:border-color 0.3s">
+                            <div class="bucket-label">POCKET 2 (OBSERVE)</div>
+                            <div id="pocket2Pattern" style="font-size:0.85rem; font-weight:bold"></div>
+                            <div class="bucket-patterns" id="pocket2Info"></div>
+                        </div>
+                    </div>
+                    <!-- Movement History -->
+                    <div id="zzHistory" style="font-size:0.5rem; color:var(--dim); margin-top:6px; max-height:40px; overflow-y:auto"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -343,9 +368,16 @@
                 update();
             }
             else if (msg.type === 'block_added') { Object.assign(state, msg.data); state.blocks = [...(state.blocks||[]), msg.data.block]; update(); }
-            else if (msg.type === 'block_undone') { state = msg.data; update(); }
+            else if (msg.type === 'block_undone') {
+                state = msg.data;
+                if (msg.data?.isLiveMode !== undefined) {
+                    isLiveMode = msg.data.isLiveMode;
+                }
+                update();
+            }
             else if (msg.type === 'sessions_list') { renderSessions(msg.data || []); }
             else if (msg.type === 'mode_changed') { isLiveMode = msg.data.isLiveMode; update(); }
+            else if (msg.type === 'error') { alert(msg.message || 'Error'); }
         }
 
         function send(action, payload = {}) { if (ws?.readyState === 1) ws.send(JSON.stringify({ action, payload })); }
@@ -366,7 +398,7 @@
         function openLoad() { document.getElementById('modal').classList.remove('hidden'); send('list_sessions'); }
         function closeLoad() { document.getElementById('modal').classList.add('hidden'); }
         function loadSession(p) { send('load', { path: p }); closeLoad(); }
-        function clear() {
+        function clearSession() {
             if (confirm('Clear session?')) {
                 send('clear');
                 isLiveMode = false; // Reset to preload mode
@@ -528,6 +560,7 @@
                         <td><span class="bucket-badge ${bucketClass}">${bucketLabel}</span></td>
                         <td style="color:${p.cumulativeProfit>=0?'var(--green)':'var(--red)'}">${p.cumulativeProfit.toFixed(0)}</td>
                         <td style="color:${p.lastRunProfit>=0?'var(--green)':'var(--red)'}">${p.lastRunProfit.toFixed(0)}</td>
+                        <td style="color:${(p.breakRunProfit||0)>=0?'var(--green)':'var(--red)'}">${(p.breakRunProfit||0).toFixed(0)}</td>
                     </tr>`;
                 }).join('');
             }
@@ -552,6 +585,161 @@
             else if (sum.isSessionStopped && sum.sessionStopReason) { alertEl.classList.remove('hidden'); alertEl.className = 'alert danger'; alertIcon.textContent = '🚫'; alertMsg.textContent = sum.sessionStopReason; }
             else if (lvl === 'caution') { alertEl.classList.remove('hidden'); alertEl.className = 'alert warning'; alertIcon.textContent = '⚠️'; alertMsg.textContent = `Health declining: ${score.toFixed(0)}/100`; }
             else alertEl.classList.add('hidden');
+
+            // ZZ State Display
+            const zzState = state.zzState || {};
+            const zzStateEl = document.getElementById('zzState');
+            const zzPocketEl = document.getElementById('zzPocket');
+            const zzNextEl = document.getElementById('zzNext');
+
+            // ZZ State badge
+            const zzCurrentState = zzState.currentState || 'inactive';
+            if (zzCurrentState === 'zz_active') {
+                zzStateEl.textContent = 'ZZ';
+                zzStateEl.className = 'badge green';
+            } else if (zzCurrentState === 'anti_zz_active') {
+                zzStateEl.textContent = 'ANTI';
+                zzStateEl.className = 'badge purple';
+            } else {
+                zzStateEl.textContent = 'OFF';
+                zzStateEl.className = 'badge yellow';
+            }
+
+            // Pocket display
+            const pocket = zzState.currentPocket || 1;
+            zzPocketEl.textContent = pocket;
+            zzPocketEl.className = 'stat-value ' + (pocket === 1 ? 'green' : 'red');
+
+            // Next run indicator (will it be Anti-ZZ?)
+            const nextIsAntiZZ = zzState.previousRunFirstBetFailed || false;
+            if (nextIsAntiZZ) {
+                zzNextEl.textContent = 'ANTI';
+                zzNextEl.className = 'badge purple';
+            } else {
+                zzNextEl.textContent = 'ZZ';
+                zzNextEl.className = 'badge cyan';
+            }
+
+            // ZZ Pocket Card Update - NEW: Shows BOTH ZZ and AntiZZ in their respective pockets
+            const pocket1Pattern = document.getElementById('pocket1Pattern');
+            const pocket1Info = document.getElementById('pocket1Info');
+            const pocket2Pattern = document.getElementById('pocket2Pattern');
+            const pocket2Info = document.getElementById('pocket2Info');
+            const pocket1Box = document.getElementById('pocket1Box');
+            const pocket2Box = document.getElementById('pocket2Box');
+            const zzMoveIndicator = document.getElementById('zzMoveIndicator');
+            const zzHistory = document.getElementById('zzHistory');
+
+            // NEW: Get separate pocket assignments for ZZ and AntiZZ
+            const zzPocketVal = zzState.zzPocket || 1;
+            const antiZZPocketVal = zzState.antiZZPocket || 2;
+            const activePattern = zzState.activePattern || null;
+            const zzPrevProfit = zzState.zzPreviousRunProfit || 0;
+            const antiZZPrevProfit = zzState.antiZZPreviousRunProfit || 0;
+            const zzRunProfit = zzState.zzCurrentRunProfit || 0;
+            const antiZZRunProfit = zzState.antiZZCurrentRunProfit || 0;
+            const movementHistory = zzState.movementHistory || [];
+
+            // DEBUG: Log ZZ state
+            console.log('[ZZ UI] ZZ Pocket:', zzPocketVal, 'AntiZZ Pocket:', antiZZPocketVal, 'Active:', activePattern);
+
+            // Build patterns in each pocket
+            let pocket1Patterns = [];
+            let pocket2Patterns = [];
+
+            // Place ZZ in its pocket
+            if (zzPocketVal === 1) {
+                pocket1Patterns.push({
+                    name: 'ZZ',
+                    color: activePattern === 'ZZ' ? 'var(--green)' : 'var(--cyan)',
+                    prevProfit: zzPrevProfit,
+                    runProfit: zzRunProfit,
+                    isActive: activePattern === 'ZZ'
+                });
+            } else {
+                pocket2Patterns.push({
+                    name: 'ZZ',
+                    color: 'var(--dim)',
+                    prevProfit: zzPrevProfit,
+                    runProfit: zzRunProfit,
+                    isActive: false
+                });
+            }
+
+            // Place AntiZZ in its pocket
+            if (antiZZPocketVal === 1) {
+                pocket1Patterns.push({
+                    name: 'AntiZZ',
+                    color: activePattern === 'AntiZZ' ? 'var(--purple)' : 'var(--cyan)',
+                    prevProfit: antiZZPrevProfit,
+                    runProfit: antiZZRunProfit,
+                    isActive: activePattern === 'AntiZZ'
+                });
+            } else {
+                pocket2Patterns.push({
+                    name: 'AntiZZ',
+                    color: 'var(--dim)',
+                    prevProfit: antiZZPrevProfit,
+                    runProfit: antiZZRunProfit,
+                    isActive: false
+                });
+            }
+
+            // Highlight Pocket 1 if it has the active pattern
+            const hasActiveInP1 = pocket1Patterns.some(p => p.isActive);
+            pocket1Box.style.borderColor = hasActiveInP1 ? (activePattern === 'ZZ' ? 'var(--green)' : 'var(--purple)') : 'var(--cyan)';
+            pocket2Box.style.borderColor = pocket2Patterns.length > 0 ? 'var(--red)' : 'transparent';
+
+            // Render Pocket 1 patterns
+            if (pocket1Patterns.length > 0) {
+                pocket1Pattern.innerHTML = pocket1Patterns.map(p =>
+                    `<span style="color:${p.color}">${p.name}</span>`
+                ).join(' ');
+                pocket1Info.innerHTML = pocket1Patterns.map(p => {
+                    let info = `<span style="color:${p.prevProfit >= 0 ? 'var(--green)' : 'var(--red)'}">${p.name}: ${p.prevProfit >= 0 ? '+' : ''}${p.prevProfit.toFixed(0)}%</span>`;
+                    if (p.isActive && p.runProfit !== 0) {
+                        const runColor = p.runProfit >= 0 ? 'var(--green)' : 'var(--red)';
+                        info += ` <span style="color:${runColor}">(run: ${p.runProfit >= 0 ? '+' : ''}${p.runProfit.toFixed(0)}%)</span>`;
+                    }
+                    return info;
+                }).join('<br>');
+            } else {
+                pocket1Pattern.innerHTML = '<span style="color:var(--dim)">-</span>';
+                pocket1Info.textContent = '';
+            }
+
+            // Render Pocket 2 patterns
+            if (pocket2Patterns.length > 0) {
+                pocket2Pattern.innerHTML = pocket2Patterns.map(p =>
+                    `<span style="color:${p.color}">${p.name}</span>`
+                ).join(' ');
+                pocket2Info.innerHTML = pocket2Patterns.map(p =>
+                    `<span style="color:var(--red)">${p.name}: ${p.prevProfit.toFixed(0)}%</span>`
+                ).join('<br>');
+            } else {
+                pocket2Pattern.innerHTML = '<span style="color:var(--dim)">-</span>';
+                pocket2Info.textContent = '';
+            }
+
+            // Show movement indicator
+            if (movementHistory.length > 0) {
+                const lastMove = movementHistory[movementHistory.length - 1];
+                zzMoveIndicator.textContent = `${lastMove.pattern} →P${lastMove.toPocket}`;
+                zzMoveIndicator.className = lastMove.toPocket === 1 ? 'badge green' : 'badge red';
+            } else {
+                zzMoveIndicator.textContent = '';
+                zzMoveIndicator.className = 'badge';
+            }
+
+            // Show movement history (last 5)
+            if (movementHistory.length > 0) {
+                const recentMoves = movementHistory.slice(-5).reverse();
+                zzHistory.innerHTML = recentMoves.map(m =>
+                    `<span style="color:${m.toPocket === 1 ? 'var(--green)' : 'var(--red)'}">${m.pattern} P${m.fromPocket}→P${m.toPocket} (${m.triggerProfit >= 0 ? '+' : ''}${m.triggerProfit.toFixed(0)}%)</span>`
+                ).join(' | ');
+            } else {
+                zzHistory.innerHTML = '<span style="color:var(--dim)">No movements</span>';
+            }
 
             // Profit Tracking (AP, AAP, BSP)
             const profitData = state.profitTracking?.totals || sum.profitTracking || { actualProfit: 0, activationAccumulatedProfit: 0, baitSwitchProfit: 0 };

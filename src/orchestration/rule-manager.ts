@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Rule Manager
+ * Ghost Evaluator v15.3 - Rule Manager
  * =====================================
  * Manages trading rules with versioning and AI recommendations
  */
@@ -47,7 +47,7 @@ export class RuleManager {
       const defaultRules = this.createDefaultRules();
       this.ruleSets.set('default', {
         id: 'default',
-        name: 'Ghost Evaluator v15.1 Rules',
+        name: 'Ghost Evaluator v15.3 Rules',
         rules: defaultRules,
         isDefault: true,
         createdAt: new Date().toISOString(),

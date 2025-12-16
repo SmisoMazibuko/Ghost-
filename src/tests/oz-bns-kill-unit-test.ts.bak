@@ -1,0 +1,255 @@
+/**
+ * OZ B&S Kill Rules - Unit Test
+ * ==============================
+ * Direct unit tests for OZ B&S kill conditions by
+ * manually setting up the B&S state and testing the kill logic.
+ */
+
+import { BucketManager } from '../engine/bucket-manager';
+
+// Helper to create a mock BucketManager with OZ in B&S
+function createOZInBnS(): BucketManager {
+  const bucketManager = new BucketManager();
+
+  // Manually set OZ to BNS bucket and initialize OZ B&S state
+  // @ts-expect-error - accessing private for testing
+  bucketManager.patternBuckets.set('OZ', 'BNS');
+  bucketManager.initializeOZBnsState(0);
+
+  return bucketManager;
+}
+
+// Helper to simulate first flip and start waiting for single
+function simulateFirstFlip(bucketManager: BucketManager, blockIndex: number): void {
+  // Simulate a flip (isFlip=true, currentRunLength=1) to trigger waitingForFirstFlip -> false
+  bucketManager.checkOZBnsKillConditions(1, 3, true, blockIndex);
+}
+
+// Helper to log test result
+function logTest(name: string, passed: boolean, details?: string): void {
+  const status = passed ? '✓ PASS' : '✗ FAIL';
+  console.log(`${status}: ${name}`);
+  if (details) {
+    console.log(`       ${details}`);
+  }
+}
+
+// Test 1: Kill when run ≥2 instead of single (bait not confirmed)
+function testKillOnRunNotSingle(): void {
+  console.log('\n--- Test 1: Kill when run ≥2 (bait not confirmed) ---');
+
+  const bucketManager = createOZInBnS();
+  const ozBnsState = bucketManager.getOZBnsState()!;
+  simulateFirstFlip(bucketManager, 1);
+
+  // State: waiting for single after switch
+  console.log(`After first flip: waitingForSingle=${ozBnsState.waitingForSingle}`);
+
+  // Simulate: run reaches 2 (not single)
+  const result = bucketManager.checkOZBnsKillConditions(
+    2,  // currentRunLength = 2 (NOT single)
+    1,  // previousRunLength = 1
+    false, // not a flip
+    10  // blockIndex
+  );
+
+  logTest(
+    'Should kill when run ≥2 instead of single',
+    result?.shouldKill === true,
+    `Result: ${JSON.stringify(result)}`
+  );
+
+  // Also test with run = 3
+  const bucketManager2 = createOZInBnS();
+  simulateFirstFlip(bucketManager2, 1);
+  const result2 = bucketManager2.checkOZBnsKillConditions(
+    3,  // currentRunLength = 3
+    1,  // previousRunLength
+    false,
+    10
+  );
+
+  logTest(
+    'Should kill when run = 3 instead of single',
+    result2?.shouldKill === true,
+    `Result: ${JSON.stringify(result2)}`
+  );
+}
+
+// Test 2: Kill when 3+ run then flip (AP5 territory)
+function testKillOnAP5Territory(): void {
+  console.log('\n--- Test 2: Kill when 3+ run then flip (AP5 territory) ---');
+  console.log('Scenario: After switch, single detected, then 3+ run, then FLIP → AP5 territory');
+
+  const bucketManager = createOZInBnS();
+  simulateFirstFlip(bucketManager, 1);
+
+  // Step 1: Bait detected (single appeared) - no longer waiting for single
+  bucketManager.markOZBaitDetected();
+  const stateAfterBait = bucketManager.getOZBnsState()!;
+  console.log(`After bait detected: waitingForSingle=${stateAfterBait.waitingForSingle}`);
+
+  // Step 2: See a 3+ run (marks sawThreePlusRun = true)
+  bucketManager.checkOZBnsKillConditions(
+    3,  // currentRunLength = 3 (flip back)
+    1,  // previousRunLength
+    false,
+    10
+  );
+
+  const ozState = bucketManager.getOZBnsState()!;
+  console.log(`After 3+ run: sawThreePlusRun=${ozState.sawThreePlusRun}`);
+
+  // Now flip happens (run = 1, isFlip = true)
+  const result = bucketManager.checkOZBnsKillConditions(
+    1,  // currentRunLength = 1 (flip)
+    3,  // previousRunLength = 3
+    true, // IS a flip
+    11
+  );
+
+  logTest(
+    'Should kill when 3+ run then flip (AP5 territory)',
+    result?.shouldKill === true,
+    `Result: ${JSON.stringify(result)}`
+  );
+}
+
+// Test 3: NOT kill when single appears (bait confirmed)
+function testNotKillOnSingle(): void {
+  console.log('\n--- Test 3: NOT kill when single appears (bait confirmed) ---');
+
+  const bucketManager = createOZInBnS();
+
+  // Simulate: single appears (run = 1)
+  const result = bucketManager.checkOZBnsKillConditions(
+    1,  // currentRunLength = 1 (single!)
+    3,  // previousRunLength
+    true, // flip to single
+    10
+  );
+
+  logTest(
+    'Should NOT kill when single appears',
+    result?.shouldKill === false || result === null,
+    `Result: ${JSON.stringify(result)}`
+  );
+}
+
+// Test 4: NOT kill when OZ not in B&S
+function testNotKillWhenNotInBnS(): void {
+  console.log('\n--- Test 4: NOT kill when OZ not in B&S ---');
+
+  const bucketManager = new BucketManager();
+  // OZ is in WAITING by default, not B&S
+
+  const result = bucketManager.checkOZBnsKillConditions(
+    2,  // currentRunLength = 2
+    1,
+    false,
+    10
+  );
+
+  logTest(
+    'Should return null when OZ not in B&S',
+    result === null,
+    `Result: ${JSON.stringify(result)}`
+  );
+}
+
+// Test 5: Kill flow - full scenario
+function testFullKillScenario(): void {
+  console.log('\n--- Test 5: Full Kill Scenario ---');
+
+  const bucketManager = createOZInBnS();
+
+  console.log('Step 1: OZ in B&S, waiting for first flip...');
+  console.log(`  Bucket: ${bucketManager.getBucket('OZ')}`);
+  console.log(`  OZ B&S State: ${JSON.stringify(bucketManager.getOZBnsState())}`);
+
+  console.log('
+Step 2: First flip happens...');
+  simulateFirstFlip(bucketManager, 1);
+  console.log(`  OZ B&S State after flip: ${JSON.stringify(bucketManager.getOZBnsState())}`);
+
+  console.log('
+Step 3: Run reaches 2 (not single)...');
+  const killCheck = bucketManager.checkOZBnsKillConditions(2, 1, false, 10);
+  console.log(`  Kill check result: ${JSON.stringify(killCheck)}`);
+
+  if (killCheck?.shouldKill) {
+  console.log('
+Step 4: Killing OZ...');
+    bucketManager.killOZInBns(10, killCheck.reason);
+    console.log(`  Bucket after kill: ${bucketManager.getBucket('OZ')}`);
+    console.log(`  OZ B&S State after kill: ${JSON.stringify(bucketManager.getOZBnsState())}`);
+  }
+
+  logTest(
+    'Full kill scenario executed correctly',
+    bucketManager.getBucket('OZ') === 'WAITING' && bucketManager.getOZBnsState() === null,
+    `Final bucket: ${bucketManager.getBucket('OZ')}, OZ state: ${bucketManager.getOZBnsState()}`
+  );
+}
+
+// Test 6: Sequence simulation
+function testSequenceSimulation(): void {
+  console.log('\n--- Test 6: Sequence Simulation ---');
+  console.log('Simulating: After switch, GGG appears (should KILL)');
+
+  const bucketManager = createOZInBnS();
+
+  // Simulate block by block
+  // First, simulate the first flip to start monitoring for single
+  simulateFirstFlip(bucketManager, 1);
+
+  const sequence = [
+    { runLen: 1, prevLen: 3, isFlip: true, desc: 'G (single - potential bait)', blockIdx: 5 },
+    { runLen: 2, prevLen: 1, isFlip: false, desc: 'G (run extends to 2 - KILL!)', blockIdx: 6 },
+  ];
+
+  let killed = false;
+  for (const step of sequence) {
+    console.log(`  Block: ${step.desc}`);
+
+    const result = bucketManager.checkOZBnsKillConditions(
+      step.runLen,
+      step.prevLen,
+      step.isFlip,
+      step.blockIdx
+    );
+
+    if (result?.shouldKill) {
+      console.log(`    -> KILL: ${result.reason}`);
+      bucketManager.killOZInBns(step.blockIdx, result.reason);
+      killed = true;
+      break;
+    } else {
+      console.log(`    -> Continue (no kill)`);
+    }
+  }
+
+  logTest(
+    'Sequence correctly killed OZ',
+    killed && bucketManager.getBucket('OZ') === 'WAITING',
+    `Killed: ${killed}, Final bucket: ${bucketManager.getBucket('OZ')}`
+  );
+}
+
+// Run all tests
+console.log('\n');
+console.log('╔══════════════════════════════════════════════════════════════════════╗');
+console.log('║              OZ B&S KILL RULES - UNIT TESTS                          ║');
+console.log('╚══════════════════════════════════════════════════════════════════════╝');
+
+testKillOnRunNotSingle();
+testKillOnAP5Territory();
+testNotKillOnSingle();
+testNotKillWhenNotInBnS();
+testFullKillScenario();
+testSequenceSimulation();
+
+console.log('\n');
+console.log('╔══════════════════════════════════════════════════════════════════════╗');
+console.log('║                      UNIT TESTS COMPLETE                              ║');
+console.log('╚══════════════════════════════════════════════════════════════════════╝');

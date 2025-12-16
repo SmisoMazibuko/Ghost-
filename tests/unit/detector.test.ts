@@ -127,7 +127,11 @@ describe('PatternDetector', () => {
   });
 
   describe('ZZ Pattern', () => {
-    it('should detect ZZ when three consecutive runs of length 1', () => {
+    // NOTE: ZZ detection is now handled by ZZStateManager, not detector.
+    // These tests verify that the detector does NOT detect ZZ/AntiZZ.
+    // See POCKET-SYSTEM-SPEC.md for the authoritative ZZ/AntiZZ rules.
+
+    it('should NOT detect ZZ from detectAll (handled by ZZStateManager)', () => {
       const runData: RunData = {
         lengths: [1, 1, 1],
         directions: [1, -1, 1],
@@ -138,8 +142,8 @@ describe('PatternDetector', () => {
       const signals = detector.detectAll(runData, 2);
       const signal = signals.find(s => s.pattern === 'ZZ');
 
-      expect(signal).toBeDefined();
-      expect(signal!.expectedDirection).toBe(-1); // Alternation continues
+      // ZZ is skipped in detectAll() - handled by ZZStateManager
+      expect(signal).toBeUndefined();
     });
 
     it('should not detect ZZ when runs are not all length 1', () => {
@@ -158,7 +162,11 @@ describe('PatternDetector', () => {
   });
 
   describe('AntiZZ Pattern', () => {
-    it('should detect AntiZZ with opposite prediction to ZZ', () => {
+    // NOTE: AntiZZ detection is now handled by ZZStateManager, not detector.
+    // AntiZZ only activates when ZZ's first bet is negative.
+    // See POCKET-SYSTEM-SPEC.md Section 5.
+
+    it('should NOT detect AntiZZ from detectAll (handled by ZZStateManager)', () => {
       const runData: RunData = {
         lengths: [1, 1, 1],
         directions: [1, -1, 1],
@@ -167,13 +175,10 @@ describe('PatternDetector', () => {
       };
 
       const signals = detector.detectAll(runData, 2);
-      const zzSignal = signals.find(s => s.pattern === 'ZZ');
       const antiZZSignal = signals.find(s => s.pattern === 'AntiZZ');
 
-      expect(zzSignal).toBeDefined();
-      expect(antiZZSignal).toBeDefined();
-      expect(zzSignal!.expectedDirection).toBe(-1);
-      expect(antiZZSignal!.expectedDirection).toBe(1);
+      // AntiZZ is skipped in detectAll() - handled by ZZStateManager
+      expect(antiZZSignal).toBeUndefined();
     });
   });
 

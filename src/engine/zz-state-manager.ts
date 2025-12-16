@@ -177,10 +177,15 @@ export class ZZStateManager {
 
   /**
    * Calculate ZZ pocket based on runProfitZZ.
-   * Per spec D.4: runProfitZZ > 0 → P1, runProfitZZ <= 0 → P2
+   *
+   * User decision: >= 0 → P1 (zero/break-even stays in P1)
+   * This is the lenient approach - a break-even run keeps ZZ in active mode.
+   *
+   * runProfitZZ >= 0 → P1 (active, can bet)
+   * runProfitZZ < 0  → P2 (inactive, observe only)
    */
   private calculateZZPocket(): ZZPocket {
-    return this.state.runProfitZZ > 0 ? 1 : 2;
+    return this.state.runProfitZZ >= 0 ? 1 : 2;
   }
 
   /**
@@ -321,19 +326,23 @@ export class ZZStateManager {
     console.log(`[ZZ]   runProfitZZ updated to: ${this.state.runProfitZZ.toFixed(0)}%`);
 
     if (imaginaryProfit >= 0) {
-      // POSITIVE imaginary → ZZ moves P2→P1, ZZ bets (per spec F)
+      // POSITIVE imaginary → ZZ moves P2→P1 (per spec F)
+      // IMPORTANT: shouldBet: false because the imaginary bet already "consumed" this block.
+      // ZZ is now active and will bet on NEXT block via continuous betting.
       this.movePatternToPocket('ZZ', 1, blockIndex, imaginaryProfit);
       this.state.zzPocket = 1;
       this.state.activePattern = 'ZZ';
       this.state.zzCurrentRunProfit = imaginaryProfit;
-      this.state.zzFirstBetEvaluated = true;
+      this.state.zzFirstBetEvaluated = true;  // Imaginary counts as first bet
       this.state.antiZZIsCandidate = false;
 
-      console.log(`[ZZ] Positive imaginary → ZZ moves P2→P1, bets`);
+      console.log(`[ZZ] Positive imaginary → ZZ moves P2→P1, will bet on NEXT block`);
       console.log(`[ZZ] ZZ activated: YES, AntiZZ played: NO`);
       this.logIndicatorState('AFTER', blockIndex);
 
-      return { pattern: 'ZZ', shouldBet: true, imaginaryProfit };
+      // Return shouldBet: false - the imaginary bet already accounted for this block
+      // ZZ will bet on subsequent blocks via continuous betting (shouldGenerateZZSignal)
+      return { pattern: 'ZZ', shouldBet: false, imaginaryProfit };
     } else {
       // NEGATIVE imaginary → ZZ stays P2, AntiZZ becomes CANDIDATE (per spec E.2, F)
       // CRITICAL: AntiZZ does NOT play immediately - waits for NEXT indicator
@@ -361,6 +370,73 @@ export class ZZStateManager {
       return this.state.antiZZPocket === 1;
     }
     return false;
+  }
+
+  /**
+   * Check if ZZ should generate a signal for the current block.
+   *
+   * ZZ CONTINUOUS BETTING RULE (per spec D.2):
+   * Once ZZ is active in P1, it bets EVERY block until a negative result.
+   * This method returns true if ZZ should bet on the current block.
+   *
+   * @param currentBlockIndex - The current block index (for logging)
+   * @returns true if ZZ should generate a bet signal for this block
+   */
+  shouldGenerateZZSignal(currentBlockIndex?: number): boolean {
+    // Only ZZ does continuous betting
+    if (this.state.activePattern !== 'ZZ') {
+      return false;
+    }
+
+    // ZZ must be in P1 to bet
+    if (this.state.zzPocket !== 1) {
+      return false;
+    }
+
+    // Don't bet during B&S (tracking continues, but no betting)
+    if (this.state.isInBaitSwitch) {
+      return false;
+    }
+
+    // Don't bet if waiting for imaginary first bet evaluation
+    if (this.state.waitingForFirstBet) {
+      return false;
+    }
+
+    // ZZ is active in P1, not in B&S, not waiting - should bet
+    if (currentBlockIndex !== undefined) {
+      console.log(`[ZZ] Continuous betting: ZZ active in P1, betting on block ${currentBlockIndex}`);
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if AntiZZ should generate a signal for the current block.
+   *
+   * AntiZZ SINGLE BET RULE (per spec E.3):
+   * AntiZZ places exactly ONE bet per indicator.
+   * This method returns true only if AntiZZ is active and hasn't bet yet this indicator.
+   *
+   * @returns true if AntiZZ should generate a bet signal
+   */
+  shouldGenerateAntiZZSignal(): boolean {
+    // Only AntiZZ
+    if (this.state.activePattern !== 'AntiZZ') {
+      return false;
+    }
+
+    // AntiZZ must be in P1 to bet
+    if (this.state.antiZZPocket !== 1) {
+      return false;
+    }
+
+    // Don't bet during B&S
+    if (this.state.isInBaitSwitch) {
+      return false;
+    }
+
+    return true;
   }
 
   // --------------------------------------------------------------------------
@@ -467,18 +543,29 @@ export class ZZStateManager {
 
     // AntiZZ pocket based on LAST BET only (per spec E.4)
     if (result.profit < 0) {
-      // LOSS → AntiZZ moves to P2
+      // LOSS → SWAP: AntiZZ to P2, ZZ to P1
       this.movePatternToPocket('AntiZZ', 2, blockIndex, result.profit);
       this.state.antiZZPocket = 2;
-      console.log(`[ZZ] AntiZZ lost → moves to P2`);
-    } else {
-      // WIN → AntiZZ stays in P1
-      this.state.antiZZPocket = 1;
-      console.log(`[ZZ] AntiZZ won → stays P1`);
-    }
+      this.state.zzPocket = 1;  // SWAP - ZZ moves to P1
 
-    // AntiZZ ALWAYS deactivates after one bet (per spec E.3)
-    this.state.activePattern = null;
+      // ZZ activates IMMEDIATELY and predicts from this block
+      // ZZ's imaginary first bet = opposite of AntiZZ's result
+      // If AntiZZ lost with pct%, ZZ would have won pct%
+      const zzImaginaryProfit = result.pct;
+      this.state.runProfitZZ = zzImaginaryProfit;
+      this.state.zzCurrentRunProfit = zzImaginaryProfit;
+      this.state.zzFirstBetEvaluated = true;  // Imaginary counts as first bet
+      this.state.activePattern = 'ZZ';  // ZZ activates immediately
+
+      console.log(`[ZZ] AntiZZ lost → SWAP: AntiZZ to P2, ZZ to P1`);
+      console.log(`[ZZ] ZZ imaginary first bet: +${zzImaginaryProfit.toFixed(0)}%`);
+      console.log(`[ZZ] ZZ activates immediately, runProfitZZ: ${zzImaginaryProfit.toFixed(0)}%`);
+    } else {
+      // WIN → AntiZZ stays in P1, deactivates and waits for next indicator
+      this.state.antiZZPocket = 1;
+      this.state.activePattern = null;  // AntiZZ deactivates after one bet
+      console.log(`[ZZ] AntiZZ won → stays P1, waits for next indicator`);
+    }
 
     // Record run
     this.recordAntiZZRunHistory(blockIndex, result.profit);
@@ -624,7 +711,7 @@ export class ZZStateManager {
           this.state.runHistory.push({
             runNumber: runCount,
             wasAntiZZ: false,
-            pocket: currentRunProfit > 0 ? 1 : 2,
+            pocket: currentRunProfit >= 0 ? 1 : 2,  // >= 0 for lenient approach
             firstPredictionNegative: false,
             profit: currentRunProfit,
             predictionCount: 1,
@@ -644,8 +731,8 @@ export class ZZStateManager {
         this.state.runProfitZZ = currentRunProfit;
       }
 
-      // Calculate ZZ pocket from runProfitZZ
-      this.state.zzPocket = this.state.runProfitZZ > 0 ? 1 : 2;
+      // Calculate ZZ pocket from runProfitZZ (>= 0 for lenient approach)
+      this.state.zzPocket = this.state.runProfitZZ >= 0 ? 1 : 2;
       console.log(`[ZZ] Rebuilt ZZ: runProfitZZ=${this.state.runProfitZZ.toFixed(0)}%, pocket=P${this.state.zzPocket}`);
     }
 

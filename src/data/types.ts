@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Data Collection Types
+ * Ghost Evaluator v15.3 - Data Collection Types
  * ==============================================
  * Type definitions for the data logging and analysis system
  */
@@ -13,6 +13,8 @@ import {
   Verdict,
   PatternCycle,
   RunData,
+  ZZRunRecord,
+  ZZPocket,
 } from '../types';
 
 // ============================================================================
@@ -153,6 +155,14 @@ export interface LoggedPlay {
 
   /** Any special events that occurred */
   events: LoggedEvent[];
+
+  // === ENHANCED PER-BLOCK TRACKING ===
+
+  /** Bucket state snapshot at this block */
+  bucketSnapshot?: BucketSnapshot;
+
+  /** ZZ state snapshot at this block (if ZZ active) */
+  zzSnapshot?: ZZBlockSnapshot;
 }
 
 // ============================================================================
@@ -183,6 +193,186 @@ export interface LoggedEvent {
   blockIndex: number;
   description: string;
   data?: Record<string, unknown>;
+}
+
+// ============================================================================
+// BUCKET STATE TRACKING TYPES
+// ============================================================================
+
+// Import BucketType and PatternBucketState from engine (don't re-export to avoid conflicts)
+import { BucketType, PatternBucketState } from '../engine/bucket-manager';
+
+// Re-export for internal use in this module
+export type { BucketType, PatternBucketState };
+
+/** Bucket transition record */
+export interface BucketTransition {
+  /** Pattern that transitioned */
+  pattern: PatternName;
+  /** Previous bucket */
+  from: BucketType;
+  /** New bucket */
+  to: BucketType;
+  /** Block index when transition occurred */
+  blockIndex: number;
+  /** Reason for transition */
+  reason: string;
+  /** Break run profit at transition (if entering from break) */
+  breakRunProfit?: number;
+  /** Whether pattern was killed (structural) vs broken (loss-based) */
+  wasKilled?: boolean;
+  /** Timestamp */
+  ts: string;
+}
+
+/** Per-block bucket snapshot */
+export interface BucketSnapshot {
+  /** Patterns in MAIN bucket */
+  main: PatternName[];
+  /** Patterns in WAITING bucket */
+  waiting: PatternName[];
+  /** Patterns in BNS bucket */
+  bns: PatternName[];
+  /** Bucket transitions that occurred this block (if any) */
+  changes?: BucketTransition[];
+}
+
+// ============================================================================
+// LOSS TRACKING TYPES
+// ============================================================================
+
+/** Loss streak summary */
+export interface LossStreakSummary {
+  /** Maximum consecutive losses */
+  maxConsecutive: number;
+  /** Total number of 2+ loss streaks */
+  totalStreaks: number;
+  /** Average streak length */
+  avgStreakLength: number;
+}
+
+/** B&S effectiveness metrics */
+export interface BnsEffectiveness {
+  /** Total B&S switch attempts */
+  totalBnsSwitches: number;
+  /** Successful switches (wins) */
+  successfulSwitches: number;
+  /** Failed switches (losses) */
+  failedSwitches: number;
+  /** Switch win rate */
+  switchWinRate: number;
+}
+
+// ============================================================================
+// P1 FLOW TRACKING TYPES
+// ============================================================================
+
+/** P1 mode event */
+export interface P1FlowEvent {
+  /** Event type */
+  type: 'enter' | 'exit';
+  /** Block index */
+  blockIndex: number;
+  /** Run length at event */
+  runLength: number;
+  /** Run direction at event */
+  runDirection: Direction;
+  /** Cumulative P/L at event */
+  pnlAtEvent: number;
+  /** Timestamp */
+  ts: string;
+}
+
+/** P1 flow analysis summary */
+export interface P1FlowAnalysis {
+  /** All P1 events */
+  p1Events: P1FlowEvent[];
+  /** Total P1 entries */
+  totalP1Entries: number;
+  /** Average run length when P1 entered */
+  avgRunLengthAtEntry: number;
+  /** Average blocks spent in P1 mode */
+  avgBlocksInP1: number;
+  /** P/L impact during P1 mode (hypothetical losses avoided) */
+  pnlLostDuringP1: number;
+  /** Longest P1 duration in blocks */
+  longestP1Duration: number;
+  /** Patterns active when P1 triggered */
+  patternsActiveAtP1Entry: Record<PatternName, number>;
+}
+
+// ============================================================================
+// ZZ/ANTIZZ POCKET SYSTEM TRACKING TYPES
+// ============================================================================
+
+/** ZZ pocket performance */
+export interface ZZPocketPerformance {
+  /** Total runs in this pocket */
+  totalRuns: number;
+  /** Total bets placed */
+  totalBets: number;
+  /** Wins */
+  wins: number;
+  /** Losses */
+  losses: number;
+  /** Total profit */
+  profit: number;
+  /** Win rate */
+  winRate: number;
+}
+
+/** ZZ pocket 2 stats (observation only) */
+export interface ZZPocket2Stats {
+  /** Total runs in pocket 2 */
+  totalRuns: number;
+  /** Blocks observed without betting */
+  observedBlocks: number;
+}
+
+/** ZZ pocket analysis */
+export interface ZZPocketAnalysis {
+  /** Pocket 1 performance (active betting) */
+  pocket1: ZZPocketPerformance;
+  /** Pocket 2 stats (observation) */
+  pocket2: ZZPocket2Stats;
+  /** Anti-ZZ specific performance */
+  antiZZPerformance: ZZPocketPerformance;
+  /** ZZ specific performance */
+  zzPerformance: ZZPocketPerformance;
+  /** Number of pocket transitions */
+  pocketTransitions: number;
+  /** Average runs per pocket */
+  avgRunsPerPocket: number;
+}
+
+/** ZZ session state for data collection */
+export interface ZZSessionState {
+  /** Final ZZ state */
+  finalState: 'inactive' | 'zz_active' | 'anti_zz_active' | 'suspended';
+  /** Final pocket */
+  currentPocket: ZZPocket;
+  /** Complete run history */
+  runHistory: ZZRunRecord[];
+  /** Pocket analysis */
+  pocketAnalysis: ZZPocketAnalysis;
+  /** Total activations */
+  activationCount: number;
+  /** Total ZZ/AntiZZ profit */
+  totalProfit: number;
+}
+
+/** Per-block ZZ snapshot */
+export interface ZZBlockSnapshot {
+  /** Current ZZ state */
+  state: 'inactive' | 'zz_active' | 'anti_zz_active' | 'suspended';
+  /** Current pocket */
+  pocket: ZZPocket;
+  /** Current run profit */
+  currentRunProfit: number;
+  /** Predicted direction (if active) */
+  predictedDirection?: Direction;
+  /** Indicator direction */
+  indicatorDirection?: Direction;
 }
 
 // ============================================================================
@@ -225,6 +415,18 @@ export interface SessionSummary {
   winsPerPattern: Record<PatternName, number>;
   /** P/L per pattern */
   pnlPerPattern: Record<PatternName, number>;
+
+  // === ENHANCED LOSS TRACKING ===
+  /** Loss streak metrics */
+  lossStreak: LossStreakSummary;
+  /** Losses per pattern */
+  lossesPerPattern: Record<PatternName, number>;
+  /** Losses while in B&S mode */
+  lossesInBns: number;
+  /** Losses while in MAIN bucket */
+  lossesInMain: number;
+  /** B&S switch effectiveness */
+  bnsEffectiveness: BnsEffectiveness;
 }
 
 /** Configuration snapshot for the session */
@@ -274,6 +476,20 @@ export interface SessionLog {
 
   /** Notes or comments (optional) */
   notes?: string;
+
+  // === ENHANCED DATA COLLECTION ===
+
+  /** Final bucket states for all patterns */
+  finalBucketStates: Record<PatternName, PatternBucketState>;
+
+  /** All bucket transitions during session */
+  bucketTransitionHistory: BucketTransition[];
+
+  /** P1 flow analysis */
+  p1FlowAnalysis: P1FlowAnalysis;
+
+  /** ZZ/AntiZZ session state and analysis */
+  zzSessionState: ZZSessionState;
 }
 
 // ============================================================================

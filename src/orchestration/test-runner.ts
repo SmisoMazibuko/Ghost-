@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Test Runner
+ * Ghost Evaluator v15.3 - Test Runner
  * ====================================
  * Automated testing for pattern behavior and rule validation
  */

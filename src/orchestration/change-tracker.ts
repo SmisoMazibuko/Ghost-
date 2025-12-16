@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Change Tracker
+ * Ghost Evaluator v15.3 - Change Tracker
  * ======================================
  * Tracks and manages all changes to the system with AI summaries
  */
@@ -289,7 +289,7 @@ export class ChangeTracker {
     }
 
     return {
-      version: '15.1',
+      version: '15.3',
       changes: [],
       lastModified: new Date().toISOString(),
     };
@@ -322,7 +322,7 @@ export class ChangeTracker {
    */
   clearAll(): void {
     this.changeLog = {
-      version: '15.1',
+      version: '15.3',
       changes: [],
       lastModified: new Date().toISOString(),
     };

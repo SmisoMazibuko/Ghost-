@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Web Server
+ * Ghost Evaluator v15.4 - Web Server
  * ===================================
  * Express server with WebSocket for real-time updates
  */
@@ -10,7 +10,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import * as path from 'path';
 import { createSessionManager } from '../session/manager';
 import { initConfig, getConfig } from '../core/config';
-import { Direction } from '../types';
+import { Direction, Prediction } from '../types';
 
 // ============================================================================
 // SERVER SETUP
@@ -57,8 +57,7 @@ export function startWebServer(port = 3000, configPath?: string) {
     });
   }
 
-  // Get full state for new connections
-  function getFullState() {
+  function buildFullStateData(prediction?: Prediction) {
     const gameState = session.getGameState();
     const reaction = session.getReactionEngine();
     const summary = session.getSummary();
@@ -68,40 +67,47 @@ export function startWebServer(port = 3000, configPath?: string) {
     const bucketManager = reaction.getBucketManager();
 
     return {
+      blocks: gameState.getBlocks(),
+      summary,
+      patterns: lifecycle.getStatistics(),
+      trades: reaction.getCompletedTrades().slice(-20),
+      pendingTrade: reaction.getPendingTrade(),
+      prediction: prediction ?? reaction.predictNext(),
+      runData: gameState.getRunData(),
+      // Session health data
+      sessionHealth: healthReport.health,
+      drawdown: healthReport.drawdown,
+      lossSeverity: healthReport.lossSeverity,
+      verdicts: healthReport.verdicts,
+      patternDivergences: healthReport.patternDivergences,
+      recovery: healthReport.recovery,
+      reentry: healthReport.reentry,
+      // Hostility data
+      hostility: {
+        state: hostilityManager.getState(),
+        activeIndicators: hostilityManager.getActiveIndicators(gameState.getBlockCount()),
+        patternRecovery: hostilityManager.getAllPatternRecoveryStates(),
+        statusMessage: hostilityManager.getStatusMessage(),
+      },
+      // Profit tracking (AP, AAP, BSP)
+      profitTracking: reaction.getProfitTracking(),
+      // 3-Bucket system data
+      buckets: {
+        summary: bucketManager.getBucketSummary(),
+        patternStates: bucketManager.getAllPatternStates(),
+      },
+      // Trading mode
+      isLiveMode,
+      // ZZ/AntiZZ pocket state
+      zzState: reaction.getZZStateManager().exportState(),
+    };
+  }
+
+  // Get full state for new connections
+  function getFullState(prediction?: Prediction) {
+    return {
       type: 'full_state',
-      data: {
-        blocks: gameState.getBlocks(),
-        summary,
-        patterns: lifecycle.getStatistics(),
-        trades: reaction.getCompletedTrades().slice(-20),
-        pendingTrade: reaction.getPendingTrade(),
-        prediction: reaction.predictNext(),
-        runData: gameState.getRunData(),
-        // Session health data
-        sessionHealth: healthReport.health,
-        drawdown: healthReport.drawdown,
-        lossSeverity: healthReport.lossSeverity,
-        verdicts: healthReport.verdicts,
-        patternDivergences: healthReport.patternDivergences,
-        recovery: healthReport.recovery,
-        reentry: healthReport.reentry,
-        // Hostility data
-        hostility: {
-          state: hostilityManager.getState(),
-          activeIndicators: hostilityManager.getActiveIndicators(gameState.getBlockCount()),
-          patternRecovery: hostilityManager.getAllPatternRecoveryStates(),
-          statusMessage: hostilityManager.getStatusMessage(),
-        },
-        // Profit tracking (AP, AAP, BSP)
-        profitTracking: reaction.getProfitTracking(),
-        // 3-Bucket system data
-        buckets: {
-          summary: bucketManager.getBucketSummary(),
-          patternStates: bucketManager.getAllPatternStates(),
-        },
-        // Trading mode
-        isLiveMode,
-      }
+      data: buildFullStateData(prediction),
     };
   }
 
@@ -202,6 +208,8 @@ export function startWebServer(port = 3000, configPath?: string) {
               summary: result.bucketSummary,
               patternStates: bucketManager.getAllPatternStates(),
             },
+            // ZZ/AntiZZ pocket state
+            zzState: reaction.getZZStateManager().exportState(),
           }
         });
         break;
@@ -212,6 +220,11 @@ export function startWebServer(port = 3000, configPath?: string) {
         const reaction = session.getReactionEngine();
         const blockCount = gameState.getBlockCount();
 
+        if (blockCount === 0) {
+          ws.send(JSON.stringify({ type: 'error', message: 'No blocks to undo' }));
+          break;
+        }
+
         // First undo any trade that was evaluated at this block
         const undoneTradeIndex = blockCount - 1;
         const undoneTradeResult = reaction.undoLastTrade(undoneTradeIndex);
@@ -219,15 +232,15 @@ export function startWebServer(port = 3000, configPath?: string) {
         // Clear any pending trade (state has changed, prediction needs recalculating)
         const cancelledPending = reaction.clearPendingTrade();
 
-        // Now undo the block (this rebuilds game state by replaying remaining blocks)
+        // Now undo the block (restores GameState snapshot)
         const removed = gameState.undoLastBlock();
         if (removed) {
           // Rebuild all state after undo (health, hostility, buckets, etc.)
           reaction.rebuildAllState();
 
-          // After undo, regenerate prediction and re-open trade if applicable
+          // After undo, regenerate prediction and (only in LIVE mode) re-open pending trade
           const prediction = reaction.predictNext();
-          const reopenedTrade = reaction.openTrade(prediction);
+          const reopenedTrade = isLiveMode ? reaction.openTrade(prediction) : null;
 
           broadcast({
             type: 'block_undone',
@@ -236,7 +249,7 @@ export function startWebServer(port = 3000, configPath?: string) {
               undoneTradeResult,
               cancelledPending,
               reopenedTrade,
-              ...getFullState().data,
+              ...buildFullStateData(prediction),
             }
           });
         }
@@ -345,6 +358,8 @@ export function startWebServer(port = 3000, configPath?: string) {
               summary: bucketManager.getBucketSummary(),
               patternStates: bucketManager.getAllPatternStates(),
             },
+            // ZZ/AntiZZ pocket state
+            zzState: reaction.getZZStateManager().exportState(),
           }
         }));
 
@@ -420,7 +435,7 @@ export function startWebServer(port = 3000, configPath?: string) {
     console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║   Ghost Evaluator v15.1 - Web Server                     ║
+║   Ghost Evaluator v15.4 - Web Server                     ║
 ║   Running at http://localhost:${port}                       ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝

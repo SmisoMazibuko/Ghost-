@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - AI Orchestration Types
+ * Ghost Evaluator v15.3 - AI Orchestration Types
  * ================================================
  * Type definitions for the AI orchestration system
  */

@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Configuration Manager
+ * Ghost Evaluator v15.3 - Configuration Manager
  * ==============================================
  * Loads and manages system configuration
  */
@@ -46,8 +46,8 @@ export interface FullConfig {
 // ============================================================================
 
 const DEFAULT_FULL_CONFIG: FullConfig = {
-  version: '15.1',
-  description: 'Ghost Evaluator v15.1 - Default Configuration',
+  version: '15.3',
+  description: 'Ghost Evaluator v15.3 - Default Configuration',
   evaluator: DEFAULT_CONFIG,
   patterns: {
     enabled: ['2A2', 'Anti2A2', '3A3', 'Anti3A3', '4A4', '5A5', 'AP5', 'OZ', 'ZZ', 'AntiZZ'],

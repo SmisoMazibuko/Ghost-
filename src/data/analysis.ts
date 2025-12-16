@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Analysis Toolkit
+ * Ghost Evaluator v15.3 - Analysis Toolkit
  * =========================================
  * Tools for analyzing logged session data
  */

@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Dev Assistant
+ * Ghost Evaluator v15.3 - Dev Assistant
  * ======================================
  * Natural language interface for development commands
  */

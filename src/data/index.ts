@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Data Collection Module
+ * Ghost Evaluator v15.3 - Data Collection Module
  * ===============================================
  * Exports all data collection and analysis functionality
  */

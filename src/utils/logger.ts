@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Logger
+ * Ghost Evaluator v15.3 - Logger
  * ===============================
  * Logging utility for the evaluator system
  */

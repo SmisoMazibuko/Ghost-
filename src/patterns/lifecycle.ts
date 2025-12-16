@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Pattern Lifecycle Manager
+ * Ghost Evaluator v15.3 - Pattern Lifecycle Manager
  * ==================================================
  * Manages pattern states: observing → active → broken
  */
@@ -54,6 +54,7 @@ export class PatternLifecycleManager {
       lastRunProfit: 0,
       breakRunProfit: 0,
       breakLoss: 0,
+      wasKilled: false,
       lastFormationIndex: -1,
       savedIndicatorDirection: null,
       waitingForIndicator: false,
@@ -68,7 +69,15 @@ export class PatternLifecycleManager {
     if (!cycle) {
       throw new Error(`Unknown pattern: ${pattern}`);
     }
-    return { ...cycle };
+    return this.cloneCycle(cycle);
+  }
+
+  private cloneCycle(cycle: PatternCycle): PatternCycle {
+    return {
+      ...cycle,
+      observationResults: (cycle.observationResults ?? []).map(r => ({ ...r })),
+      activeResults: (cycle.activeResults ?? []).map(r => ({ ...r })),
+    };
   }
 
   /**
@@ -77,7 +86,7 @@ export class PatternLifecycleManager {
   getAllCycles(): Record<PatternName, PatternCycle> {
     const result: Partial<Record<PatternName, PatternCycle>> = {};
     for (const [pattern, cycle] of this.cycles) {
-      result[pattern] = { ...cycle };
+      result[pattern] = this.cloneCycle(cycle);
     }
     return result as Record<PatternName, PatternCycle>;
   }
@@ -164,12 +173,16 @@ export class PatternLifecycleManager {
       }
 
       // Check if should activate
+      // NOTE: ZZ/AntiZZ activation is handled by ZZStateManager, not here
       if (this.checkActivation(cycle, result.pattern)) {
         cycle.state = 'active';
         cycle.lastRunProfit = 0; // Run profit starts at 0 - activation trade is NOT part of run
         activated = true;
       }
-    } else if (cycle.state === 'active') {
+    }
+
+    // Handle active state
+    if (cycle.state === 'active' && !cycle.observationResults.includes(result)) {
       // Record result during active phase
       cycle.activeResults.push(result);
       cycle.lastRunProfit += result.profit; // Track last run profit
@@ -209,16 +222,19 @@ export class PatternLifecycleManager {
   /**
    * Check if pattern should activate based on observation results
    *
-   * ZZ: Activates IMMEDIATELY on first result (no 70% requirement)
+   * ZZ: Activation is handled EXCLUSIVELY by ZZStateManager (pocket system)
+   *     See POCKET-SYSTEM-SPEC.md - ZZ activates based on indicator detection
+   *     and pocket position, not through lifecycle activation.
    * AntiZZ: NEVER activates through normal checkActivation - only activated by ZZ becoming unprofitable
    * Other patterns: Use 70% threshold (singleProfitThreshold) or 100% cumulative
    */
   private checkActivation(cycle: PatternCycle, pattern?: PatternName): boolean {
     if (cycle.observationResults.length === 0) return false;
 
-    // ZZ activates immediately on first observation (no 70% requirement)
+    // ZZ activation is handled by ZZStateManager, not lifecycle
+    // See POCKET-SYSTEM-SPEC.md for the authoritative rules
     if (pattern === 'ZZ') {
-      return true; // Activate immediately
+      return false; // Don't activate through lifecycle - ZZStateManager handles this
     }
 
     // AP5 activates via confirmAP5Pattern(), not through normal checkActivation
@@ -295,7 +311,11 @@ export class PatternLifecycleManager {
         cycle.savedIndicatorDirection = indicatorDirection;
         cycle.lastRunProfit = 0;
         // state stays 'active'
-        console.log(`[Lifecycle] ${pattern} last run profitable - staying ACTIVE, waiting for indicator`);
+        if (isAntiZZ) {
+          console.log(`[Lifecycle] AntiZZ profitable - staying ACTIVE in Pocket 1, continuing`);
+        } else {
+          console.log(`[Lifecycle] ${pattern} last run profitable - staying ACTIVE, waiting for indicator`);
+        }
       } else {
         // Last run was unprofitable - go to OBSERVING
         // NOTE: We do NOT switch to Anti-ZZ here anymore!
@@ -365,7 +385,7 @@ export class PatternLifecycleManager {
 
     if (shouldActivate) {
       cycle.state = 'active';
-      cycle.lastRunProfit = secondBlockProfit;
+      cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
       console.log(`[Lifecycle] AP5 activated with ${secondBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -386,7 +406,11 @@ export class PatternLifecycleManager {
       return; // Not active
     }
 
-    console.log(`[Lifecycle] AP5 broken (flip with <= 2 blocks)`);
+    // Save breakRunProfit BEFORE resetting (for bucket manager)
+    cycle.breakRunProfit = cycle.lastRunProfit;
+    cycle.wasKilled = true; // Structural kill, not bet loss
+
+    console.log(`[Lifecycle] AP5 killed (flip with <= 2 blocks) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
     // Reset to observing
     cycle.state = 'observing';
@@ -427,7 +451,7 @@ export class PatternLifecycleManager {
 
     if (shouldActivate) {
       cycle.state = 'active';
-      cycle.lastRunProfit = firstBlockProfit;
+      cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
       console.log(`[Lifecycle] OZ activated with ${firstBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -448,7 +472,11 @@ export class PatternLifecycleManager {
       return; // Not active
     }
 
-    console.log(`[Lifecycle] OZ broken (flip back < 3 blocks)`);
+    // Save breakRunProfit BEFORE resetting (for bucket manager)
+    cycle.breakRunProfit = cycle.lastRunProfit;
+    cycle.wasKilled = true; // Structural kill, not bet loss
+
+    console.log(`[Lifecycle] OZ killed (flip back < 3 blocks) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
     // Reset to observing
     cycle.state = 'observing';
@@ -486,7 +514,7 @@ export class PatternLifecycleManager {
 
     if (shouldActivate) {
       cycle.state = 'active';
-      cycle.lastRunProfit = firstBlockProfit;
+      cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
       console.log(`[Lifecycle] PP activated with ${firstBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -500,6 +528,7 @@ export class PatternLifecycleManager {
    *
    * PP is continuous during 2A2 rhythm, breaks when:
    * - Run reaches 3+ blocks (exits 2A2, enters OZ territory)
+   * - Flip back is 1 (single) - expected double
    * - Loss recorded (handled by recordResult)
    */
   breakPPPattern(): void {
@@ -508,7 +537,11 @@ export class PatternLifecycleManager {
       return; // Not active
     }
 
-    console.log(`[Lifecycle] PP broken (3+ run - exited 2A2 rhythm)`);
+    // Save breakRunProfit BEFORE resetting (for bucket manager)
+    cycle.breakRunProfit = cycle.lastRunProfit;
+    cycle.wasKilled = true; // Structural kill, not bet loss
+
+    console.log(`[Lifecycle] PP broken (structural) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
     // Reset to observing
     cycle.state = 'observing';
@@ -545,7 +578,7 @@ export class PatternLifecycleManager {
 
     if (shouldActivate) {
       cycle.state = 'active';
-      cycle.lastRunProfit = firstBlockProfit;
+      cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
       console.log(`[Lifecycle] ST activated with ${firstBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -555,11 +588,12 @@ export class PatternLifecycleManager {
   }
 
   /**
-   * Break ST pattern
+   * Kill ST pattern (structural)
    *
-   * ST is continuous during 2A2 rhythm, breaks when:
+   * ST is killed when:
    * - Run reaches 3+ blocks (exits 2A2, enters OZ territory)
-   * - Loss recorded (handled by recordResult)
+   *
+   * ST breaks (loss-based) are handled by recordResult()
    */
   breakSTPattern(): void {
     const cycle = this.cycles.get('ST');
@@ -567,7 +601,11 @@ export class PatternLifecycleManager {
       return; // Not active
     }
 
-    console.log(`[Lifecycle] ST broken (3+ run - exited 2A2 rhythm)`);
+    // Save breakRunProfit BEFORE resetting (for bucket manager)
+    cycle.breakRunProfit = cycle.lastRunProfit;
+    cycle.wasKilled = true; // Structural kill (3+ run), not bet loss
+
+    console.log(`[Lifecycle] ST killed (3+ run - exited 2A2 rhythm) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
     // Reset to observing
     cycle.state = 'observing';
@@ -591,6 +629,18 @@ export class PatternLifecycleManager {
   getSavedIndicatorDirection(pattern: PatternName): Direction | null {
     const cycle = this.cycles.get(pattern);
     return cycle?.savedIndicatorDirection ?? null;
+  }
+
+  /**
+   * Set the saved indicator direction for ZZ/AntiZZ
+   * Used when Anti-ZZ activates to enable signal generation
+   */
+  setSavedIndicatorDirection(pattern: PatternName, direction: Direction): void {
+    const cycle = this.cycles.get(pattern);
+    if (cycle) {
+      cycle.savedIndicatorDirection = direction;
+      console.log(`[Lifecycle] ${pattern} saved indicator direction set to ${direction > 0 ? 'UP' : 'DOWN'}`);
+    }
   }
 
   /**
@@ -664,7 +714,7 @@ export class PatternLifecycleManager {
     for (const [pattern, cycle] of Object.entries(data)) {
       if (PATTERN_NAMES.includes(pattern as PatternName)) {
         this.cycles.set(pattern as PatternName, {
-          ...cycle,
+          ...this.cloneCycle(cycle),
           // Provide defaults for fields that may be missing from older sessions
           breakRunProfit: cycle.breakRunProfit ?? 0,
           breakLoss: cycle.breakLoss ?? 0,

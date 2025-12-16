@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Recorded Session Manager
+ * Ghost Evaluator v15.3 - Recorded Session Manager
  * =================================================
  * Session manager with integrated data recording
  *

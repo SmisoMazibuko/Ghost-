@@ -181,16 +181,20 @@ describe('Evaluator Integration', () => {
   });
 
   describe('ZZ Pattern', () => {
-    it('should detect ZZ on pure alternation', () => {
+    // NOTE: ZZ detection is now handled by ZZStateManager, not the detector.
+    // ZZ signals are no longer generated in blockResult.newSignals.
+    // ZZ predictions are generated directly in the reaction engine's predictNext().
+    // See POCKET-SYSTEM-SPEC.md for the authoritative ZZ rules.
+
+    it('should NOT detect ZZ in newSignals (handled by ZZStateManager)', () => {
       // G R G (three runs of length 1)
       reaction.processBlock(1, 50);
-      const result = reaction.processBlock(-1, 60);
-      expect(result.blockResult.newSignals.find(s => s.pattern === 'ZZ')).toBeUndefined();
+      reaction.processBlock(-1, 60);
+      const result = reaction.processBlock(1, 55);
 
-      const result2 = reaction.processBlock(1, 55);
-      const zzSignal = result2.blockResult.newSignals.find(s => s.pattern === 'ZZ');
-      expect(zzSignal).toBeDefined();
-      expect(zzSignal!.expectedDirection).toBe(-1); // Expect R
+      // ZZ signals are no longer in newSignals - they come from ZZStateManager
+      const zzSignal = result.blockResult.newSignals.find(s => s.pattern === 'ZZ');
+      expect(zzSignal).toBeUndefined();
     });
   });
 

@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.1 - Research Data Types
+ * Ghost Evaluator v15.3 - Research Data Types
  * ============================================
  * Type definitions for P1, Bait-and-Switch, and Early Detection research.
  *
