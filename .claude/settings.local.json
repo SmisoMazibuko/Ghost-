@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(npm test)",
+      "Bash(echo:*)",
+      "Bash(node dist/cli/index.js:*)",
+      "Bash(npm start)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm run web:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(node dist/tests/oz-bns-kill-test.js:*)",
+      "Bash(node:*)",
+      "Bash(python:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(npm run web:start:*)",
+      "Bash(npm run:*)",
+      "Bash(ls:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm test:*)",
+      "Bash(npx ts-node:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
