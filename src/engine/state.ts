@@ -116,7 +116,7 @@ export class GameStateEngine {
         const secondBlockIndex = index - 1;
         if (secondBlockIndex >= 0 && secondBlockIndex < this.blocks.length) {
           const secondBlockPct = this.blocks[secondBlockIndex].pct;
-          this.lifecycle.confirmAP5Pattern(secondBlockPct);
+          this.lifecycle.confirmAP5Pattern(secondBlockPct, index);
         }
       }
     }
@@ -134,7 +134,7 @@ export class GameStateEngine {
         const firstBlockIndex = index - 2;
         if (firstBlockIndex >= 0 && firstBlockIndex < this.blocks.length) {
           const firstBlockPct = this.blocks[firstBlockIndex].pct;
-          this.lifecycle.confirmOZPattern(firstBlockPct);
+          this.lifecycle.confirmOZPattern(firstBlockPct, index);
         }
       }
     }
@@ -152,7 +152,7 @@ export class GameStateEngine {
         const firstBlockIndex = index - 1;
         if (firstBlockIndex >= 0 && firstBlockIndex < this.blocks.length) {
           const firstBlockPct = this.blocks[firstBlockIndex].pct;
-          this.lifecycle.confirmPPPattern(firstBlockPct);
+          this.lifecycle.confirmPPPattern(firstBlockPct, index);
         }
       }
     }
@@ -164,7 +164,7 @@ export class GameStateEngine {
     if (this.lifecycle.isActive('PP')) {
       // Kill condition 1: Run reaches 3+
       if (this.runData.currentLength >= 3) {
-        this.lifecycle.breakPPPattern();
+        this.lifecycle.breakPPPattern(index);
       }
       // Kill condition 2: Two singles in a row (rhythm broken)
       else if (this.runData.currentLength === 1 && this.runData.lengths.length >= 2) {
@@ -173,7 +173,7 @@ export class GameStateEngine {
           // Previous was single, current is single = two singles in a row
           // PP rhythm broken (expected double after single)
           console.log(`[State] PP broken - two singles in a row (rhythm broken)`);
-          this.lifecycle.breakPPPattern();
+          this.lifecycle.breakPPPattern(index);
         }
       }
     }
@@ -186,14 +186,14 @@ export class GameStateEngine {
         // Previous was 2+ - this is ST setup
         // Get the 2nd block of current run (the current block - confirmation block)
         const secondBlockPct = this.blocks[index].pct;
-        this.lifecycle.confirmSTPattern(secondBlockPct);
+        this.lifecycle.confirmSTPattern(secondBlockPct, index);
       }
     }
 
     // ST BREAK: ST is continuous during 2A2 rhythm, breaks on 3+ (enters OZ territory)
     // Loss-based breaks are handled by lifecycle via recordResult()
     if (this.lifecycle.isActive('ST') && this.runData.currentLength >= 3) {
-      this.lifecycle.breakSTPattern();
+      this.lifecycle.breakSTPattern(index);
     }
 
     // =========================================================================
@@ -211,7 +211,7 @@ export class GameStateEngine {
           const flipBackLength = this.runData.lengths[this.runData.lengths.length - 2];
           if (flipBackLength < 3) {
             console.log(`[State] OZ structural kill - flip back was only ${flipBackLength} (< 3)`);
-            this.lifecycle.breakOZPattern();
+            this.lifecycle.breakOZPattern(index);
           } else {
             console.log(`[State] OZ flip back was ${flipBackLength} - pattern survives`);
           }
@@ -287,7 +287,7 @@ export class GameStateEngine {
       if (this.runData.lengths.length >= 2) {
         const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
         if (previousRunLength <= 2) {
-          this.lifecycle.breakAP5Pattern();
+          this.lifecycle.breakAP5Pattern(index);
         }
       }
     }

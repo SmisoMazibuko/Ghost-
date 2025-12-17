@@ -947,24 +947,28 @@ export class ReactionEngine {
         continue;
       }
 
+      // Only process imaginary results (wasBet === false) here.
+      // Real bets (wasBet === true) are processed in evaluateTrade() to avoid double recording.
+      // This matches how the bucket system handles imaginary vs real results.
+      if (result.wasBet) {
+        continue;
+      }
+
       // Only record results that match the ACTIVE pattern
       const activePattern = this.zzStateManager.getActivePattern();
       if (result.pattern !== activePattern) {
         continue;
       }
 
-      // === PROCESS ZZ RESULT ===
+      // === PROCESS ZZ IMAGINARY RESULT ===
       if (activePattern === 'ZZ') {
+        console.log(`[Reaction] Processing ZZ imaginary result: ${result.profit.toFixed(0)}%`);
         const zzResult = this.zzStateManager.recordZZResult(result, blockIndex);
 
         if (zzResult.action === 'first_bet_negative') {
-          // First bet negative → AntiZZ activated
-          console.log(`[Reaction] ZZ first bet negative → AntiZZ activated`);
-          lifecycle.forceActivate('AntiZZ');
-          const indicatorDir = this.zzStateManager.getState().savedIndicatorDirection;
-          if (indicatorDir) {
-            lifecycle.setSavedIndicatorDirection('AntiZZ', indicatorDir);
-          }
+          // First bet negative → AntiZZ becomes candidate
+          console.log(`[Reaction] ZZ first bet negative → AntiZZ is candidate for next indicator`);
+          // Note: AntiZZ activation happens on NEXT indicator, not immediately
         } else if (zzResult.action === 'run_ends') {
           // Run ended, wait for next indicator
           console.log(`[Reaction] ZZ run ended → waiting for next indicator`);
@@ -972,17 +976,18 @@ export class ReactionEngine {
         // 'continue' → ZZ keeps betting (handled by predictNext)
       }
 
-      // === PROCESS ANTIZZ RESULT ===
+      // === PROCESS ANTIZZ IMAGINARY RESULT ===
       else if (activePattern === 'AntiZZ') {
+        console.log(`[Reaction] Processing AntiZZ imaginary result: ${result.profit.toFixed(0)}%`);
         const antiZZResult = this.zzStateManager.recordAntiZZResult(result, blockIndex);
 
         // AntiZZ ALWAYS deactivates after one bet - waits for next indicator
-        console.log(`[Reaction] AntiZZ bet complete (${antiZZResult.didWin ? 'WIN' : 'LOSS'}) → waiting for next indicator`);
+        console.log(`[Reaction] AntiZZ imaginary bet complete (${antiZZResult.didWin ? 'WIN' : 'LOSS'}) → waiting for next indicator`);
 
         // Sync with lifecycle
         if (!antiZZResult.didWin) {
-          // AntiZZ lost → stays in P2, ZZ activates on next indicator
-          console.log(`[Reaction] AntiZZ lost → ZZ activates on next indicator`);
+          // AntiZZ lost → SWAP: ZZ activates immediately
+          console.log(`[Reaction] AntiZZ lost → SWAP: ZZ activates immediately`);
         }
       }
     }
@@ -1024,12 +1029,22 @@ export class ReactionEngine {
     // Handle indicator - this checks pocket and either:
     // - ZZ in P1 → activates ZZ immediately (bets on next block)
     // - ZZ in P2 → sets up waiting for imaginary first bet evaluation
+    // - AntiZZ in P1 → activates AntiZZ immediately
     this.zzStateManager.handleIndicator(blockIndex, currentBlockDirection);
 
-    const zzPocket = this.zzStateManager.getZZPocket();
-    if (zzPocket === 1) {
+    const lifecycle = this.gameState.getLifecycle();
+    const activePattern = this.zzStateManager.getActivePattern();
+
+    // Sync with lifecycle so signals get generated
+    if (activePattern === 'ZZ') {
+      lifecycle.forceActivate('ZZ');
+      lifecycle.setSavedIndicatorDirection('ZZ', currentBlockDirection);
       console.log(`[Reaction] ZZ indicator at block ${blockIndex} - ZZ in P1, betting immediately`);
-    } else {
+    } else if (activePattern === 'AntiZZ') {
+      lifecycle.forceActivate('AntiZZ');
+      lifecycle.setSavedIndicatorDirection('AntiZZ', currentBlockDirection);
+      console.log(`[Reaction] ZZ indicator at block ${blockIndex} - AntiZZ in P1, betting immediately`);
+    } else if (this.zzStateManager.isWaitingForFirstBet()) {
       console.log(`[Reaction] ZZ indicator at block ${blockIndex} - ZZ in P2, waiting for imaginary first bet`);
     }
   }

@@ -672,15 +672,19 @@ export class ZZStateManager {
    * Rebuild ZZ state from evaluated results history (used after undo).
    *
    * This method reconstructs the ZZ/AntiZZ pocket positions and state
-   * by replaying the historical results. After undo, no pattern should
-   * be active - the system waits for the next indicator.
+   * by replaying the historical results in chronological order to properly
+   * handle SWAP events.
    *
    * Key state rebuilt:
-   * - zzPocket: Based on last ZZ run's runProfitZZ (>0 → P1, ≤0 → P2)
-   * - antiZZPocket: Based on last AntiZZ bet outcome (≥0 → P1, <0 → P2)
-   * - runProfitZZ: Preserved from last ZZ run
+   * - zzPocket: Based on SWAP events and runProfitZZ
+   * - antiZZPocket: Based on SWAP events and last AntiZZ bet outcome
+   * - runProfitZZ: Includes imaginary profits from SWAP
    * - antiZZLastBetOutcome: Preserved from last AntiZZ bet
    * - runHistory/movementHistory: Rebuilt from results
+   *
+   * SWAP handling:
+   * - When ZZ first bet is negative → SWAP: ZZ to P2, AntiZZ becomes candidate (P1)
+   * - When AntiZZ loses → SWAP: AntiZZ to P2, ZZ to P1 with imaginary profit
    *
    * @param results - All evaluated results remaining after undo
    */
@@ -690,65 +694,81 @@ export class ZZStateManager {
     // Reset to initial state first
     this.state = createInitialZZState();
 
-    // Filter ZZ and AntiZZ results
-    const zzResults = results.filter(r => r.pattern === 'ZZ');
-    const antiZZResults = results.filter(r => r.pattern === 'AntiZZ');
+    // Filter and sort ZZ/AntiZZ results by evalIndex (chronological order)
+    const zzAntiZZResults = results
+      .filter(r => r.pattern === 'ZZ' || r.pattern === 'AntiZZ')
+      .sort((a, b) => a.evalIndex - b.evalIndex);
 
-    console.log(`[ZZ] Found ${zzResults.length} ZZ results, ${antiZZResults.length} AntiZZ results`);
+    console.log(`[ZZ] Found ${zzAntiZZResults.length} ZZ/AntiZZ results to replay`);
 
-    // Rebuild ZZ state from ZZ results
-    if (zzResults.length > 0) {
-      // Find runs by looking for negative results (run ends on negative)
-      let currentRunProfit = 0;
-      let runCount = 0;
+    // Track state as we replay
+    let zzRunProfit = 0;
+    let zzBetCount = 0;  // Bets in current ZZ run (including imaginary)
+    let runCount = 0;
 
-      for (const result of zzResults) {
-        currentRunProfit += result.profit;
+    for (const result of zzAntiZZResults) {
+      if (result.pattern === 'ZZ') {
+        // ZZ result
+        zzRunProfit += result.profit;
+        zzBetCount++;
 
         if (result.profit < 0) {
-          // Run ended
+          // ZZ lost
+          if (zzBetCount === 1) {
+            // First bet negative → SWAP: ZZ to P2, AntiZZ to P1
+            this.state.zzPocket = 2;
+            this.state.antiZZPocket = 1;
+            this.state.antiZZIsCandidate = true;
+            console.log(`[ZZ Rebuild] ZZ first bet negative → SWAP: ZZ to P2, AntiZZ candidate`);
+          } else {
+            // Run ends (not first bet) → pocket based on runProfitZZ
+            this.state.zzPocket = zzRunProfit >= 0 ? 1 : 2;
+            console.log(`[ZZ Rebuild] ZZ run ends: runProfitZZ=${zzRunProfit.toFixed(0)}% → P${this.state.zzPocket}`);
+          }
+
+          // Record run
           runCount++;
           this.state.runHistory.push({
             runNumber: runCount,
             wasAntiZZ: false,
-            pocket: currentRunProfit >= 0 ? 1 : 2,  // >= 0 for lenient approach
-            firstPredictionNegative: false,
-            profit: currentRunProfit,
-            predictionCount: 1,
+            pocket: this.state.zzPocket,
+            firstPredictionNegative: zzBetCount === 1,
+            profit: zzRunProfit,
+            predictionCount: zzBetCount,
             startBlockIndex: result.signalIndex,
             endBlockIndex: result.evalIndex,
             ts: new Date().toISOString(),
           });
 
-          // Update runProfitZZ from this run
-          this.state.runProfitZZ = currentRunProfit;
-          currentRunProfit = 0;
+          this.state.runProfitZZ = zzRunProfit;
+          zzRunProfit = 0;
+          zzBetCount = 0;
         }
-      }
+      } else if (result.pattern === 'AntiZZ') {
+        // AntiZZ result (always one bet per indicator)
+        this.state.antiZZLastBetOutcome = result.profit;
 
-      // If there's remaining profit (run didn't end), track it
-      if (currentRunProfit !== 0) {
-        this.state.runProfitZZ = currentRunProfit;
-      }
+        if (result.profit < 0) {
+          // AntiZZ lost → SWAP: AntiZZ to P2, ZZ to P1 with imaginary profit
+          this.state.antiZZPocket = 2;
+          this.state.zzPocket = 1;
 
-      // Calculate ZZ pocket from runProfitZZ (>= 0 for lenient approach)
-      this.state.zzPocket = this.state.runProfitZZ >= 0 ? 1 : 2;
-      console.log(`[ZZ] Rebuilt ZZ: runProfitZZ=${this.state.runProfitZZ.toFixed(0)}%, pocket=P${this.state.zzPocket}`);
-    }
+          // ZZ's imaginary first bet = opposite of AntiZZ's loss (the pct)
+          const zzImaginaryProfit = result.pct;
+          zzRunProfit = zzImaginaryProfit;
+          zzBetCount = 1;  // Imaginary counts as first bet
 
-    // Rebuild AntiZZ state from AntiZZ results
-    if (antiZZResults.length > 0) {
-      // AntiZZ uses LAST BET ONLY for pocket decision
-      const lastAntiZZResult = antiZZResults[antiZZResults.length - 1];
-      this.state.antiZZLastBetOutcome = lastAntiZZResult.profit;
+          console.log(`[ZZ Rebuild] AntiZZ lost → SWAP: AntiZZ to P2, ZZ to P1, imaginary profit=${zzImaginaryProfit.toFixed(0)}%`);
+        } else {
+          // AntiZZ won → stays P1
+          this.state.antiZZPocket = 1;
+          console.log(`[ZZ Rebuild] AntiZZ won → stays P1`);
+        }
 
-      // AntiZZ pocket based on last bet (≥0 → P1, <0 → P2)
-      this.state.antiZZPocket = lastAntiZZResult.profit >= 0 ? 1 : 2;
-
-      // Record AntiZZ runs
-      for (const result of antiZZResults) {
+        // Record AntiZZ run
+        runCount++;
         this.state.runHistory.push({
-          runNumber: this.state.runHistory.length + 1,
+          runNumber: runCount,
           wasAntiZZ: true,
           pocket: result.profit >= 0 ? 1 : 2,
           firstPredictionNegative: false,
@@ -759,18 +779,26 @@ export class ZZStateManager {
           ts: new Date().toISOString(),
         });
       }
+    }
 
-      console.log(`[ZZ] Rebuilt AntiZZ: lastBet=${this.state.antiZZLastBetOutcome?.toFixed(0)}%, pocket=P${this.state.antiZZPocket}`);
+    // Handle mid-run state (ZZ was active when undo happened)
+    if (zzBetCount > 0) {
+      // ZZ was mid-run with accumulated profit (including imaginary from SWAP)
+      this.state.runProfitZZ = zzRunProfit;
+      this.state.zzCurrentRunProfit = zzRunProfit;
+      this.state.zzFirstBetEvaluated = true;  // At least one bet (real or imaginary) evaluated
+      console.log(`[ZZ Rebuild] ZZ mid-run: runProfitZZ=${zzRunProfit.toFixed(0)}%, zzFirstBetEvaluated=true`);
     }
 
     // After undo, no pattern should be active - wait for next indicator
+    // But preserve the pocket positions and runProfitZZ we calculated
     this.state.activePattern = null;
     this.state.waitingForFirstBet = false;
-    this.state.antiZZIsCandidate = false;
-    this.state.zzFirstBetEvaluated = false;
-    this.state.zzCurrentRunProfit = 0;
+    // Keep antiZZIsCandidate if it was set by ZZ first bet negative
+    // this.state.antiZZIsCandidate is already set correctly above
 
-    console.log(`[ZZ] State rebuilt: ZZ=P${this.state.zzPocket}, AntiZZ=P${this.state.antiZZPocket}, activePattern=none`);
+    console.log(`[ZZ] State rebuilt: ZZ=P${this.state.zzPocket}, AntiZZ=P${this.state.antiZZPocket}, ` +
+      `runProfitZZ=${this.state.runProfitZZ.toFixed(0)}%, antiZZIsCandidate=${this.state.antiZZIsCandidate}`);
   }
 
   // --------------------------------------------------------------------------

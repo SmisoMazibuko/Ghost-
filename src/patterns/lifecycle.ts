@@ -16,6 +16,8 @@ import {
   OPPOSITE_PATTERNS,
   DEFAULT_CONFIG,
 } from '../types';
+import { CycleAnalyticsCollector } from '../data/cycle-analytics-collector';
+import { TransitionTrigger } from '../types/cycle-analytics';
 
 // ============================================================================
 // PATTERN LIFECYCLE MANAGER
@@ -24,11 +26,27 @@ import {
 export class PatternLifecycleManager {
   private cycles: Map<PatternName, PatternCycle>;
   private config: EvaluatorConfig;
+  private analyticsCollector?: CycleAnalyticsCollector;
+  private activationStartBlocks: Map<PatternName, number> = new Map();
 
   constructor(config?: Partial<EvaluatorConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.cycles = new Map();
     this.initializeCycles();
+  }
+
+  /**
+   * Set the analytics collector for cycle optimization data
+   */
+  setAnalyticsCollector(collector: CycleAnalyticsCollector): void {
+    this.analyticsCollector = collector;
+  }
+
+  /**
+   * Get the current analytics collector (if set)
+   */
+  getAnalyticsCollector(): CycleAnalyticsCollector | undefined {
+    return this.analyticsCollector;
   }
 
   /**
@@ -172,12 +190,47 @@ export class PatternLifecycleManager {
         cycle.cumulativeProfit = 0;
       }
 
+      // Track observation step for analytics
+      if (this.analyticsCollector) {
+        this.analyticsCollector.recordObservationStep(
+          result.pattern,
+          result,
+          cycle,
+          result.evalIndex
+        );
+        // Also record counterfactual (what would have happened if we bet)
+        this.analyticsCollector.recordCounterfactual(
+          result.pattern,
+          'observing',
+          result,
+          result.evalIndex
+        );
+      }
+
       // Check if should activate
       // NOTE: ZZ/AntiZZ activation is handled by ZZStateManager, not here
       if (this.checkActivation(cycle, result.pattern)) {
         cycle.state = 'active';
         cycle.lastRunProfit = 0; // Run profit starts at 0 - activation trade is NOT part of run
         activated = true;
+
+        // Track activation for analytics
+        this.activationStartBlocks.set(result.pattern, result.evalIndex);
+        if (this.analyticsCollector) {
+          const trigger: TransitionTrigger = this.getActivationTrigger(cycle);
+          const triggerValue = trigger === 'single_70'
+            ? Math.max(...cycle.observationResults.map(r => r.profit))
+            : cycle.cumulativeProfit;
+          this.analyticsCollector.recordTransition(
+            result.pattern,
+            'observing',
+            'active',
+            trigger,
+            result.evalIndex,
+            triggerValue,
+            cycle
+          );
+        }
       }
     }
 
@@ -192,6 +245,25 @@ export class PatternLifecycleManager {
       // Pattern stays in BNS bucket, but must re-confirm bait (70%+) before next switch
       if (result.isBnsInverse) {
         cycle.breakLoss = result.profit < 0 ? result.profit : 0;
+
+        // Track break for analytics BEFORE calling breakPattern
+        if (this.analyticsCollector) {
+          const startBlock = this.activationStartBlocks.get(result.pattern) || 0;
+          const activeRunSummary = this.analyticsCollector.buildActiveRunSummary(
+            cycle, startBlock, result.evalIndex
+          );
+          this.analyticsCollector.recordTransition(
+            result.pattern,
+            'active',
+            'observing',
+            'bns_inverse',
+            result.evalIndex,
+            result.profit,
+            undefined,
+            activeRunSummary
+          );
+        }
+
         this.breakPattern(result.pattern, result.indicatorDirection);
         broken = true;
         console.log(`[Lifecycle] B&S pattern ${result.pattern} broke after switch trade (profit: ${result.profit.toFixed(0)}%) - waiting for next bait`);
@@ -203,6 +275,24 @@ export class PatternLifecycleManager {
         if (cycle.isContinuous || !cycle.isContinuous) {
           // Track the break loss (the single loss that broke the pattern)
           cycle.breakLoss = result.profit; // This is negative (e.g., -80)
+
+          // Track break for analytics BEFORE calling breakPattern
+          if (this.analyticsCollector) {
+            const startBlock = this.activationStartBlocks.get(result.pattern) || 0;
+            const activeRunSummary = this.analyticsCollector.buildActiveRunSummary(
+              cycle, startBlock, result.evalIndex
+            );
+            this.analyticsCollector.recordTransition(
+              result.pattern,
+              'active',
+              'observing',
+              'loss_break',
+              result.evalIndex,
+              result.profit,
+              undefined,
+              activeRunSummary
+            );
+          }
 
           // For ZZ/AntiZZ, pass the indicator direction for potential persistence
           this.breakPattern(result.pattern, result.indicatorDirection);
@@ -217,6 +307,17 @@ export class PatternLifecycleManager {
       previousState,
       newState: cycle.state,
     };
+  }
+
+  /**
+   * Determine what triggered activation
+   */
+  private getActivationTrigger(cycle: PatternCycle): TransitionTrigger {
+    const maxSingle = Math.max(...cycle.observationResults.map(r => r.profit), 0);
+    if (maxSingle >= this.config.singleProfitThreshold) {
+      return 'single_70';
+    }
+    return 'cumulative_100';
   }
 
   /**
@@ -363,9 +464,10 @@ export class PatternLifecycleManager {
    * - 2nd block of current run is >= 70% (or cumulative >= 100%)
    *
    * @param secondBlockProfit - The profit percentage of the 2nd block in the current run
+   * @param blockIndex - Current block index for analytics
    * @returns true if AP5 was activated
    */
-  confirmAP5Pattern(secondBlockProfit: number): boolean {
+  confirmAP5Pattern(secondBlockProfit: number, blockIndex?: number): boolean {
     const cycle = this.cycles.get('AP5');
     if (!cycle || cycle.state === 'active') {
       return false; // Already active or doesn't exist
@@ -386,6 +488,26 @@ export class PatternLifecycleManager {
     if (shouldActivate) {
       cycle.state = 'active';
       cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
+
+      // Track activation for analytics
+      if (blockIndex !== undefined) {
+        this.activationStartBlocks.set('AP5', blockIndex);
+      }
+      if (this.analyticsCollector && blockIndex !== undefined) {
+        const trigger: TransitionTrigger = secondBlockProfit >= this.config.singleProfitThreshold
+          ? 'single_70' : 'cumulative_100';
+        const triggerValue = trigger === 'single_70' ? secondBlockProfit : cycle.cumulativeProfit;
+        this.analyticsCollector.recordTransition(
+          'AP5',
+          'observing',
+          'active',
+          trigger,
+          blockIndex,
+          triggerValue,
+          cycle
+        );
+      }
+
       console.log(`[Lifecycle] AP5 activated with ${secondBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -400,7 +522,7 @@ export class PatternLifecycleManager {
    * AP5 breaks when:
    * - Flip happens with 2 or fewer blocks (miss the bet or win by cut at 2 blocks)
    */
-  breakAP5Pattern(): void {
+  breakAP5Pattern(blockIndex?: number): void {
     const cycle = this.cycles.get('AP5');
     if (!cycle || cycle.state !== 'active') {
       return; // Not active
@@ -409,6 +531,24 @@ export class PatternLifecycleManager {
     // Save breakRunProfit BEFORE resetting (for bucket manager)
     cycle.breakRunProfit = cycle.lastRunProfit;
     cycle.wasKilled = true; // Structural kill, not bet loss
+
+    // Track structural kill for analytics
+    if (this.analyticsCollector && blockIndex !== undefined) {
+      const startBlock = this.activationStartBlocks.get('AP5') || 0;
+      const activeRunSummary = this.analyticsCollector.buildActiveRunSummary(
+        cycle, startBlock, blockIndex
+      );
+      this.analyticsCollector.recordTransition(
+        'AP5',
+        'active',
+        'observing',
+        'structural_kill',
+        blockIndex,
+        undefined,
+        undefined,
+        activeRunSummary
+      );
+    }
 
     console.log(`[Lifecycle] AP5 killed (flip with <= 2 blocks) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
@@ -429,9 +569,10 @@ export class PatternLifecycleManager {
    * - 3+ flip back → confirm 70% on 1st block of this run
    *
    * @param firstBlockProfit - The profit percentage of the 1st block in the flip back run
+   * @param blockIndex - Current block index for analytics
    * @returns true if OZ was activated
    */
-  confirmOZPattern(firstBlockProfit: number): boolean {
+  confirmOZPattern(firstBlockProfit: number, blockIndex?: number): boolean {
     const cycle = this.cycles.get('OZ');
     if (!cycle || cycle.state === 'active') {
       return false; // Already active or doesn't exist
@@ -452,6 +593,26 @@ export class PatternLifecycleManager {
     if (shouldActivate) {
       cycle.state = 'active';
       cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
+
+      // Track activation for analytics
+      if (blockIndex !== undefined) {
+        this.activationStartBlocks.set('OZ', blockIndex);
+      }
+      if (this.analyticsCollector && blockIndex !== undefined) {
+        const trigger: TransitionTrigger = firstBlockProfit >= this.config.singleProfitThreshold
+          ? 'single_70' : 'cumulative_100';
+        const triggerValue = trigger === 'single_70' ? firstBlockProfit : cycle.cumulativeProfit;
+        this.analyticsCollector.recordTransition(
+          'OZ',
+          'observing',
+          'active',
+          trigger,
+          blockIndex,
+          triggerValue,
+          cycle
+        );
+      }
+
       console.log(`[Lifecycle] OZ activated with ${firstBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -466,7 +627,7 @@ export class PatternLifecycleManager {
    * OZ breaks when:
    * - Flip back is less than 3 blocks
    */
-  breakOZPattern(): void {
+  breakOZPattern(blockIndex?: number): void {
     const cycle = this.cycles.get('OZ');
     if (!cycle || cycle.state !== 'active') {
       return; // Not active
@@ -475,6 +636,24 @@ export class PatternLifecycleManager {
     // Save breakRunProfit BEFORE resetting (for bucket manager)
     cycle.breakRunProfit = cycle.lastRunProfit;
     cycle.wasKilled = true; // Structural kill, not bet loss
+
+    // Track structural kill for analytics
+    if (this.analyticsCollector && blockIndex !== undefined) {
+      const startBlock = this.activationStartBlocks.get('OZ') || 0;
+      const activeRunSummary = this.analyticsCollector.buildActiveRunSummary(
+        cycle, startBlock, blockIndex
+      );
+      this.analyticsCollector.recordTransition(
+        'OZ',
+        'active',
+        'observing',
+        'structural_kill',
+        blockIndex,
+        undefined,
+        undefined,
+        activeRunSummary
+      );
+    }
 
     console.log(`[Lifecycle] OZ killed (flip back < 3 blocks) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
@@ -493,8 +672,11 @@ export class PatternLifecycleManager {
    * - Called when flip back reaches 2 blocks (double)
    * - Checks if 1st block had 70%+ profit
    * - If yes, activates PP
+   *
+   * @param firstBlockProfit - The profit percentage of the 1st block in the flip back run
+   * @param blockIndex - Current block index for analytics
    */
-  confirmPPPattern(firstBlockProfit: number): boolean {
+  confirmPPPattern(firstBlockProfit: number, blockIndex?: number): boolean {
     const cycle = this.cycles.get('PP');
     if (!cycle || cycle.state === 'active') {
       return false; // Already active or doesn't exist
@@ -515,6 +697,26 @@ export class PatternLifecycleManager {
     if (shouldActivate) {
       cycle.state = 'active';
       cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
+
+      // Track activation for analytics
+      if (blockIndex !== undefined) {
+        this.activationStartBlocks.set('PP', blockIndex);
+      }
+      if (this.analyticsCollector && blockIndex !== undefined) {
+        const trigger: TransitionTrigger = firstBlockProfit >= this.config.singleProfitThreshold
+          ? 'single_70' : 'cumulative_100';
+        const triggerValue = trigger === 'single_70' ? firstBlockProfit : cycle.cumulativeProfit;
+        this.analyticsCollector.recordTransition(
+          'PP',
+          'observing',
+          'active',
+          trigger,
+          blockIndex,
+          triggerValue,
+          cycle
+        );
+      }
+
       console.log(`[Lifecycle] PP activated with ${firstBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -531,7 +733,7 @@ export class PatternLifecycleManager {
    * - Flip back is 1 (single) - expected double
    * - Loss recorded (handled by recordResult)
    */
-  breakPPPattern(): void {
+  breakPPPattern(blockIndex?: number): void {
     const cycle = this.cycles.get('PP');
     if (!cycle || cycle.state !== 'active') {
       return; // Not active
@@ -540,6 +742,24 @@ export class PatternLifecycleManager {
     // Save breakRunProfit BEFORE resetting (for bucket manager)
     cycle.breakRunProfit = cycle.lastRunProfit;
     cycle.wasKilled = true; // Structural kill, not bet loss
+
+    // Track structural kill for analytics
+    if (this.analyticsCollector && blockIndex !== undefined) {
+      const startBlock = this.activationStartBlocks.get('PP') || 0;
+      const activeRunSummary = this.analyticsCollector.buildActiveRunSummary(
+        cycle, startBlock, blockIndex
+      );
+      this.analyticsCollector.recordTransition(
+        'PP',
+        'active',
+        'observing',
+        'structural_kill',
+        blockIndex,
+        undefined,
+        undefined,
+        activeRunSummary
+      );
+    }
 
     console.log(`[Lifecycle] PP broken (structural) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 
@@ -557,8 +777,11 @@ export class PatternLifecycleManager {
    * ST is like AP5 but for 2A2 (doubles):
    * - 2+ → flip → 2 (double with 70% on 1st) → ACTIVATE
    * - Then on flip, predict 2nd block of continuation
+   *
+   * @param firstBlockProfit - The profit percentage of the 1st block
+   * @param blockIndex - Current block index for analytics
    */
-  confirmSTPattern(firstBlockProfit: number): boolean {
+  confirmSTPattern(firstBlockProfit: number, blockIndex?: number): boolean {
     const cycle = this.cycles.get('ST');
     if (!cycle || cycle.state === 'active') {
       return false; // Already active or doesn't exist
@@ -579,6 +802,26 @@ export class PatternLifecycleManager {
     if (shouldActivate) {
       cycle.state = 'active';
       cycle.lastRunProfit = 0; // Start at 0, not confirmation profit
+
+      // Track activation for analytics
+      if (blockIndex !== undefined) {
+        this.activationStartBlocks.set('ST', blockIndex);
+      }
+      if (this.analyticsCollector && blockIndex !== undefined) {
+        const trigger: TransitionTrigger = firstBlockProfit >= this.config.singleProfitThreshold
+          ? 'single_70' : 'cumulative_100';
+        const triggerValue = trigger === 'single_70' ? firstBlockProfit : cycle.cumulativeProfit;
+        this.analyticsCollector.recordTransition(
+          'ST',
+          'observing',
+          'active',
+          trigger,
+          blockIndex,
+          triggerValue,
+          cycle
+        );
+      }
+
       console.log(`[Lifecycle] ST activated with ${firstBlockProfit}% (cumulative: ${cycle.cumulativeProfit}%)`);
       return true;
     }
@@ -595,7 +838,7 @@ export class PatternLifecycleManager {
    *
    * ST breaks (loss-based) are handled by recordResult()
    */
-  breakSTPattern(): void {
+  breakSTPattern(blockIndex?: number): void {
     const cycle = this.cycles.get('ST');
     if (!cycle || cycle.state !== 'active') {
       return; // Not active
@@ -604,6 +847,24 @@ export class PatternLifecycleManager {
     // Save breakRunProfit BEFORE resetting (for bucket manager)
     cycle.breakRunProfit = cycle.lastRunProfit;
     cycle.wasKilled = true; // Structural kill (3+ run), not bet loss
+
+    // Track structural kill for analytics
+    if (this.analyticsCollector && blockIndex !== undefined) {
+      const startBlock = this.activationStartBlocks.get('ST') || 0;
+      const activeRunSummary = this.analyticsCollector.buildActiveRunSummary(
+        cycle, startBlock, blockIndex
+      );
+      this.analyticsCollector.recordTransition(
+        'ST',
+        'active',
+        'observing',
+        'structural_kill',
+        blockIndex,
+        undefined,
+        undefined,
+        activeRunSummary
+      );
+    }
 
     console.log(`[Lifecycle] ST killed (3+ run - exited 2A2 rhythm) - breakRunProfit=${cycle.breakRunProfit.toFixed(0)}%`);
 

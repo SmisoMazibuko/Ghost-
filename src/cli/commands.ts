@@ -7,6 +7,7 @@
 import { Direction } from '../types';
 import { SessionManager } from '../session/manager';
 import { OrchestrationManager, createOrchestrationManager } from '../orchestration';
+import { loadRecentAnalytics, aggregateAnalytics, AggregatedAnalytics } from '../data/analytics-storage';
 
 // ============================================================================
 // DISPLAY HELPERS
@@ -520,6 +521,178 @@ export class CommandHandler {
     }
   }
 
+  // ========================================
+  // CYCLE ANALYTICS COMMANDS
+  // ========================================
+
+  /**
+   * Display current session's cycle analytics
+   */
+  displayCycleAnalytics(): void {
+    const analytics = this.session.getCycleAnalytics();
+
+    if (!analytics) {
+      console.log(`${COLORS.yellow}No cycle analytics available yet.${COLORS.reset}`);
+      return;
+    }
+
+    console.log(`\n${'─'.repeat(60)}`);
+    console.log(`${COLORS.bright}Cycle Analytics - Current Session${COLORS.reset}`);
+    console.log(`${'─'.repeat(60)}`);
+
+    // Overall stats
+    console.log(`\n${COLORS.cyan}Overview:${COLORS.reset}`);
+    console.log(`  Session Duration: ${analytics.sessionDuration} blocks`);
+    console.log(`  Total Transitions: ${analytics.totalTransitions}`);
+    console.log(`  Total Activations: ${analytics.totalActivations}`);
+    console.log(`  Total Breaks: ${analytics.totalBreaks}`);
+    console.log(`  Activation Success Rate: ${(analytics.overallActivationSuccessRate * 100).toFixed(1)}%`);
+    console.log(`  Break Accuracy: ${(analytics.overallBreakAccuracy * 100).toFixed(1)}%`);
+    console.log(`  Net Observation Value: ${colorPnl(analytics.totalNetObservationValue)}`);
+
+    // Per-bucket stats
+    console.log(`\n${COLORS.cyan}Bucket Performance:${COLORS.reset}`);
+    console.log(`  MAIN: ${analytics.perBucket.MAIN.activations} activations, ` +
+      `${(analytics.perBucket.MAIN.successRate * 100).toFixed(1)}% success, ` +
+      `avg ${analytics.perBucket.MAIN.avgPnL.toFixed(0)}% PnL`);
+    console.log(`  B&S: ${analytics.perBucket.BNS.activations} activations, ` +
+      `${(analytics.perBucket.BNS.successRate * 100).toFixed(1)}% success, ` +
+      `avg ${analytics.perBucket.BNS.avgPnL.toFixed(0)}% PnL`);
+
+    // Per-pattern stats (only show patterns with data)
+    const patternsWithData = Object.entries(analytics.perPattern)
+      .filter(([_, stats]) => stats.activationCount > 0 || stats.breakCount > 0);
+
+    if (patternsWithData.length > 0) {
+      console.log(`\n${COLORS.cyan}Per-Pattern Performance:${COLORS.reset}`);
+      for (const [pattern, stats] of patternsWithData) {
+        console.log(`\n  ${COLORS.bright}${pattern}:${COLORS.reset}`);
+        console.log(`    Activations: ${stats.activationCount} (${(stats.activationSuccessRate * 100).toFixed(1)}% success)`);
+        console.log(`    Avg Observation: ${stats.avgObservationBeforeActivation.toFixed(1)} steps`);
+        console.log(`    Avg Active PnL: ${stats.avgActivePeriodPnL.toFixed(0)}%`);
+        console.log(`    Breaks: ${stats.breakCount} (loss: ${stats.lossBreakCount}, structural: ${stats.structuralKillCount})`);
+        console.log(`    Break Accuracy: ${(stats.breakAccuracy * 100).toFixed(1)}%`);
+        console.log(`    Net Obs Value: ${colorPnl(stats.netObservationValue)}`);
+        console.log(`    Time Split: ${(stats.observingPercentage * 100).toFixed(0)}% observing / ${((1 - stats.observingPercentage) * 100).toFixed(0)}% active`);
+      }
+    }
+  }
+
+  /**
+   * Display aggregated analytics from recent sessions
+   */
+  async displayAggregatedAnalytics(days: number = 7): Promise<void> {
+    console.log(`\n${COLORS.dim}Loading analytics from last ${days} days...${COLORS.reset}`);
+
+    const sessions = await loadRecentAnalytics(days);
+
+    if (sessions.length === 0) {
+      console.log(`${COLORS.yellow}No cycle analytics found for the last ${days} days.${COLORS.reset}`);
+      console.log(`Run some sessions and save their analytics to populate this data.`);
+      return;
+    }
+
+    const agg = aggregateAnalytics(sessions);
+    this.displayAggregated(agg, days);
+  }
+
+  /**
+   * Display aggregated analytics
+   */
+  private displayAggregated(agg: AggregatedAnalytics, days: number): void {
+    console.log(`\n${'─'.repeat(60)}`);
+    console.log(`${COLORS.bright}Aggregated Cycle Analytics (${agg.sessionCount} sessions, ${days} days)${COLORS.reset}`);
+    console.log(`${'─'.repeat(60)}`);
+
+    // Date range
+    const startStr = agg.dateRange.start.toLocaleDateString();
+    const endStr = agg.dateRange.end.toLocaleDateString();
+    console.log(`\n${COLORS.cyan}Date Range:${COLORS.reset} ${startStr} - ${endStr}`);
+
+    // Overall stats
+    console.log(`\n${COLORS.cyan}Overall Performance:${COLORS.reset}`);
+    console.log(`  Total Transitions: ${agg.totalTransitions}`);
+    console.log(`  Total Activations: ${agg.totalActivations}`);
+    console.log(`  Total Breaks: ${agg.totalBreaks}`);
+    console.log(`  Activation Success Rate: ${(agg.overallActivationSuccessRate * 100).toFixed(1)}%`);
+    console.log(`  Break Accuracy: ${(agg.overallBreakAccuracy * 100).toFixed(1)}%`);
+    console.log(`  Net Observation Value: ${colorPnl(agg.totalNetObservationValue)}`);
+
+    // Per-bucket stats
+    console.log(`\n${COLORS.cyan}Bucket Comparison:${COLORS.reset}`);
+    console.log(`  ${COLORS.green}MAIN:${COLORS.reset}`);
+    console.log(`    Activations: ${agg.perBucket.MAIN.activations}`);
+    console.log(`    Success Rate: ${(agg.perBucket.MAIN.successRate * 100).toFixed(1)}%`);
+    console.log(`    Avg PnL: ${agg.perBucket.MAIN.avgPnL.toFixed(0)}%`);
+    console.log(`  ${COLORS.yellow}B&S:${COLORS.reset}`);
+    console.log(`    Activations: ${agg.perBucket.BNS.activations}`);
+    console.log(`    Success Rate: ${(agg.perBucket.BNS.successRate * 100).toFixed(1)}%`);
+    console.log(`    Avg PnL: ${agg.perBucket.BNS.avgPnL.toFixed(0)}%`);
+
+    // Per-pattern summary (sorted by activations)
+    const sortedPatterns = Object.entries(agg.perPattern)
+      .filter(([_, stats]) => stats.activations > 0)
+      .sort((a, b) => b[1].activations - a[1].activations);
+
+    if (sortedPatterns.length > 0) {
+      console.log(`\n${COLORS.cyan}Pattern Rankings (by activation count):${COLORS.reset}`);
+      console.log(`  ${'Pattern'.padEnd(10)} ${'Act'.padStart(5)} ${'Succ%'.padStart(7)} ${'AvgPnL'.padStart(8)} ${'Breaks'.padStart(7)} ${'BrkAcc%'.padStart(8)} ${'NetObs'.padStart(8)}`);
+      console.log(`  ${'─'.repeat(57)}`);
+
+      for (const [pattern, stats] of sortedPatterns) {
+        const successColor = stats.successRate >= 0.5 ? COLORS.green : COLORS.red;
+        const netObsColor = stats.netObservationValue >= 0 ? COLORS.green : COLORS.red;
+
+        console.log(
+          `  ${pattern.padEnd(10)} ` +
+          `${stats.activations.toString().padStart(5)} ` +
+          `${successColor}${(stats.successRate * 100).toFixed(1).padStart(7)}${COLORS.reset} ` +
+          `${stats.avgPnL.toFixed(0).padStart(8)} ` +
+          `${stats.breaks.toString().padStart(7)} ` +
+          `${(stats.breakAccuracy * 100).toFixed(1).padStart(8)} ` +
+          `${netObsColor}${stats.netObservationValue.toFixed(0).padStart(8)}${COLORS.reset}`
+        );
+      }
+    }
+
+    // Key insights
+    console.log(`\n${COLORS.cyan}Key Insights:${COLORS.reset}`);
+
+    // Best and worst patterns
+    if (sortedPatterns.length > 0) {
+      const bestBySuccess = [...sortedPatterns].sort((a, b) => b[1].successRate - a[1].successRate)[0];
+      const worstBySuccess = [...sortedPatterns].sort((a, b) => a[1].successRate - b[1].successRate)[0];
+
+      console.log(`  Best Success Rate: ${bestBySuccess[0]} (${(bestBySuccess[1].successRate * 100).toFixed(1)}%)`);
+      console.log(`  Worst Success Rate: ${worstBySuccess[0]} (${(worstBySuccess[1].successRate * 100).toFixed(1)}%)`);
+
+      // Patterns with high observation value (avoiding losses)
+      const highObsValue = sortedPatterns.filter(([_, s]) => s.netObservationValue > 50);
+      if (highObsValue.length > 0) {
+        console.log(`  High Observation Value: ${highObsValue.map(([p, _]) => p).join(', ')}`);
+      }
+    }
+
+    // MAIN vs B&S comparison
+    if (agg.perBucket.MAIN.activations > 0 && agg.perBucket.BNS.activations > 0) {
+      const mainBetter = agg.perBucket.MAIN.successRate > agg.perBucket.BNS.successRate;
+      const diff = Math.abs(agg.perBucket.MAIN.successRate - agg.perBucket.BNS.successRate) * 100;
+      console.log(`  ${mainBetter ? 'MAIN' : 'B&S'} bucket outperforms by ${diff.toFixed(1)}% success rate`);
+    }
+  }
+
+  /**
+   * Save current session's cycle analytics
+   */
+  async saveCycleAnalytics(): Promise<void> {
+    const filepath = await this.session.saveCycleAnalytics();
+    if (filepath) {
+      console.log(`${COLORS.green}Cycle analytics saved to: ${filepath}${COLORS.reset}`);
+    } else {
+      console.log(`${COLORS.yellow}No analytics to save.${COLORS.reset}`);
+    }
+  }
+
   /**
    * Display help
    */
@@ -554,6 +727,11 @@ ${COLORS.cyan}AI Orchestration:${COLORS.reset}
   changes         Show change history
   suggest         Get AI recommendations
   validate        Validate all rules
+
+${COLORS.cyan}Analytics:${COLORS.reset}
+  analytics       Show current session cycle analytics
+  analytics-agg [days]  Show aggregated analytics (default: 7 days)
+  save-analytics  Save current session analytics to storage
 
 ${COLORS.cyan}Other:${COLORS.reset}
   help            Show this help

@@ -151,6 +151,24 @@ ${COLORS.dim}Type 'help' for commands, 'exit' to quit${COLORS.reset}
         this.handler.listSessions();
         break;
 
+      // Cycle Analytics commands
+      case 'analytics':
+        this.handler.displayCycleAnalytics();
+        break;
+
+      case 'analytics-agg':
+        const days = args[0] ? parseInt(args[0], 10) : 7;
+        this.handler.displayAggregatedAnalytics(days).catch(err => {
+          console.log(`${COLORS.yellow}Error loading analytics: ${err.message}${COLORS.reset}`);
+        });
+        break;
+
+      case 'save-analytics':
+        this.handler.saveCycleAnalytics().catch(err => {
+          console.log(`${COLORS.yellow}Error saving analytics: ${err.message}${COLORS.reset}`);
+        });
+        break;
+
       // Block entry: first arg is direction, second is percentage
       case 'g':
       case 'green':

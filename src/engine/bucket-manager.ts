@@ -1508,11 +1508,12 @@ export class BucketManager {
    * 4. bnsStates - cleared, rebuilt when entering BNS
    * 5. consecutiveOppositeWins - via initializePatterns(), rebuilt from imaginary wins
    * 6. oppositeBlocked - via initializePatterns(), set by enterBnsMode()
-   * 7. blockedAccumulation - via initializePatterns() (NOTE: not rebuilt from history)
+   * 7. blockedAccumulation - via initializePatterns(), NOW REBUILT from imaginary results
    * 8. ozBnsState/ap5BnsState/ppBnsState/stBnsState - reset to null, rebuilt by enterBnsMode()
    *
    * v15.6 FIX: Now tracks imaginary wins for blocked patterns (wasBet === false).
    * When a blocked pattern gets consecutive imaginary wins, it kills the opposite B&S.
+   * Also accumulates blocked pattern profit for immediate activation check on unblock.
    *
    * If you add NEW state:
    * - Reset it at the start (either here or ensure initializePatterns() handles it)
@@ -1681,7 +1682,14 @@ export class BucketManager {
       } else {
         // wasBet === false - this is an imaginary result
         // Check if this pattern is blocked and track imaginary wins/losses
-        if (opposite && this.isBlockedByOpposite(pattern)) {
+        const isBlocked = opposite && this.isBlockedByOpposite(pattern);
+        console.log(`[Bucket Rebuild] ${pattern} imaginary result: profit=${result.profit.toFixed(0)}%, blocked=${isBlocked}, opposite=${opposite}, oppBucket=${opposite ? this.patternBuckets.get(opposite) : 'N/A'}`);
+
+        if (isBlocked) {
+          // Accumulate profit for blocked pattern (for immediate activation check on unblock)
+          const currentAccum = this.blockedAccumulation.get(pattern) ?? 0;
+          this.blockedAccumulation.set(pattern, currentAccum + result.profit);
+
           const oppBucket = this.patternBuckets.get(opposite);
           if (oppBucket === 'BNS') {
             if (result.profit > 0) {

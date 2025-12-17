@@ -22,6 +22,9 @@ import {
 import { GameStateEngine, createGameStateEngine } from '../engine/state';
 import { ReactionEngine, createReactionEngine } from '../engine/reaction';
 import { SessionHealthManager } from '../engine/session-health';
+import { CycleAnalyticsCollector } from '../data/cycle-analytics-collector';
+import { saveCycleAnalytics } from '../data/analytics-storage';
+import { SessionCycleAnalytics } from '../types/cycle-analytics';
 
 // ============================================================================
 // SESSION MANAGER
@@ -35,6 +38,8 @@ export class SessionManager {
   private sessionDir: string;
   private currentSessionPath: string | null = null;
   private autoSaveInterval: NodeJS.Timeout | null = null;
+  private analyticsCollector: CycleAnalyticsCollector | null = null;
+  private sessionId: string = '';
 
   constructor(options?: {
     config?: Partial<EvaluatorConfig>;
@@ -47,8 +52,20 @@ export class SessionManager {
     this.gameState = createGameStateEngine(this.config);
     this.reactionEngine = createReactionEngine(this.gameState, this.config, this.healthConfig);
 
+    // Initialize analytics collector
+    this.initializeAnalytics();
+
     // Ensure session directory exists
     this.ensureSessionDir();
+  }
+
+  /**
+   * Initialize cycle analytics collector for this session
+   */
+  private initializeAnalytics(): void {
+    this.sessionId = new Date().toISOString();
+    this.analyticsCollector = new CycleAnalyticsCollector(this.sessionId);
+    this.gameState.getLifecycle().setAnalyticsCollector(this.analyticsCollector);
   }
 
   /**
@@ -82,6 +99,9 @@ export class SessionManager {
     this.gameState.reset();
     this.reactionEngine.reset();
     this.currentSessionPath = null;
+
+    // Reinitialize analytics for new session
+    this.initializeAnalytics();
   }
 
   /**
@@ -335,6 +355,64 @@ export class SessionManager {
    */
   getHealthConfig(): SessionHealthConfig {
     return JSON.parse(JSON.stringify(this.healthConfig));
+  }
+
+  // ========================================
+  // CYCLE ANALYTICS
+  // ========================================
+
+  /**
+   * Get the current session's cycle analytics
+   * Call finalizeSession() first if you want complete analytics
+   */
+  getCycleAnalytics(): SessionCycleAnalytics | null {
+    if (!this.analyticsCollector) {
+      return null;
+    }
+    return this.analyticsCollector.getSessionAnalytics();
+  }
+
+  /**
+   * Finalize the session analytics
+   * Call this before getting final analytics or saving
+   */
+  finalizeSessionAnalytics(): void {
+    if (this.analyticsCollector) {
+      this.analyticsCollector.finalizeSession();
+    }
+  }
+
+  /**
+   * Save cycle analytics to storage
+   * Returns the path where analytics were saved
+   */
+  async saveCycleAnalytics(): Promise<string | null> {
+    if (!this.analyticsCollector) {
+      return null;
+    }
+
+    // Finalize first
+    this.analyticsCollector.finalizeSession();
+
+    const analytics = this.analyticsCollector.getSessionAnalytics();
+    const filepath = await saveCycleAnalytics(analytics);
+
+    console.log(`[SessionManager] Cycle analytics saved to ${filepath}`);
+    return filepath;
+  }
+
+  /**
+   * Get analytics collector for advanced usage
+   */
+  getAnalyticsCollector(): CycleAnalyticsCollector | null {
+    return this.analyticsCollector;
+  }
+
+  /**
+   * Get current session ID
+   */
+  getSessionId(): string {
+    return this.sessionId;
   }
 }
 
