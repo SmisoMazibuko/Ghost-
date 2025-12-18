@@ -15,7 +15,7 @@ export type Direction = 1 | -1;
 export type PatternState = 'observing' | 'active' | 'broken';
 
 /** Session playability states */
-export type SessionState = 'playable' | 'unplayable' | 'p1_mode' | 'done';
+export type SessionState = 'playable' | 'unplayable' | 'done';
 
 /** Verdict classification for evaluated results */
 export type Verdict = 'fair' | 'unfair' | 'fake' | 'neutral';
@@ -391,8 +391,6 @@ export interface Prediction {
 export interface SessionFlags {
   /** Whether daily target was reached */
   dailyTargetReached: boolean;
-  /** Whether P1 mode is active */
-  p1Mode: boolean;
 }
 
 /** Complete session state for persistence */
@@ -468,9 +466,9 @@ export type EventType =
   | 'trade_closed'
   | 'session_playable'
   | 'session_unplayable'
-  | 'p1_mode_entered'
-  | 'p1_mode_cleared'
-  | 'daily_target_reached';
+  | 'daily_target_reached'
+  | 'same_direction_activated'
+  | 'same_direction_deactivated';
 
 /** System event */
 export interface SystemEvent {
@@ -978,3 +976,54 @@ export const OPPOSITE_PATTERNS: Record<PatternName, PatternName | null> = {
   'PP': 'ST',
   'ST': 'PP',
 };
+
+// ============================================================================
+// HIERARCHY MANAGER TYPES
+// ============================================================================
+
+/** Source of betting decision in hierarchy */
+export type HierarchySource = 'pocket' | 'same-direction' | 'bucket' | 'none';
+
+/** Result of hierarchy manager's bet decision */
+export interface HierarchyDecision {
+  /** Block index for this decision */
+  blockIndex: number;
+  /** Which system is betting (or 'none') */
+  source: HierarchySource;
+  /** Pattern that generated the signal (if applicable) */
+  pattern?: PatternName;
+  /** Direction to bet (if betting) */
+  direction?: Direction;
+  /** Whether a bet should be placed */
+  shouldBet: boolean;
+  /** Explanation of the decision */
+  reason: string;
+  /** Systems that were paused for betting this block */
+  pausedSystems: ('same-direction' | 'bucket')[];
+  /** Timestamp */
+  ts: string;
+}
+
+/** Hierarchy observation state for a single block */
+export interface HierarchyObservation {
+  /** Block index */
+  blockIndex: number;
+  /** Pocket system state after observation */
+  pocket: {
+    hasIndicator: boolean;
+    zzPocket: 1 | 2;
+    antiZZPocket: 1 | 2;
+    activePattern: 'ZZ' | 'AntiZZ' | null;
+  };
+  /** Same Direction state after observation */
+  sameDirection: {
+    active: boolean;
+    accumulatedLoss: number;
+    currentRunLength: number;
+  };
+  /** Bucket system state summary */
+  bucket: {
+    eligiblePatterns: PatternName[];
+    mainBucketPatterns: PatternName[];
+  };
+}
