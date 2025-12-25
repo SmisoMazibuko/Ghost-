@@ -289,12 +289,12 @@ export class ReactionEngine {
     }
 
     // === SAME DIRECTION SYSTEM CHECK ===
-    // Priority 2: Same Direction bets continuation when active
-    // SameDir has its own independent pause tracking
-    if (this.sameDirectionManager.isActive()) {
-      // Check if SameDir can trade (has its own pause state)
+    // Priority 2: Same Direction bets continuation when active and not paused
+    // SameDir has internal pause (market conditions) and external pause (drawdown)
+    if (this.sameDirectionManager.canBet()) {
+      // Check external pause (drawdown-based via PauseManager)
       if (!this.pauseManager.canSamedirTrade()) {
-        console.log(`[Prediction] SameDir BLOCKED by pause: ${this.pauseManager.getSummary()}`);
+        console.log(`[Prediction] SameDir BLOCKED by external pause: ${this.pauseManager.getSummary()}`);
         // Fall through to check if any other pattern can trade
       } else {
         const blocks = this.gameState.getBlocks();
@@ -504,6 +504,18 @@ export class ReactionEngine {
     this.completedTrades.push(trade);
     this.pendingTrade = null;
 
+    // === TRACK ZZ/XAX RESULT FOR SD PAUSE/RESUME ===
+    // Update SameDirectionManager with ZZ/XAX trade results
+    // This is used to detect ZZ/XAX breaks for resume triggers
+    this.sameDirectionManager.recordZZXAXResult(trade.pattern, isWin, trade.evalIndex);
+
+    // === SD RESUME CHECK (Phase 3) ===
+    // Check if SD should resume after ZZ/XAX break
+    // Resume takes effect on NEXT trade (this just changes state)
+    if (this.sameDirectionManager.checkResumeCondition(block.index)) {
+      console.log(`[Reaction] SD resumed after ZZ/XAX break at block ${block.index}`);
+    }
+
     // Update session health with trade result (for drawdown tracking)
     this.healthManager.updateAfterTrade(trade);
 
@@ -610,7 +622,7 @@ export class ReactionEngine {
         this.samedirConsecutiveLosses++;
       }
 
-      // Check for SameDir system pause
+      // Check for SameDir system pause (external - drawdown based)
       const samedirPause = this.pauseManager.checkSystemPause('SAMEDIR', {
         consecutiveLosses: this.samedirConsecutiveLosses,
         totalPnl: this.samedirTotalPnl,
@@ -620,6 +632,23 @@ export class ReactionEngine {
         console.log(`[Reaction] SameDir pause triggered: ${samedirPause.type} - ${samedirPause.reason}`);
         // Reset consecutive losses after pause triggers
         this.samedirConsecutiveLosses = 0;
+      }
+
+      // === SD INTERNAL PAUSE LOGIC (Phase 2) ===
+      // Check for market-condition based pause (HIGH_PCT reversal + loss, consecutive losses)
+      const blocks = this.gameState.getBlocks();
+      const prevBlock = trade.evalIndex > 0 ? blocks[trade.evalIndex - 1] : null;
+      const isReversal = prevBlock !== null && prevBlock !== undefined && block.dir !== prevBlock.dir;
+
+      const pauseResult = this.sameDirectionManager.recordSDTradeResult(
+        isWin,
+        block.pct,
+        block.index,
+        isReversal
+      );
+
+      if (pauseResult.didPause) {
+        console.log(`[Reaction] SD internal pause: ${pauseResult.reason}`);
       }
     }
     // Note: Pocket (ZZ/AntiZZ) does NOT trigger MINOR_PAUSE or MAJOR_PAUSE

@@ -19,6 +19,25 @@
 import { Block, Direction } from '../types';
 
 // ============================================================================
+// ZZ/XAX TRACKING TYPES & CONSTANTS
+// ============================================================================
+
+/** Result of last ZZ/XAX trade for pause/resume logic */
+export type ZZXAXResult = 'WIN' | 'LOSS' | null;
+
+/** Pause reason for SameDir (Phase 2) */
+export type SDPauseReason = 'HIGH_PCT_REVERSAL' | 'CONSECUTIVE_LOSSES' | null;
+
+/** Patterns that predict alternation/anti-alternation (used for SD pause/resume) */
+export const ZZ_XAX_PATTERNS = [
+  'ZZ', 'AntiZZ',
+  '2A2', 'Anti2A2',
+  '3A3', 'Anti3A3',
+  '4A4', 'Anti4A4',
+  '5A5', 'Anti5A5',
+] as const;
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -64,6 +83,32 @@ export interface SameDirectionState {
   runHistory: SameDirectionRun[];
   /** Total blocks processed */
   totalBlocksProcessed: number;
+
+  // === ZZ/XAX TRACKING (for pause/resume) ===
+  /** Last ZZ/XAX trade result for pause/resume logic */
+  lastZZXAXResult: ZZXAXResult;
+  /** Block index of last ZZ/XAX trade (-1 if none) */
+  lastZZXAXTradeBlock: number;
+  /** Pattern of last ZZ/XAX trade (null if none) */
+  lastZZXAXPattern: string | null;
+
+  // === PAUSE STATE (Phase 2) ===
+  /** Whether SD is currently paused */
+  paused: boolean;
+  /** Reason for current pause */
+  pauseReason: SDPauseReason;
+  /** Block index where pause started (-1 if not paused) */
+  pauseBlock: number;
+  /** Consecutive SD losses (resets on win, used for pause trigger) */
+  sdConsecutiveLosses: number;
+
+  // === IMAGINARY TRACKING (during pause) ===
+  /** Imaginary P/L accumulated during pause */
+  imaginaryPnL: number;
+  /** Imaginary wins during pause */
+  imaginaryWins: number;
+  /** Imaginary losses during pause */
+  imaginaryLosses: number;
 }
 
 // ============================================================================
@@ -102,6 +147,19 @@ export class SameDirectionManager {
       activationRunProfit: 0,
       runHistory: [],
       totalBlocksProcessed: 0,
+      // ZZ/XAX tracking
+      lastZZXAXResult: null,
+      lastZZXAXTradeBlock: -1,
+      lastZZXAXPattern: null,
+      // Pause state
+      paused: false,
+      pauseReason: null,
+      pauseBlock: -1,
+      sdConsecutiveLosses: 0,
+      // Imaginary tracking
+      imaginaryPnL: 0,
+      imaginaryWins: 0,
+      imaginaryLosses: 0,
     };
   }
 
@@ -404,10 +462,252 @@ export class SameDirectionManager {
    * Get status message for display
    */
   getStatusMessage(): string {
-    if (this.state.active) {
-      return `ACTIVE (loss: ${this.state.accumulatedLoss}/${DEACTIVATION_THRESHOLD})`;
+    if (!this.state.active) {
+      return `INACTIVE (observing)`;
     }
-    return `INACTIVE (observing)`;
+    if (this.state.paused) {
+      return `PAUSED (${this.state.pauseReason}) - life frozen at ${this.state.accumulatedLoss}/${DEACTIVATION_THRESHOLD}`;
+    }
+    return `ACTIVE (loss: ${this.state.accumulatedLoss}/${DEACTIVATION_THRESHOLD})`;
+  }
+
+  // ==========================================================================
+  // ZZ/XAX RESULT TRACKING (for pause/resume)
+  // ==========================================================================
+
+  /**
+   * Record the result of a ZZ/XAX trade.
+   * Called by ReactionEngine after each trade completes.
+   * Used to determine when SameDir should resume (on ZZ/XAX break).
+   *
+   * @param pattern - The pattern name
+   * @param isWin - Whether the trade won
+   * @param blockIndex - Block index where trade was evaluated
+   */
+  recordZZXAXResult(pattern: string, isWin: boolean, blockIndex: number): void {
+    // Only track ZZ/XAX patterns
+    if (!ZZ_XAX_PATTERNS.includes(pattern as typeof ZZ_XAX_PATTERNS[number])) {
+      return;
+    }
+
+    const result: ZZXAXResult = isWin ? 'WIN' : 'LOSS';
+    this.state.lastZZXAXResult = result;
+    this.state.lastZZXAXTradeBlock = blockIndex;
+    this.state.lastZZXAXPattern = pattern;
+
+    console.log(`[SD] ZZ/XAX result: ${pattern} ${result} at block ${blockIndex}`);
+  }
+
+  /**
+   * Get the last ZZ/XAX trade result.
+   * Returns 'WIN', 'LOSS', or null if no ZZ/XAX trade has occurred.
+   */
+  getLastZZXAXResult(): ZZXAXResult {
+    return this.state.lastZZXAXResult;
+  }
+
+  /**
+   * Get complete info about the last ZZ/XAX trade.
+   */
+  getLastZZXAXInfo(): {
+    result: ZZXAXResult;
+    block: number;
+    pattern: string | null;
+  } {
+    return {
+      result: this.state.lastZZXAXResult,
+      block: this.state.lastZZXAXTradeBlock,
+      pattern: this.state.lastZZXAXPattern,
+    };
+  }
+
+  /**
+   * Check if last ZZ/XAX result was a break (loss).
+   * Used as resume trigger for SameDir.
+   */
+  didZZXAXBreak(): boolean {
+    return this.state.lastZZXAXResult === 'LOSS';
+  }
+
+  // ==========================================================================
+  // PAUSE SYSTEM (Phase 2)
+  // ==========================================================================
+
+  /**
+   * Check if SD should pause based on trade result.
+   * Called after each SD trade by ReactionEngine.
+   *
+   * @param isWin - Whether the trade won
+   * @param evalBlockPct - Block percentage
+   * @param isReversal - Whether this was a direction reversal
+   */
+  shouldPause(
+    isWin: boolean,
+    evalBlockPct: number,
+    isReversal: boolean
+  ): { shouldPause: boolean; reason: SDPauseReason } {
+    // Only check pause triggers when active and not already paused
+    if (!this.state.active || this.state.paused) {
+      return { shouldPause: false, reason: null };
+    }
+
+    // Trigger 1: High PCT reversal + loss
+    if (isReversal && evalBlockPct >= 70 && !isWin) {
+      return { shouldPause: true, reason: 'HIGH_PCT_REVERSAL' };
+    }
+
+    // Trigger 2: 2+ consecutive losses
+    // sdConsecutiveLosses >= 1 && !isWin means this is the 2nd+ loss
+    if (this.state.sdConsecutiveLosses >= 1 && !isWin) {
+      return { shouldPause: true, reason: 'CONSECUTIVE_LOSSES' };
+    }
+
+    return { shouldPause: false, reason: null };
+  }
+
+  /**
+   * Pause SD trading (enter PAUSED state).
+   */
+  pause(reason: SDPauseReason, blockIndex: number): void {
+    if (this.state.paused) return;
+
+    this.state.paused = true;
+    this.state.pauseReason = reason;
+    this.state.pauseBlock = blockIndex;
+
+    // Reset imaginary tracking for this pause period
+    this.state.imaginaryPnL = 0;
+    this.state.imaginaryWins = 0;
+    this.state.imaginaryLosses = 0;
+
+    console.log(`[SD] *** PAUSED at block ${blockIndex} ***`);
+    console.log(`[SD]     Reason: ${reason}`);
+    console.log(`[SD]     accumulatedLoss FROZEN at: ${this.state.accumulatedLoss}%`);
+  }
+
+  /**
+   * Check if SD is currently paused.
+   */
+  isPaused(): boolean {
+    return this.state.paused;
+  }
+
+  /**
+   * Resume SD trading (exit PAUSED state).
+   * Called when ZZ/XAX breaks (loses), signaling market returning to trending mode.
+   */
+  resume(blockIndex: number): void {
+    if (!this.state.paused) return;
+
+    const pauseDuration = blockIndex - this.state.pauseBlock;
+    console.log(`[SD] *** RESUMED at block ${blockIndex} ***`);
+    console.log(`[SD]     Was paused for ${pauseDuration} blocks`);
+    console.log(`[SD]     Pause reason was: ${this.state.pauseReason}`);
+    console.log(`[SD]     Imaginary during pause: ${this.state.imaginaryWins}W/${this.state.imaginaryLosses}L = ${this.state.imaginaryPnL}%`);
+    console.log(`[SD]     Resuming with accumulatedLoss: ${this.state.accumulatedLoss}%`);
+
+    this.state.paused = false;
+    this.state.pauseReason = null;
+    this.state.pauseBlock = -1;
+    // Reset consecutive losses on resume - fresh start
+    this.state.sdConsecutiveLosses = 0;
+    // Keep imaginary stats for analysis but don't reset
+  }
+
+  /**
+   * Check if SD should resume based on ZZ/XAX break.
+   * Called after recording ZZ/XAX result.
+   *
+   * @returns Whether SD resumed
+   */
+  checkResumeCondition(blockIndex: number): boolean {
+    // Only check resume if currently paused
+    if (!this.state.paused) {
+      return false;
+    }
+
+    // Resume when ZZ/XAX breaks (loses)
+    if (this.state.lastZZXAXResult === 'LOSS') {
+      this.resume(blockIndex);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if SD can place a bet (active AND not paused).
+   */
+  canBet(): boolean {
+    return this.state.active && !this.state.paused;
+  }
+
+  /**
+   * Record the result of an SD trade.
+   * Called by ReactionEngine after each SD trade.
+   *
+   * @param isWin - Whether the trade won
+   * @param pct - Block percentage
+   * @param blockIndex - Block index
+   * @param isReversal - Whether this was a reversal
+   * @returns Whether SD paused after this trade
+   */
+  recordSDTradeResult(
+    isWin: boolean,
+    pct: number,
+    blockIndex: number,
+    isReversal: boolean
+  ): { didPause: boolean; reason: SDPauseReason } {
+    // If already paused, track as imaginary
+    if (this.state.paused) {
+      if (isWin) {
+        this.state.imaginaryWins++;
+        this.state.imaginaryPnL += pct;
+      } else {
+        this.state.imaginaryLosses++;
+        this.state.imaginaryPnL -= pct;
+      }
+      console.log(`[SD] IMAGINARY trade: ${isWin ? 'WIN' : 'LOSS'} ${pct}% (total: ${this.state.imaginaryPnL}%)`);
+      return { didPause: false, reason: null };
+    }
+
+    // Not paused - this is a REAL trade
+    // Update consecutive losses BEFORE checking pause
+    if (isWin) {
+      this.state.sdConsecutiveLosses = 0;
+    } else {
+      this.state.sdConsecutiveLosses++;
+    }
+
+    // Check if should pause
+    const pauseCheck = this.shouldPause(isWin, pct, isReversal);
+    if (pauseCheck.shouldPause) {
+      this.pause(pauseCheck.reason, blockIndex);
+      return { didPause: true, reason: pauseCheck.reason };
+    }
+
+    return { didPause: false, reason: null };
+  }
+
+  /**
+   * Get pause info for display/logging.
+   */
+  getPauseInfo(): {
+    isPaused: boolean;
+    reason: SDPauseReason;
+    pauseBlock: number;
+    imaginaryPnL: number;
+    imaginaryWins: number;
+    imaginaryLosses: number;
+  } {
+    return {
+      isPaused: this.state.paused,
+      reason: this.state.pauseReason,
+      pauseBlock: this.state.pauseBlock,
+      imaginaryPnL: this.state.imaginaryPnL,
+      imaginaryWins: this.state.imaginaryWins,
+      imaginaryLosses: this.state.imaginaryLosses,
+    };
   }
 
   // ==========================================================================
