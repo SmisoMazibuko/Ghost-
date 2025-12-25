@@ -4,74 +4,104 @@
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:32.547Z",
+      "ts": "2025-12-17T18:45:02.613Z",
       "index": 0
     },
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:34.531Z",
+      "ts": "2025-12-17T18:45:04.313Z",
       "index": 1
     },
     {
       "dir": 1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:37.233Z",
+      "ts": "2025-12-17T18:45:07.470Z",
       "index": 2
     },
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:39.883Z",
+      "ts": "2025-12-17T18:45:10.158Z",
       "index": 3
     },
     {
       "dir": 1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:42.369Z",
+      "ts": "2025-12-17T18:45:12.709Z",
       "index": 4
     },
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:46.947Z",
+      "ts": "2025-12-17T18:45:15.388Z",
       "index": 5
     },
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:49.700Z",
+      "ts": "2025-12-17T18:45:17.855Z",
       "index": 6
     },
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:34:58.409Z",
+      "ts": "2025-12-17T18:45:18.724Z",
       "index": 7
+    },
+    {
+      "dir": -1,
+      "pct": 85,
+      "ts": "2025-12-17T18:45:19.509Z",
+      "index": 8
     },
     {
       "dir": 1,
       "pct": 85,
-      "ts": "2025-12-16T08:35:03.246Z",
-      "index": 8
-    },
-    {
-      "dir": -1,
-      "pct": 85,
-      "ts": "2025-12-16T08:35:08.959Z",
+      "ts": "2025-12-17T18:45:22.621Z",
       "index": 9
     },
     {
-      "dir": -1,
+      "dir": 1,
       "pct": 85,
-      "ts": "2025-12-16T08:35:13.667Z",
+      "ts": "2025-12-17T18:45:24.494Z",
       "index": 10
     },
     {
       "dir": -1,
       "pct": 85,
-      "ts": "2025-12-16T08:35:19.570Z",
+      "ts": "2025-12-17T18:45:27.230Z",
       "index": 11
+    },
+    {
+      "dir": 1,
+      "pct": 85,
+      "ts": "2025-12-17T18:45:31.310Z",
+      "index": 12
+    },
+    {
+      "dir": -1,
+      "pct": 85,
+      "ts": "2025-12-17T18:45:34.739Z",
+      "index": 13
+    },
+    {
+      "dir": 1,
+      "pct": 85,
+      "ts": "2025-12-17T18:54:43.357Z",
+      "index": 14
+    },
+    {
+      "dir": -1,
+      "pct": 85,
+      "ts": "2025-12-17T18:54:46.243Z",
+      "index": 15
+    },
+    {
+      "dir": 1,
+      "pct": 85,
+      "ts": "2025-12-17T18:54:49.552Z",
+      "index": 16
     }
   ],
   "results": [
@@ -86,7 +116,7 @@
       "verdict": "fair",
       "profit": 85,
       "wasBet": false,
-      "ts": "2025-12-16T08:34:37.233Z"
+      "ts": "2025-12-17T18:45:07.470Z"
     },
     {
       "pattern": "Anti2A2",
@@ -99,7 +129,21 @@
       "verdict": "fake",
       "profit": -85,
       "wasBet": false,
-      "ts": "2025-12-16T08:34:37.233Z"
+      "ts": "2025-12-17T18:45:07.473Z"
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 5,
+      "evalIndex": 6,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 85,
+      "runLength": 2,
+      "verdict": "fake",
+      "profit": -85,
+      "wasBet": true,
+      "ts": "2025-12-17T18:45:17.857Z",
+      "indicatorDirection": 1
     },
     {
       "pattern": "2A2",
@@ -112,7 +156,7 @@
       "verdict": "fake",
       "profit": -85,
       "wasBet": true,
-      "ts": "2025-12-16T08:34:58.409Z"
+      "ts": "2025-12-17T18:45:18.725Z"
     },
     {
       "pattern": "Anti2A2",
@@ -125,38 +169,116 @@
       "verdict": "fair",
       "profit": 85,
       "wasBet": false,
-      "ts": "2025-12-16T08:34:58.409Z"
+      "ts": "2025-12-17T18:45:18.725Z"
     },
     {
       "pattern": "3A3",
       "signalIndex": 7,
       "evalIndex": 8,
       "expectedDirection": 1,
-      "actualDirection": 1,
+      "actualDirection": -1,
       "pct": 85,
-      "runLength": 1,
-      "verdict": "fair",
-      "profit": 85,
+      "runLength": 4,
+      "verdict": "fake",
+      "profit": -85,
       "wasBet": false,
-      "ts": "2025-12-16T08:35:03.247Z"
+      "ts": "2025-12-17T18:45:19.509Z"
     },
     {
       "pattern": "Anti3A3",
       "signalIndex": 7,
       "evalIndex": 8,
       "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 85,
+      "runLength": 4,
+      "verdict": "fair",
+      "profit": 85,
+      "wasBet": false,
+      "ts": "2025-12-17T18:45:19.509Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 8,
+      "evalIndex": 9,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 85,
+      "wasBet": false,
+      "ts": "2025-12-17T18:45:22.621Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 8,
+      "evalIndex": 9,
+      "expectedDirection": -1,
       "actualDirection": 1,
       "pct": 85,
       "runLength": 1,
       "verdict": "fake",
       "profit": -85,
       "wasBet": false,
-      "ts": "2025-12-16T08:35:03.247Z"
+      "ts": "2025-12-17T18:45:22.621Z"
     },
     {
       "pattern": "OZ",
-      "signalIndex": 8,
-      "evalIndex": 9,
+      "signalIndex": 9,
+      "evalIndex": 10,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 2,
+      "verdict": "fake",
+      "profit": -85,
+      "wasBet": true,
+      "ts": "2025-12-17T18:45:24.495Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 10,
+      "evalIndex": 11,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 85,
+      "wasBet": false,
+      "ts": "2025-12-17T18:45:27.230Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 10,
+      "evalIndex": 11,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -85,
+      "wasBet": true,
+      "ts": "2025-12-17T18:45:27.230Z"
+    },
+    {
+      "pattern": "ST",
+      "signalIndex": 11,
+      "evalIndex": 12,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -85,
+      "wasBet": true,
+      "ts": "2025-12-17T18:45:31.310Z"
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 14,
+      "evalIndex": 15,
       "expectedDirection": -1,
       "actualDirection": -1,
       "pct": 85,
@@ -164,54 +286,58 @@
       "verdict": "fair",
       "profit": 85,
       "wasBet": true,
-      "ts": "2025-12-16T08:35:08.959Z"
+      "ts": "2025-12-17T18:54:46.243Z",
+      "indicatorDirection": -1
     },
     {
-      "pattern": "2A2",
-      "signalIndex": 10,
-      "evalIndex": 11,
+      "pattern": "ZZ",
+      "signalIndex": 15,
+      "evalIndex": 16,
       "expectedDirection": 1,
-      "actualDirection": -1,
+      "actualDirection": 1,
       "pct": 85,
-      "runLength": 3,
-      "verdict": "fake",
-      "profit": -85,
-      "wasBet": false,
-      "ts": "2025-12-16T08:35:19.570Z"
-    },
-    {
-      "pattern": "Anti2A2",
-      "signalIndex": 10,
-      "evalIndex": 11,
-      "expectedDirection": -1,
-      "actualDirection": -1,
-      "pct": 85,
-      "runLength": 3,
+      "runLength": 1,
       "verdict": "fair",
       "profit": 85,
       "wasBet": true,
-      "ts": "2025-12-16T08:35:19.570Z"
+      "ts": "2025-12-17T18:54:49.552Z",
+      "indicatorDirection": -1
     }
   ],
   "patternCycles": {
     "2A2": {
-      "state": "observing",
+      "state": "active",
       "isContinuous": false,
       "observationResults": [
         {
           "pattern": "2A2",
           "signalIndex": 10,
           "evalIndex": 11,
-          "expectedDirection": 1,
+          "expectedDirection": -1,
           "actualDirection": -1,
           "pct": 85,
-          "runLength": 3,
-          "verdict": "fake",
-          "profit": -85,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 85,
           "wasBet": false,
-          "ts": "2025-12-16T08:35:19.570Z"
+          "ts": "2025-12-17T18:45:27.230Z"
         }
       ],
+      "activeResults": [],
+      "cumulativeProfit": 85,
+      "allTimeProfit": 85,
+      "lastRunProfit": 0,
+      "breakRunProfit": -85,
+      "breakLoss": -85,
+      "wasKilled": false,
+      "lastFormationIndex": 10,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "Anti2A2": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [],
       "activeResults": [],
       "cumulativeProfit": 0,
       "allTimeProfit": -85,
@@ -223,64 +349,8 @@
       "savedIndicatorDirection": null,
       "waitingForIndicator": false
     },
-    "Anti2A2": {
-      "state": "active",
-      "isContinuous": false,
-      "observationResults": [
-        {
-          "pattern": "Anti2A2",
-          "signalIndex": 1,
-          "evalIndex": 2,
-          "expectedDirection": -1,
-          "actualDirection": 1,
-          "pct": 85,
-          "runLength": 1,
-          "verdict": "fake",
-          "profit": -85,
-          "wasBet": false,
-          "ts": "2025-12-16T08:34:37.233Z"
-        },
-        {
-          "pattern": "Anti2A2",
-          "signalIndex": 6,
-          "evalIndex": 7,
-          "expectedDirection": -1,
-          "actualDirection": -1,
-          "pct": 85,
-          "runLength": 3,
-          "verdict": "fair",
-          "profit": 85,
-          "wasBet": false,
-          "ts": "2025-12-16T08:34:58.409Z"
-        }
-      ],
-      "activeResults": [
-        {
-          "pattern": "Anti2A2",
-          "signalIndex": 10,
-          "evalIndex": 11,
-          "expectedDirection": -1,
-          "actualDirection": -1,
-          "pct": 85,
-          "runLength": 3,
-          "verdict": "fair",
-          "profit": 85,
-          "wasBet": true,
-          "ts": "2025-12-16T08:35:19.570Z"
-        }
-      ],
-      "cumulativeProfit": 85,
-      "allTimeProfit": 85,
-      "lastRunProfit": 85,
-      "breakRunProfit": 0,
-      "breakLoss": 0,
-      "wasKilled": false,
-      "lastFormationIndex": 10,
-      "savedIndicatorDirection": null,
-      "waitingForIndicator": false
-    },
     "3A3": {
-      "state": "active",
+      "state": "observing",
       "isContinuous": false,
       "observationResults": [
         {
@@ -288,42 +358,13 @@
           "signalIndex": 7,
           "evalIndex": 8,
           "expectedDirection": 1,
-          "actualDirection": 1,
+          "actualDirection": -1,
           "pct": 85,
-          "runLength": 1,
-          "verdict": "fair",
-          "profit": 85,
-          "wasBet": false,
-          "ts": "2025-12-16T08:35:03.247Z"
-        }
-      ],
-      "activeResults": [],
-      "cumulativeProfit": 85,
-      "allTimeProfit": 85,
-      "lastRunProfit": 0,
-      "breakRunProfit": 0,
-      "breakLoss": 0,
-      "wasKilled": false,
-      "lastFormationIndex": 11,
-      "savedIndicatorDirection": null,
-      "waitingForIndicator": false
-    },
-    "Anti3A3": {
-      "state": "observing",
-      "isContinuous": false,
-      "observationResults": [
-        {
-          "pattern": "Anti3A3",
-          "signalIndex": 7,
-          "evalIndex": 8,
-          "expectedDirection": -1,
-          "actualDirection": 1,
-          "pct": 85,
-          "runLength": 1,
+          "runLength": 4,
           "verdict": "fake",
           "profit": -85,
           "wasBet": false,
-          "ts": "2025-12-16T08:35:03.247Z"
+          "ts": "2025-12-17T18:45:19.509Z"
         }
       ],
       "activeResults": [],
@@ -333,37 +374,94 @@
       "breakRunProfit": 0,
       "breakLoss": 0,
       "wasKilled": false,
-      "lastFormationIndex": 11,
+      "lastFormationIndex": 7,
       "savedIndicatorDirection": null,
       "waitingForIndicator": false
     },
-    "4A4": {
-      "state": "observing",
+    "Anti3A3": {
+      "state": "active",
       "isContinuous": false,
-      "observationResults": [],
+      "observationResults": [
+        {
+          "pattern": "Anti3A3",
+          "signalIndex": 7,
+          "evalIndex": 8,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 85,
+          "runLength": 4,
+          "verdict": "fair",
+          "profit": 85,
+          "wasBet": false,
+          "ts": "2025-12-17T18:45:19.509Z"
+        }
+      ],
       "activeResults": [],
-      "cumulativeProfit": 0,
-      "allTimeProfit": 0,
+      "cumulativeProfit": 85,
+      "allTimeProfit": 85,
       "lastRunProfit": 0,
       "breakRunProfit": 0,
       "breakLoss": 0,
       "wasKilled": false,
-      "lastFormationIndex": -1,
+      "lastFormationIndex": 7,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "4A4": {
+      "state": "active",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "4A4",
+          "signalIndex": 8,
+          "evalIndex": 9,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 85,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 85,
+          "wasBet": false,
+          "ts": "2025-12-17T18:45:22.621Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 85,
+      "allTimeProfit": 85,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": 8,
       "savedIndicatorDirection": null,
       "waitingForIndicator": false
     },
     "Anti4A4": {
       "state": "observing",
       "isContinuous": false,
-      "observationResults": [],
+      "observationResults": [
+        {
+          "pattern": "Anti4A4",
+          "signalIndex": 8,
+          "evalIndex": 9,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 85,
+          "runLength": 1,
+          "verdict": "fake",
+          "profit": -85,
+          "wasBet": false,
+          "ts": "2025-12-17T18:45:22.621Z"
+        }
+      ],
       "activeResults": [],
       "cumulativeProfit": 0,
-      "allTimeProfit": 0,
+      "allTimeProfit": -85,
       "lastRunProfit": 0,
       "breakRunProfit": 0,
       "breakLoss": 0,
       "wasKilled": false,
-      "lastFormationIndex": -1,
+      "lastFormationIndex": 8,
       "savedIndicatorDirection": null,
       "waitingForIndicator": false
     },
@@ -443,14 +541,29 @@
       "waitingForIndicator": false
     },
     "OZ": {
-      "state": "active",
+      "state": "observing",
       "isContinuous": false,
+      "observationResults": [],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": -85,
+      "lastRunProfit": 0,
+      "breakRunProfit": -85,
+      "breakLoss": -85,
+      "wasKilled": false,
+      "lastFormationIndex": 9,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "ZZ": {
+      "state": "active",
+      "isContinuous": true,
       "observationResults": [],
       "activeResults": [
         {
-          "pattern": "OZ",
-          "signalIndex": 8,
-          "evalIndex": 9,
+          "pattern": "ZZ",
+          "signalIndex": 14,
+          "evalIndex": 15,
           "expectedDirection": -1,
           "actualDirection": -1,
           "pct": 85,
@@ -458,32 +571,32 @@
           "verdict": "fair",
           "profit": 85,
           "wasBet": true,
-          "ts": "2025-12-16T08:35:08.959Z"
+          "ts": "2025-12-17T18:54:46.243Z",
+          "indicatorDirection": -1
+        },
+        {
+          "pattern": "ZZ",
+          "signalIndex": 15,
+          "evalIndex": 16,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 85,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 85,
+          "wasBet": true,
+          "ts": "2025-12-17T18:54:49.552Z",
+          "indicatorDirection": -1
         }
       ],
-      "cumulativeProfit": 85,
-      "allTimeProfit": 85,
-      "lastRunProfit": 85,
-      "breakRunProfit": 0,
-      "breakLoss": 0,
-      "wasKilled": false,
-      "lastFormationIndex": 8,
-      "savedIndicatorDirection": null,
-      "waitingForIndicator": false
-    },
-    "ZZ": {
-      "state": "observing",
-      "isContinuous": true,
-      "observationResults": [],
-      "activeResults": [],
       "cumulativeProfit": 0,
-      "allTimeProfit": 0,
-      "lastRunProfit": 0,
-      "breakRunProfit": 0,
-      "breakLoss": 0,
+      "allTimeProfit": 85,
+      "lastRunProfit": 170,
+      "breakRunProfit": -85,
+      "breakLoss": -85,
       "wasKilled": false,
-      "lastFormationIndex": -1,
-      "savedIndicatorDirection": null,
+      "lastFormationIndex": 16,
+      "savedIndicatorDirection": -1,
       "waitingForIndicator": false
     },
     "AntiZZ": {
@@ -522,33 +635,27 @@
       "observationResults": [],
       "activeResults": [],
       "cumulativeProfit": 0,
-      "allTimeProfit": 0,
+      "allTimeProfit": -85,
       "lastRunProfit": 0,
-      "breakRunProfit": 0,
-      "breakLoss": 0,
+      "breakRunProfit": -85,
+      "breakLoss": -85,
       "wasKilled": false,
-      "lastFormationIndex": -1,
+      "lastFormationIndex": 11,
       "savedIndicatorDirection": null,
       "waitingForIndicator": false
     }
   },
   "pendingSignals": [
     {
-      "pattern": "3A3",
-      "signalIndex": 11,
-      "expectedDirection": 1,
-      "ts": "2025-12-16T08:35:19.570Z"
-    },
-    {
-      "pattern": "Anti3A3",
-      "signalIndex": 11,
+      "pattern": "ZZ",
+      "signalIndex": 16,
       "expectedDirection": -1,
-      "ts": "2025-12-16T08:35:19.570Z"
+      "ts": "2025-12-17T18:54:49.552Z",
+      "indicatorDirection": -1
     }
   ],
   "flags": {
-    "dailyTargetReached": false,
-    "p1Mode": false
+    "dailyTargetReached": false
   },
   "trades": [
     {
@@ -563,7 +670,7 @@
       "isWin": true,
       "pnl": 170,
       "reason": "[ZZ] P1 → Down (Cum: 0%) [M:1 W:13 B:0]",
-      "ts": "2025-12-16T08:34:46.948Z"
+      "ts": "2025-12-17T18:45:15.388Z"
     },
     {
       "id": 2,
@@ -577,52 +684,88 @@
       "isWin": false,
       "pnl": -170,
       "reason": "[ZZ] P1 → Up (Cum: 0%) [M:1 W:13 B:0]",
-      "ts": "2025-12-16T08:34:49.701Z"
+      "ts": "2025-12-17T18:45:17.860Z"
     },
     {
       "id": 3,
       "openIndex": 6,
       "evalIndex": 7,
-      "pattern": "ZZ",
+      "pattern": "2A2",
       "predictedDirection": 1,
       "actualDirection": -1,
       "confidence": 60,
       "pct": 85,
       "isWin": false,
       "pnl": -170,
-      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:2 W:12 B:0]",
-      "ts": "2025-12-16T08:34:58.410Z"
+      "reason": "2A2 [MAIN] → Up (Cum: 85%) [M:2 W:12 B:0]",
+      "ts": "2025-12-17T18:45:18.726Z"
     },
     {
       "id": 4,
       "openIndex": 9,
       "evalIndex": 10,
-      "pattern": "ZZ",
+      "pattern": "SameDir",
       "predictedDirection": 1,
-      "actualDirection": -1,
-      "confidence": 60,
+      "actualDirection": 1,
+      "confidence": 75,
       "pct": 85,
-      "isWin": false,
-      "pnl": -170,
-      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:2 W:11 B:1]",
-      "ts": "2025-12-16T08:35:13.668Z"
+      "isWin": true,
+      "pnl": 170,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:10 B:1]",
+      "ts": "2025-12-17T18:45:24.509Z"
     },
     {
       "id": 5,
       "openIndex": 10,
       "evalIndex": 11,
-      "pattern": "ZZ",
+      "pattern": "SameDir",
       "predictedDirection": 1,
       "actualDirection": -1,
-      "confidence": 60,
+      "confidence": 75,
       "pct": 85,
       "isWin": false,
       "pnl": -170,
-      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:3 W:10 B:1]",
-      "ts": "2025-12-16T08:35:19.571Z"
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:9 B:2]",
+      "ts": "2025-12-17T18:45:27.239Z"
+    },
+    {
+      "id": 6,
+      "openIndex": 11,
+      "evalIndex": 12,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 85,
+      "isWin": false,
+      "pnl": -170,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:9 B:2]",
+      "ts": "2025-12-17T18:45:31.312Z"
+    },
+    {
+      "id": 7,
+      "openIndex": 12,
+      "evalIndex": 13,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 85,
+      "isWin": false,
+      "pnl": -170,
+      "reason": "Same Direction ACTIVE (loss: 85/140) - betting continuation [M:2 W:9 B:3]",
+      "ts": "2025-12-17T18:45:34.741Z"
     }
   ],
-  "pendingTrade": null,
+  "pendingTrade": {
+    "openIndex": 16,
+    "evalIndex": 17,
+    "direction": -1,
+    "confidence": 60,
+    "pattern": "ZZ",
+    "reason": "[ZZ] P1 → Down (Cum: 0%) [M:2 W:10 B:2]",
+    "ts": "2025-12-17T18:54:49.553Z"
+  },
   "pnlTotal": -510,
   "runData": {
     "lengths": [
@@ -630,9 +773,14 @@
       1,
       1,
       1,
-      3,
+      4,
+      2,
       1,
-      3
+      1,
+      1,
+      1,
+      1,
+      1
     ],
     "directions": [
       -1,
@@ -641,17 +789,22 @@
       1,
       -1,
       1,
-      -1
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1
     ],
-    "currentLength": 3,
-    "currentDirection": -1
+    "currentLength": 1,
+    "currentDirection": 1
   },
-  "ts": "2025-12-16T08:35:21.404Z",
+  "ts": "2025-12-17T18:54:52.065Z",
   "profitTracking": {
     "totals": {
       "actualProfit": -510,
       "activationAccumulatedProfit": 255,
-      "baitSwitchProfit": 0
+      "baitSwitchProfit": -85
     },
     "history": [
       {
@@ -659,86 +812,133 @@
         "actualProfitDelta": 0,
         "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:32.552Z"
+        "ts": "2025-12-17T18:45:02.617Z"
       },
       {
         "blockIndex": 1,
         "actualProfitDelta": 0,
         "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:34.533Z"
+        "ts": "2025-12-17T18:45:04.317Z"
       },
       {
         "blockIndex": 2,
         "actualProfitDelta": 0,
         "activationProfitDelta": 85,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:37.234Z"
+        "ts": "2025-12-17T18:45:07.480Z"
       },
       {
         "blockIndex": 3,
         "actualProfitDelta": 0,
         "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:39.884Z"
+        "ts": "2025-12-17T18:45:10.159Z"
       },
       {
         "blockIndex": 4,
         "actualProfitDelta": 0,
         "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:42.370Z"
+        "ts": "2025-12-17T18:45:12.716Z"
       },
       {
         "blockIndex": 5,
         "actualProfitDelta": 170,
         "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:46.949Z"
+        "ts": "2025-12-17T18:45:15.389Z"
       },
       {
         "blockIndex": 6,
         "actualProfitDelta": -170,
         "activationProfitDelta": 85,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:49.701Z"
+        "ts": "2025-12-17T18:45:17.869Z"
       },
       {
         "blockIndex": 7,
         "actualProfitDelta": -170,
         "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:34:58.410Z"
+        "ts": "2025-12-17T18:45:18.727Z"
       },
       {
         "blockIndex": 8,
         "actualProfitDelta": 0,
         "activationProfitDelta": 85,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:35:03.247Z"
+        "ts": "2025-12-17T18:45:19.510Z"
       },
       {
         "blockIndex": 9,
         "actualProfitDelta": 0,
-        "activationProfitDelta": 0,
+        "activationProfitDelta": 85,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:35:08.960Z"
+        "ts": "2025-12-17T18:45:22.622Z"
       },
       {
         "blockIndex": 10,
-        "actualProfitDelta": -170,
-        "activationProfitDelta": 85,
+        "actualProfitDelta": 170,
+        "activationProfitDelta": 0,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:35:13.668Z"
+        "ts": "2025-12-17T18:45:24.510Z"
       },
       {
         "blockIndex": 11,
         "actualProfitDelta": -170,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-17T18:45:27.239Z"
+      },
+      {
+        "blockIndex": 12,
+        "actualProfitDelta": -170,
         "activationProfitDelta": -85,
         "baitSwitchProfitDelta": 0,
-        "ts": "2025-12-16T08:35:19.572Z"
+        "ts": "2025-12-17T18:45:31.312Z"
+      },
+      {
+        "blockIndex": 13,
+        "actualProfitDelta": -170,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-17T18:45:34.742Z"
+      },
+      {
+        "blockIndex": 14,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-17T18:54:43.358Z"
+      },
+      {
+        "blockIndex": 15,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": -85,
+        "ts": "2025-12-17T18:54:46.250Z"
+      },
+      {
+        "blockIndex": 16,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-17T18:54:49.553Z"
       }
     ],
-    "bspSimulations": []
+    "bspSimulations": [
+      {
+        "blockIndex": 15,
+        "pattern": "ZZ",
+        "originalDirection": -1,
+        "reverseDirection": 1,
+        "actualDirection": -1,
+        "reverseWouldWin": false,
+        "pct": 85,
+        "profit": -85,
+        "ts": "2025-12-17T18:54:46.250Z"
+      }
+    ]
   }
 }

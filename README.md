@@ -1,4 +1,4 @@
-# Ghost Evaluator v15.1
+# Ghost Evaluator v15.3
 
 A TypeScript-based pattern detection and auto-betting evaluation system, designed for terminal execution and easy integration.
 
@@ -76,6 +76,8 @@ npm start -- ./config/custom.json
 |---------|-------------|
 | `g <pct>` or `r <pct>` | Add a block (green/red with percentage) |
 | `status` | Show current session status |
+| `health` | Show detailed session health report |
+| `pause` | Show pause status for all systems |
 | `patterns` | Show pattern states |
 | `trades` | Show trade history |
 | `blocks` | Show block sequence |
@@ -84,6 +86,7 @@ npm start -- ./config/custom.json
 | `save [path]` | Save session to file |
 | `load <path>` | Load session from file |
 | `list` | List saved sessions |
+| `analytics` | Show cycle analytics |
 | `help` | Show help |
 | `exit` | Exit the evaluator |
 
@@ -274,6 +277,39 @@ Indicator  2  2  2  → 2-2-2 rhythm established
 - **ZZ/AntiZZ Switching**: Based on lastRunProfit - if profitable (> 0), stay active; if not (≤ 0), switch to opposite
 - **AP5**: Activates on 3rd block of opposite run (70% on 2nd block); breaks when flip with ≤2 blocks
 - **OZ**: Activates on 3rd block of flip back (70% on 1st block); breaks when flip back < 3 blocks
+
+## Trading Systems
+
+The evaluator uses three independent trading systems:
+
+| System | Description | Patterns |
+|--------|-------------|----------|
+| **Pocket** | ZZ/AntiZZ continuous betting | ZZ, AntiZZ |
+| **Bucket** | 3-bucket pattern management | XAX (2A2-6A6), OZ, PP and Anti variants |
+| **Same Direction** | Run continuation betting | N/A (direction-based) |
+
+Each system operates independently and has its own pause tracking.
+
+## Pause System
+
+The pause system provides profit/loss protection with independent tracking per system.
+
+### Pause Types
+
+| Type | Trigger | Duration | Affects |
+|------|---------|----------|---------|
+| **STOP_GAME** | -1000 drawdown OR -500 actual loss | Permanent | ALL systems |
+| **MAJOR_PAUSE** | Every -300 drawdown milestone | 10 blocks | Per-system only |
+| **MINOR_PAUSE** | 2 consecutive losses | 3 blocks | Per-system only |
+
+### Key Points
+
+- **Pocket (ZZ/AntiZZ)** is ONLY affected by STOP_GAME
+- **Bucket** and **SameDir** track pauses independently
+- If SameDir triggers a pause, only SameDir pauses (Bucket continues)
+- If Bucket triggers a pause, only Bucket pauses (SameDir continues)
+
+See `docs/PAUSE-SYSTEM-SPEC.md` for detailed documentation.
 
 ## Testing
 

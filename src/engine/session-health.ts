@@ -511,6 +511,45 @@ export class SessionHealthManager {
     return JSON.parse(JSON.stringify(this.config));
   }
 
+  /**
+   * Get current total P/L
+   */
+  getTotalPnl(): number {
+    return this.drawdownState.currentPnL;
+  }
+
+  /**
+   * Get drawdown level (0-4)
+   */
+  getDrawdownLevel(): number {
+    return this.drawdownState.level;
+  }
+
+  /**
+   * Get data needed for PauseManager to check triggers
+   * This integrates with the new pause management system
+   */
+  getPauseTriggerData(currentBlock: number, actualPnl: number): {
+    totalPnl: number;
+    actualPnl: number;
+    consecutiveLosses: number;
+    currentBlock: number;
+  } {
+    return {
+      totalPnl: this.drawdownState.currentPnL,
+      actualPnl,
+      consecutiveLosses: this.consecutiveLosses,
+      currentBlock,
+    };
+  }
+
+  /**
+   * Reset consecutive losses (after pause ends)
+   */
+  resetConsecutiveLosses(): void {
+    this.consecutiveLosses = 0;
+  }
+
   // ============================================================================
   // RESET & EXPORT
   // ============================================================================

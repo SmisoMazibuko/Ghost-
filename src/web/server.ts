@@ -100,6 +100,8 @@ export function startWebServer(port = 3000, configPath?: string) {
       isLiveMode,
       // ZZ/AntiZZ pocket state
       zzState: reaction.getZZStateManager().exportState(),
+      // Same Direction state
+      sameDirectionState: reaction.getSameDirectionManager().getState(),
     };
   }
 
@@ -210,6 +212,8 @@ export function startWebServer(port = 3000, configPath?: string) {
             },
             // ZZ/AntiZZ pocket state
             zzState: reaction.getZZStateManager().exportState(),
+            // Same Direction state
+            sameDirectionState: reaction.getSameDirectionManager().getState(),
           }
         });
         break;
@@ -360,6 +364,8 @@ export function startWebServer(port = 3000, configPath?: string) {
             },
             // ZZ/AntiZZ pocket state
             zzState: reaction.getZZStateManager().exportState(),
+            // Same Direction state
+            sameDirectionState: reaction.getSameDirectionManager().getState(),
           }
         }));
 

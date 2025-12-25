@@ -200,6 +200,9 @@
                 <div class="stat"><span class="stat-label">ZZ</span><span id="zzState" class="badge yellow">OFF</span></div>
                 <div class="stat"><span class="stat-label">Pocket</span><span class="stat-value cyan" id="zzPocket">1</span></div>
                 <div class="stat"><span class="stat-label">Next</span><span id="zzNext" class="badge yellow">ZZ</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat"><span class="stat-label">SD</span><span id="sdState" class="badge yellow">OFF</span></div>
+                <div class="stat"><span class="stat-label">Loss</span><span class="stat-value" id="sdLoss">0</span><span class="stat-sub">/140</span></div>
             </div>
         </div>
 
@@ -334,6 +337,25 @@
                     </div>
                     <!-- Movement History -->
                     <div id="zzHistory" style="font-size:0.5rem; color:var(--dim); margin-top:6px; max-height:40px; overflow-y:auto"></div>
+                </div>
+
+                <!-- Same Direction System -->
+                <div class="bucket-card" style="margin-top:6px">
+                    <div class="card-title">Same Direction <span id="sdStatusBadge" class="badge yellow">INACTIVE</span></div>
+                    <div class="bucket-grid" style="grid-template-columns:1fr 1fr">
+                        <div class="bucket-col">
+                            <div class="bucket-label">Status</div>
+                            <div id="sdStatusText" style="font-size:0.75rem; font-weight:bold; color:var(--dim)">Observing</div>
+                            <div class="bucket-patterns" id="sdRunInfo">Run: 0 blocks</div>
+                        </div>
+                        <div class="bucket-col">
+                            <div class="bucket-label">Accum. Loss</div>
+                            <div id="sdAccumLoss" style="font-size:1.2rem; font-weight:bold; color:var(--green)">0%</div>
+                            <div class="bucket-patterns">Threshold: 140%</div>
+                        </div>
+                    </div>
+                    <!-- Run History -->
+                    <div id="sdHistory" style="font-size:0.5rem; color:var(--dim); margin-top:6px; max-height:50px; overflow-y:auto"></div>
                 </div>
             </div>
         </div>
@@ -775,6 +797,72 @@
                     `<span class="${ap >= 0 ? 'green' : 'red'}">AP: ${ap >= 0 ? '+' : ''}R${ap.toFixed(0)}</span> | ` +
                     `<span class="yellow">AAP: ${aap >= 0 ? '+' : ''}${aap.toFixed(0)}%</span> | ` +
                     `<span class="${bsp >= 0 ? 'green' : 'red'}">BSP: ${bsp >= 0 ? '+' : ''}${bsp.toFixed(0)}%</span>`;
+            }
+
+            // Same Direction State Display
+            const sdState = state.sameDirectionState || {};
+            const sdActive = sdState.active || false;
+            const sdAccumLoss = sdState.accumulatedLoss || 0;
+            const sdRunBlocks = sdState.currentRunBlocks || [];
+            const sdRunDir = sdState.currentRunDirection;
+            const sdHistory = sdState.runHistory || [];
+
+            // Stats bar indicators
+            const sdStateEl = document.getElementById('sdState');
+            const sdLossEl = document.getElementById('sdLoss');
+
+            if (sdActive) {
+                sdStateEl.textContent = 'ON';
+                sdStateEl.className = 'badge green';
+            } else {
+                sdStateEl.textContent = 'OFF';
+                sdStateEl.className = 'badge yellow';
+            }
+
+            sdLossEl.textContent = sdAccumLoss.toFixed(0);
+            sdLossEl.className = 'stat-value ' + (sdAccumLoss > 100 ? 'red' : sdAccumLoss > 50 ? 'yellow' : 'green');
+
+            // Same Direction Card
+            const sdStatusBadge = document.getElementById('sdStatusBadge');
+            const sdStatusText = document.getElementById('sdStatusText');
+            const sdRunInfo = document.getElementById('sdRunInfo');
+            const sdAccumLossEl = document.getElementById('sdAccumLoss');
+            const sdHistoryEl = document.getElementById('sdHistory');
+
+            // Status badge
+            if (sdActive) {
+                sdStatusBadge.textContent = 'ACTIVE';
+                sdStatusBadge.className = 'badge green';
+                sdStatusText.textContent = 'Betting Continuation';
+                sdStatusText.style.color = 'var(--green)';
+            } else {
+                sdStatusBadge.textContent = 'INACTIVE';
+                sdStatusBadge.className = 'badge yellow';
+                sdStatusText.textContent = 'Observing';
+                sdStatusText.style.color = 'var(--dim)';
+            }
+
+            // Run info
+            const runDirText = sdRunDir === 1 ? '▲' : sdRunDir === -1 ? '▼' : '-';
+            sdRunInfo.innerHTML = `Run: ${sdRunBlocks.length} blocks ${runDirText}`;
+
+            // Accumulated loss display
+            sdAccumLossEl.textContent = sdAccumLoss.toFixed(0) + '%';
+            sdAccumLossEl.style.color = sdAccumLoss > 100 ? 'var(--red)' : sdAccumLoss > 50 ? 'var(--yellow)' : 'var(--green)';
+
+            // Run history (last 5)
+            if (sdHistory.length > 0) {
+                const recentRuns = sdHistory.slice(-5).reverse();
+                sdHistoryEl.innerHTML = recentRuns.map(r => {
+                    const dirIcon = r.direction === 1 ? '▲' : '▼';
+                    const profitColor = r.runProfit >= 0 ? 'var(--green)' : 'var(--red)';
+                    let tag = '';
+                    if (r.wasActivation) tag = ' <span style="color:var(--cyan)">[ACT]</span>';
+                    if (r.wasDeactivation) tag = ' <span style="color:var(--red)">[CUT]</span>';
+                    return `<span>${dirIcon}${r.runLength} <span style="color:${profitColor}">${r.runProfit >= 0 ? '+' : ''}${r.runProfit.toFixed(0)}%</span>${tag}</span>`;
+                }).join(' | ');
+            } else {
+                sdHistoryEl.innerHTML = '<span style="color:var(--dim)">No runs yet</span>';
             }
         }
 

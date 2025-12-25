@@ -423,4 +423,119 @@ describe('ZZStateManager', () => {
       expect(newManager.getRunProfitZZ()).toBe(manager.getRunProfitZZ());
     });
   });
+
+  describe('Rebuild From Results (Undo)', () => {
+    it('should rebuild ZZ pocket from positive runProfitZZ', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', 80),  // Win
+        createResult('ZZ', -30), // Lose, run ends with +50
+      ];
+      results[0].evalIndex = 6;
+      results[1].evalIndex = 7;
+
+      manager.rebuildFromResults(results);
+
+      expect(manager.getZZPocket()).toBe(1);  // runProfitZZ = 50 → P1
+      expect(manager.getRunProfitZZ()).toBe(50);
+      expect(manager.getActivePattern()).toBeNull();
+    });
+
+    it('should rebuild ZZ pocket from negative runProfitZZ', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', 30),   // Win
+        createResult('ZZ', -100), // Lose, run ends with -70
+      ];
+      results[0].evalIndex = 6;
+      results[1].evalIndex = 7;
+
+      manager.rebuildFromResults(results);
+
+      expect(manager.getZZPocket()).toBe(2);  // runProfitZZ = -70 → P2
+      expect(manager.getRunProfitZZ()).toBe(-70);
+    });
+
+    it('should handle ZZ first bet negative → AntiZZ candidate', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', -70),  // First bet negative → SWAP
+      ];
+      results[0].evalIndex = 6;
+
+      manager.rebuildFromResults(results);
+
+      expect(manager.getZZPocket()).toBe(2);  // ZZ to P2
+      expect(manager.getAntiZZPocket()).toBe(1);  // AntiZZ to P1
+      expect(manager.isAntiZZCandidate()).toBe(true);
+    });
+
+    it('should handle AntiZZ loss → SWAP with imaginary profit', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', -70),     // ZZ first bet negative → SWAP
+        createResult('AntiZZ', -60), // AntiZZ loses → SWAP back
+      ];
+      results[0].evalIndex = 6;
+      results[1].evalIndex = 11;
+      results[1].pct = 60;  // pct for imaginary calculation
+
+      manager.rebuildFromResults(results);
+
+      expect(manager.getZZPocket()).toBe(1);  // ZZ back to P1 after SWAP
+      expect(manager.getAntiZZPocket()).toBe(2);  // AntiZZ to P2
+      expect(manager.getRunProfitZZ()).toBe(60);  // ZZ's imaginary profit from SWAP
+    });
+
+    it('should handle AntiZZ win → stays P1', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', -70),    // ZZ first bet negative → SWAP
+        createResult('AntiZZ', 75), // AntiZZ wins → stays P1
+      ];
+      results[0].evalIndex = 6;
+      results[1].evalIndex = 11;
+
+      manager.rebuildFromResults(results);
+
+      expect(manager.getAntiZZPocket()).toBe(1);  // AntiZZ stays P1
+      expect(manager.getZZPocket()).toBe(2);  // ZZ stays P2
+    });
+
+    it('should handle ZZ mid-run state after SWAP', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', -70),     // ZZ first bet negative → SWAP
+        createResult('AntiZZ', -60), // AntiZZ loses → SWAP, ZZ imaginary = +60
+        createResult('ZZ', 80),      // ZZ bets and wins
+      ];
+      results[0].evalIndex = 6;
+      results[1].evalIndex = 11;
+      results[1].pct = 60;
+      results[2].evalIndex = 12;
+
+      manager.rebuildFromResults(results);
+
+      // ZZ mid-run: imaginary (60) + actual (80) = 140
+      expect(manager.getRunProfitZZ()).toBe(140);
+      expect(manager.getZZPocket()).toBe(1);
+      // zzFirstBetEvaluated should be true (imaginary counted)
+      expect(manager.getState().zzFirstBetEvaluated).toBe(true);
+    });
+
+    it('should handle complete cycle: ZZ→AntiZZ→ZZ with SWAP', () => {
+      const results: EvaluatedResult[] = [
+        createResult('ZZ', -70),     // ZZ first bet negative → SWAP
+        createResult('AntiZZ', -60), // AntiZZ loses → SWAP, ZZ imaginary = +60
+        createResult('ZZ', 80),      // ZZ bets and wins, runProfit = 140
+        createResult('ZZ', -50),     // ZZ loses, run ends with +90
+      ];
+      results[0].evalIndex = 6;
+      results[1].evalIndex = 11;
+      results[1].pct = 60;
+      results[2].evalIndex = 12;
+      results[3].evalIndex = 13;
+
+      manager.rebuildFromResults(results);
+
+      // Run ended with +90 (imaginary 60 + 80 - 50) → P1
+      expect(manager.getZZPocket()).toBe(1);
+      expect(manager.getRunProfitZZ()).toBe(90);
+      expect(manager.getActivePattern()).toBeNull();
+    });
+  });
 });

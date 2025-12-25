@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(cat:*)",
+      "Bash(npm run dev:web:*)",
+      "Bash(npx kill-port:*)"
+    ]
+  }
+}

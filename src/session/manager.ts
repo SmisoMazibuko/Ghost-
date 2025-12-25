@@ -119,7 +119,7 @@ export class SessionManager {
       pendingSignals: gameExport.pendingSignals,
       flags: {
         dailyTargetReached: reactionExport.dailyTargetReached,
-        p1Mode: gameExport.p1Mode,
+        // REMOVED: p1Mode - legacy hold removed
       },
       trades: reactionExport.completedTrades,
       pendingTrade: reactionExport.pendingTrade,
@@ -165,6 +165,12 @@ export class SessionManager {
         bspSimulations: [],
       },
       zzState: this.reactionEngine.getZZStateManager().exportState(),
+      sameDirectionState: this.reactionEngine.getSameDirectionManager().exportState(),
+      // Per-system pause tracking (default to 0 for older sessions)
+      bucketConsecutiveLosses: 0,
+      samedirConsecutiveLosses: 0,
+      bucketTotalPnl: 0,
+      samedirTotalPnl: 0,
     };
 
     this.reactionEngine.importState(reactionState);

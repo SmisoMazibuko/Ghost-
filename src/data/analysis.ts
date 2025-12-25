@@ -247,7 +247,7 @@ export function analyzePatternPerformance(plays: LoggedPlay[]): PatternPerforman
  * Analyze performance by session state
  */
 export function analyzeBySessionState(plays: LoggedPlay[]): SessionStateAnalysis[] {
-  const states: SessionState[] = ['playable', 'unplayable', 'p1_mode', 'done'];
+  const states: SessionState[] = ['playable', 'unplayable', 'done'];
   const results: SessionStateAnalysis[] = [];
 
   for (const state of states) {

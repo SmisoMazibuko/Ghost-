@@ -126,6 +126,14 @@ ${COLORS.dim}Type 'help' for commands, 'exit' to quit${COLORS.reset}
         this.handler.displayBlocks();
         break;
 
+      case 'health':
+        this.handler.displayHealth();
+        break;
+
+      case 'pause':
+        this.handler.displayPause();
+        break;
+
       case 'undo':
       case 'u':
         this.handler.undo();

@@ -69,6 +69,16 @@ function colorRecoveryMode(mode: string): string {
   }
 }
 
+function colorPauseType(pauseType: string | null): string {
+  if (!pauseType) return `${COLORS.green}NONE${COLORS.reset}`;
+  switch (pauseType) {
+    case 'STOP_GAME': return `${COLORS.bgRed}${COLORS.white} STOP GAME ${COLORS.reset}`;
+    case 'MAJOR_PAUSE_10_BLOCKS': return `${COLORS.yellow}MAJOR PAUSE${COLORS.reset}`;
+    case 'MINOR_PAUSE_3_BLOCKS': return `${COLORS.cyan}MINOR PAUSE${COLORS.reset}`;
+    default: return pauseType;
+  }
+}
+
 function colorPatternState(state: string): string {
   switch (state) {
     case 'active': return `${COLORS.green}●${COLORS.reset}`;
@@ -123,6 +133,14 @@ export class CommandHandler {
     console.log(`  Direction: ${colorDir(dir)}`);
     console.log(`  Percentage: ${pct.toFixed(1)}%`);
     console.log(`  Run Length: ${this.session.getGameState().getCurrentRunLength()}`);
+
+    // Display pause state if active
+    if (result.pauseState) {
+      console.log(`\n  ${colorPauseType(result.pauseState.type)}`);
+      if (result.pauseState.type !== 'STOP_GAME') {
+        console.log(`  ${COLORS.dim}${result.pauseState.blocksRemaining} blocks remaining${COLORS.reset}`);
+      }
+    }
 
     // Display new signals
     if (result.blockResult.newSignals.length > 0) {
@@ -202,6 +220,34 @@ export class CommandHandler {
     console.log(`  P/L: ${colorPnl(summary.pnlTotal)}`);
     console.log(`  Win Rate: ${summary.winRate.toFixed(1)}%`);
     console.log(`  Target: ${summary.targetProgress.toFixed(1)}%`);
+
+    // Pause State display
+    const pauseManager = reaction.getPauseManager();
+    const ledger = reaction.getActualSimLedger();
+
+    if (pauseManager && ledger) {
+      const ledgerSummary = ledger.getSummary();
+      const pauseStatus = pauseManager.getDetailedStatus();
+
+      console.log(`\n  ${COLORS.bright}System Pause Status:${COLORS.reset}`);
+      console.log(`    Pocket (ZZ): ${pauseStatus.canPocketTrade ? `${COLORS.green}TRADING${COLORS.reset}` : `${COLORS.red}BLOCKED${COLORS.reset}`}`);
+      console.log(`    Bucket: ${pauseStatus.canBucketTrade ? `${COLORS.green}TRADING${COLORS.reset}` : `${COLORS.red}BLOCKED${COLORS.reset}`}${pauseStatus.bucketPause ? ` (${pauseStatus.bucketPause.blocksRemaining} blocks)` : ''}`);
+      console.log(`    SameDir: ${pauseStatus.canSamedirTrade ? `${COLORS.green}TRADING${COLORS.reset}` : `${COLORS.red}BLOCKED${COLORS.reset}`}${pauseStatus.samedirPause ? ` (${pauseStatus.samedirPause.blocksRemaining} blocks)` : ''}`);
+
+      if (pauseStatus.globalStopGame) {
+        console.log(`    ${COLORS.bgRed}${COLORS.white} STOP GAME: ${pauseStatus.globalStopGame.reason} ${COLORS.reset}`);
+      }
+
+      console.log(`\n  ${COLORS.bright}Ledger:${COLORS.reset}`);
+      console.log(`    Actual Trades: ${ledgerSummary.actual.trades} (${colorPnl(ledgerSummary.actual.pnl)})`);
+      console.log(`    Simulated: ${ledgerSummary.simulated.trades} (${colorPnl(ledgerSummary.simulated.pnl)})`);
+      console.log(`    Total P/L: ${colorPnl(ledgerSummary.combined.pnl)}`);
+
+      const consecutiveLosses = ledger.getConsecutiveLosses();
+      if (consecutiveLosses > 0) {
+        console.log(`    Consecutive Losses: ${COLORS.yellow}${consecutiveLosses}${COLORS.reset}`);
+      }
+    }
 
     // Session Health display
     console.log(`\n  ${COLORS.bright}Session Health:${COLORS.reset}`);
@@ -694,6 +740,137 @@ export class CommandHandler {
   }
 
   /**
+   * Display detailed pause and ledger information
+   */
+  displayPause(): void {
+    const reaction = this.session.getReactionEngine();
+    const pauseManager = reaction.getPauseManager();
+    const ledger = reaction.getActualSimLedger();
+    const baitSwitchDetector = reaction.getBaitSwitchDetector();
+
+    console.log(`\n${'─'.repeat(60)}`);
+    console.log(`${COLORS.bright}Pause & Risk Management${COLORS.reset}`);
+    console.log(`${'─'.repeat(60)}`);
+
+    if (!pauseManager || !ledger) {
+      console.log(`${COLORS.yellow}Pause management not initialized.${COLORS.reset}`);
+      return;
+    }
+
+    // System Pause Status
+    const pauseStatus = pauseManager.getDetailedStatus();
+    console.log(`\n${COLORS.cyan}System Pause Status:${COLORS.reset}`);
+
+    // Global STOP_GAME
+    if (pauseStatus.globalStopGame) {
+      console.log(`  ${COLORS.bgRed}${COLORS.white} STOP GAME ${COLORS.reset}`);
+      console.log(`    Reason: ${pauseStatus.globalStopGame.reason}`);
+      console.log(`    Started at Block: ${pauseStatus.globalStopGame.startBlock}`);
+      console.log(`    ALL SYSTEMS BLOCKED`);
+    } else {
+      // Get per-system stats
+      const perSystemStats = reaction.getPerSystemStats();
+
+      // Pocket System
+      console.log(`\n  ${COLORS.bright}Pocket (ZZ/AntiZZ):${COLORS.reset}`);
+      console.log(`    Status: ${pauseStatus.canPocketTrade ? `${COLORS.green}TRADING${COLORS.reset}` : `${COLORS.red}BLOCKED${COLORS.reset}`}`);
+      console.log(`    ${COLORS.dim}Only affected by STOP_GAME${COLORS.reset}`);
+
+      // Bucket System
+      console.log(`\n  ${COLORS.bright}Bucket (XAX, OZ, PP):${COLORS.reset}`);
+      if (pauseStatus.bucketPause) {
+        console.log(`    Status: ${COLORS.red}PAUSED${COLORS.reset} - ${pauseStatus.bucketPause.type}`);
+        console.log(`    Reason: ${pauseStatus.bucketPause.reason}`);
+        console.log(`    Blocks Remaining: ${pauseStatus.bucketPause.blocksRemaining}`);
+      } else {
+        console.log(`    Status: ${COLORS.green}TRADING${COLORS.reset}`);
+      }
+      console.log(`    Consecutive Losses: ${perSystemStats.bucket.consecutiveLosses}${perSystemStats.bucket.consecutiveLosses >= 1 ? ` ${COLORS.yellow}(${2 - perSystemStats.bucket.consecutiveLosses} to pause)${COLORS.reset}` : ''}`);
+      console.log(`    Total P/L: ${perSystemStats.bucket.totalPnl >= 0 ? COLORS.green : COLORS.red}${perSystemStats.bucket.totalPnl.toFixed(0)}%${COLORS.reset}`);
+
+      // SameDir System
+      console.log(`\n  ${COLORS.bright}Same Direction:${COLORS.reset}`);
+      if (pauseStatus.samedirPause) {
+        console.log(`    Status: ${COLORS.red}PAUSED${COLORS.reset} - ${pauseStatus.samedirPause.type}`);
+        console.log(`    Reason: ${pauseStatus.samedirPause.reason}`);
+        console.log(`    Blocks Remaining: ${pauseStatus.samedirPause.blocksRemaining}`);
+      } else {
+        console.log(`    Status: ${COLORS.green}TRADING${COLORS.reset}`);
+      }
+      console.log(`    Consecutive Losses: ${perSystemStats.samedir.consecutiveLosses}${perSystemStats.samedir.consecutiveLosses >= 1 ? ` ${COLORS.yellow}(${2 - perSystemStats.samedir.consecutiveLosses} to pause)${COLORS.reset}` : ''}`);
+      console.log(`    Total P/L: ${perSystemStats.samedir.totalPnl >= 0 ? COLORS.green : COLORS.red}${perSystemStats.samedir.totalPnl.toFixed(0)}%${COLORS.reset}`);
+    }
+
+    // Pause History
+    const pauseHistory = pauseManager.getPauseHistory();
+    if (pauseHistory.length > 0) {
+      console.log(`\n${COLORS.cyan}Pause History (${pauseHistory.length} total):${COLORS.reset}`);
+      const recent = pauseHistory.slice(-5);
+      for (const p of recent) {
+        const typeStr = colorPauseType(p.type);
+        console.log(`  Block ${p.startBlock}: ${typeStr} - ${p.reason}`);
+      }
+      if (pauseHistory.length > 5) {
+        console.log(`  ${COLORS.dim}... and ${pauseHistory.length - 5} more${COLORS.reset}`);
+      }
+    }
+
+    // Ledger Summary
+    const ledgerSummary = ledger.getSummary();
+    console.log(`\n${COLORS.cyan}Trade Ledger:${COLORS.reset}`);
+    console.log(`  ${COLORS.green}Actual Trades:${COLORS.reset} ${ledgerSummary.actual.trades}`);
+    console.log(`    P/L: ${colorPnl(ledgerSummary.actual.pnl)}`);
+    console.log(`    Win Rate: ${(ledgerSummary.actual.winRate * 100).toFixed(1)}%`);
+    console.log(`  ${COLORS.yellow}Simulated Trades:${COLORS.reset} ${ledgerSummary.simulated.trades}`);
+    console.log(`    P/L: ${colorPnl(ledgerSummary.simulated.pnl)}`);
+    console.log(`    Win Rate: ${(ledgerSummary.simulated.winRate * 100).toFixed(1)}%`);
+    console.log(`  ${COLORS.bright}Combined:${COLORS.reset}`);
+    console.log(`    Total P/L: ${colorPnl(ledgerSummary.combined.pnl)}`);
+    console.log(`    Consecutive Losses: ${ledger.getConsecutiveLosses()}`);
+
+    // Bait & Switch Detection
+    if (baitSwitchDetector) {
+      const bsSummary = baitSwitchDetector.getSummary();
+      console.log(`\n${COLORS.cyan}Bait & Switch Episodes:${COLORS.reset}`);
+      console.log(`  Total Episodes: ${bsSummary.totalEpisodes}`);
+      console.log(`  Completed: ${bsSummary.completedEpisodes}`);
+      console.log(`  Active: ${bsSummary.activeEpisodes}`);
+
+      if (bsSummary.baitSwitchPatterns.length > 0) {
+        console.log(`\n  ${COLORS.red}B&S Patterns Detected:${COLORS.reset}`);
+        for (const pattern of bsSummary.baitSwitchPatterns) {
+          const stats = bsSummary.patternStats.get(pattern);
+          if (stats) {
+            console.log(`    ${pattern}: ${stats.negative}/${stats.total} negative episodes (${(stats.score * 100).toFixed(0)}%)`);
+          }
+        }
+      }
+
+      // Show active episodes
+      const activeEpisodes = baitSwitchDetector.getCurrentEpisodes();
+      if (activeEpisodes.size > 0) {
+        console.log(`\n  ${COLORS.yellow}Active Episodes:${COLORS.reset}`);
+        activeEpisodes.forEach((episode, pattern) => {
+          const pnlStr = episode.totalPnl >= 0
+            ? `${COLORS.green}+${episode.totalPnl.toFixed(0)}%${COLORS.reset}`
+            : `${COLORS.red}${episode.totalPnl.toFixed(0)}%${COLORS.reset}`;
+          console.log(`    ${pattern}: ${episode.trades.length} trades, ${pnlStr} (started block ${episode.startBlock})`);
+        });
+      }
+    }
+
+    // Risk Thresholds
+    console.log(`\n${COLORS.cyan}Pause Rules:${COLORS.reset}`);
+    console.log(`  ${COLORS.bright}STOP_GAME:${COLORS.reset} -1000 drawdown OR -500 actual loss`);
+    console.log(`    → Blocks ALL systems (Pocket, Bucket, SameDir)`);
+    console.log(`  ${COLORS.bright}MAJOR_PAUSE (10 blocks):${COLORS.reset} Every -300 drawdown milestone`);
+    console.log(`    → Per-system: Only blocks the system that triggered it`);
+    console.log(`  ${COLORS.bright}MINOR_PAUSE (3 blocks):${COLORS.reset} 2 consecutive losses`);
+    console.log(`    → Per-system: Only blocks the system that triggered it`);
+    console.log(`  ${COLORS.dim}Pocket (ZZ/AntiZZ) is ONLY affected by STOP_GAME${COLORS.reset}`);
+  }
+
+  /**
    * Display help
    */
   help(): void {
@@ -708,6 +885,7 @@ ${COLORS.cyan}Block Entry:${COLORS.reset}
 ${COLORS.cyan}Display:${COLORS.reset}
   status          Show current session status
   health          Show detailed session health report
+  pause           Show pause state and risk management
   patterns        Show pattern states
   trades          Show trade history
   blocks          Show block sequence

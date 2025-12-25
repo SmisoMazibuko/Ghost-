@@ -1,0 +1,4565 @@
+{
+  "version": "15.3",
+  "blocks": [
+    {
+      "dir": -1,
+      "pct": 93,
+      "ts": "2025-12-24T18:19:51.533Z",
+      "index": 0
+    },
+    {
+      "dir": -1,
+      "pct": 80,
+      "ts": "2025-12-24T18:19:54.040Z",
+      "index": 1
+    },
+    {
+      "dir": 1,
+      "pct": 44,
+      "ts": "2025-12-24T18:19:57.738Z",
+      "index": 2
+    },
+    {
+      "dir": -1,
+      "pct": 65,
+      "ts": "2025-12-24T18:20:00.465Z",
+      "index": 3
+    },
+    {
+      "dir": 1,
+      "pct": 17,
+      "ts": "2025-12-24T18:20:02.777Z",
+      "index": 4
+    },
+    {
+      "dir": -1,
+      "pct": 28,
+      "ts": "2025-12-24T18:20:22.021Z",
+      "index": 5
+    },
+    {
+      "dir": 1,
+      "pct": 84,
+      "ts": "2025-12-24T18:20:45.056Z",
+      "index": 6
+    },
+    {
+      "dir": -1,
+      "pct": 55,
+      "ts": "2025-12-24T18:21:07.014Z",
+      "index": 7
+    },
+    {
+      "dir": -1,
+      "pct": 65,
+      "ts": "2025-12-24T18:21:28.119Z",
+      "index": 8
+    },
+    {
+      "dir": -1,
+      "pct": 43,
+      "ts": "2025-12-24T18:21:49.166Z",
+      "index": 9
+    },
+    {
+      "dir": -1,
+      "pct": 13,
+      "ts": "2025-12-24T18:22:08.093Z",
+      "index": 10
+    },
+    {
+      "dir": 1,
+      "pct": 15,
+      "ts": "2025-12-24T18:22:32.628Z",
+      "index": 11
+    },
+    {
+      "dir": -1,
+      "pct": 58,
+      "ts": "2025-12-24T18:22:50.659Z",
+      "index": 12
+    },
+    {
+      "dir": 1,
+      "pct": 78,
+      "ts": "2025-12-24T18:23:13.864Z",
+      "index": 13
+    },
+    {
+      "dir": 1,
+      "pct": 12,
+      "ts": "2025-12-24T18:23:36.548Z",
+      "index": 14
+    },
+    {
+      "dir": -1,
+      "pct": 99,
+      "ts": "2025-12-24T18:23:53.705Z",
+      "index": 15
+    },
+    {
+      "dir": 1,
+      "pct": 27,
+      "ts": "2025-12-24T18:24:18.900Z",
+      "index": 16
+    },
+    {
+      "dir": 1,
+      "pct": 59,
+      "ts": "2025-12-24T18:24:38.742Z",
+      "index": 17
+    },
+    {
+      "dir": 1,
+      "pct": 48,
+      "ts": "2025-12-24T18:25:02.797Z",
+      "index": 18
+    },
+    {
+      "dir": 1,
+      "pct": 85,
+      "ts": "2025-12-24T18:25:19.711Z",
+      "index": 19
+    },
+    {
+      "dir": -1,
+      "pct": 41,
+      "ts": "2025-12-24T18:25:45.331Z",
+      "index": 20
+    },
+    {
+      "dir": 1,
+      "pct": 26,
+      "ts": "2025-12-24T18:26:06.721Z",
+      "index": 21
+    },
+    {
+      "dir": 1,
+      "pct": 9,
+      "ts": "2025-12-24T18:26:25.433Z",
+      "index": 22
+    },
+    {
+      "dir": -1,
+      "pct": 15,
+      "ts": "2025-12-24T18:26:49.660Z",
+      "index": 23
+    },
+    {
+      "dir": -1,
+      "pct": 54,
+      "ts": "2025-12-24T18:27:07.180Z",
+      "index": 24
+    },
+    {
+      "dir": 1,
+      "pct": 18,
+      "ts": "2025-12-24T18:27:33.022Z",
+      "index": 25
+    },
+    {
+      "dir": 1,
+      "pct": 69,
+      "ts": "2025-12-24T18:27:55.300Z",
+      "index": 26
+    },
+    {
+      "dir": 1,
+      "pct": 57,
+      "ts": "2025-12-24T18:28:17.041Z",
+      "index": 27
+    },
+    {
+      "dir": 1,
+      "pct": 64,
+      "ts": "2025-12-24T18:28:37.114Z",
+      "index": 28
+    },
+    {
+      "dir": 1,
+      "pct": 79,
+      "ts": "2025-12-24T18:28:55.707Z",
+      "index": 29
+    },
+    {
+      "dir": -1,
+      "pct": 61,
+      "ts": "2025-12-24T18:29:20.758Z",
+      "index": 30
+    },
+    {
+      "dir": -1,
+      "pct": 25,
+      "ts": "2025-12-24T18:29:49.530Z",
+      "index": 31
+    },
+    {
+      "dir": -1,
+      "pct": 18,
+      "ts": "2025-12-24T18:30:00.485Z",
+      "index": 32
+    },
+    {
+      "dir": -1,
+      "pct": 53,
+      "ts": "2025-12-24T18:30:24.906Z",
+      "index": 33
+    },
+    {
+      "dir": -1,
+      "pct": 1,
+      "ts": "2025-12-24T18:30:43.047Z",
+      "index": 34
+    },
+    {
+      "dir": -1,
+      "pct": 76,
+      "ts": "2025-12-24T18:31:04.669Z",
+      "index": 35
+    },
+    {
+      "dir": -1,
+      "pct": 46,
+      "ts": "2025-12-24T18:31:29.401Z",
+      "index": 36
+    },
+    {
+      "dir": -1,
+      "pct": 97,
+      "ts": "2025-12-24T18:31:51.664Z",
+      "index": 37
+    },
+    {
+      "dir": -1,
+      "pct": 41,
+      "ts": "2025-12-24T18:32:13.485Z",
+      "index": 38
+    },
+    {
+      "dir": 1,
+      "pct": 83,
+      "ts": "2025-12-24T18:32:36.521Z",
+      "index": 39
+    },
+    {
+      "dir": 1,
+      "pct": 34,
+      "ts": "2025-12-24T18:32:55.632Z",
+      "index": 40
+    },
+    {
+      "dir": -1,
+      "pct": 78,
+      "ts": "2025-12-24T18:33:17.357Z",
+      "index": 41
+    },
+    {
+      "dir": 1,
+      "pct": 74,
+      "ts": "2025-12-24T18:33:39.189Z",
+      "index": 42
+    },
+    {
+      "dir": -1,
+      "pct": 63,
+      "ts": "2025-12-24T18:34:01.871Z",
+      "index": 43
+    },
+    {
+      "dir": -1,
+      "pct": 45,
+      "ts": "2025-12-24T18:34:24.169Z",
+      "index": 44
+    },
+    {
+      "dir": 1,
+      "pct": 82,
+      "ts": "2025-12-24T18:34:44.997Z",
+      "index": 45
+    },
+    {
+      "dir": -1,
+      "pct": 59,
+      "ts": "2025-12-24T18:35:00.758Z",
+      "index": 46
+    },
+    {
+      "dir": -1,
+      "pct": 100,
+      "ts": "2025-12-24T18:35:23.334Z",
+      "index": 47
+    },
+    {
+      "dir": 1,
+      "pct": 85,
+      "ts": "2025-12-24T18:35:47.796Z",
+      "index": 48
+    },
+    {
+      "dir": 1,
+      "pct": 2,
+      "ts": "2025-12-24T18:36:06.449Z",
+      "index": 49
+    },
+    {
+      "dir": 1,
+      "pct": 79,
+      "ts": "2025-12-24T18:36:30.975Z",
+      "index": 50
+    },
+    {
+      "dir": 1,
+      "pct": 57,
+      "ts": "2025-12-24T18:36:49.171Z",
+      "index": 51
+    },
+    {
+      "dir": -1,
+      "pct": 34,
+      "ts": "2025-12-24T18:37:11.630Z",
+      "index": 52
+    },
+    {
+      "dir": -1,
+      "pct": 31,
+      "ts": "2025-12-24T18:37:32.521Z",
+      "index": 53
+    },
+    {
+      "dir": 1,
+      "pct": 57,
+      "ts": "2025-12-24T18:37:55.981Z",
+      "index": 54
+    },
+    {
+      "dir": -1,
+      "pct": 97,
+      "ts": "2025-12-24T18:38:17.806Z",
+      "index": 55
+    },
+    {
+      "dir": 1,
+      "pct": 75,
+      "ts": "2025-12-24T18:38:37.841Z",
+      "index": 56
+    },
+    {
+      "dir": -1,
+      "pct": 98,
+      "ts": "2025-12-24T18:39:02.091Z",
+      "index": 57
+    },
+    {
+      "dir": 1,
+      "pct": 82,
+      "ts": "2025-12-24T18:39:22.755Z",
+      "index": 58
+    },
+    {
+      "dir": 1,
+      "pct": 83,
+      "ts": "2025-12-24T18:39:46.763Z",
+      "index": 59
+    },
+    {
+      "dir": -1,
+      "pct": 94,
+      "ts": "2025-12-24T18:40:08.402Z",
+      "index": 60
+    },
+    {
+      "dir": 1,
+      "pct": 89,
+      "ts": "2025-12-24T18:40:27.149Z",
+      "index": 61
+    },
+    {
+      "dir": -1,
+      "pct": 2,
+      "ts": "2025-12-24T18:40:45.368Z",
+      "index": 62
+    },
+    {
+      "dir": -1,
+      "pct": 25,
+      "ts": "2025-12-24T18:41:09.120Z",
+      "index": 63
+    },
+    {
+      "dir": 1,
+      "pct": 100,
+      "ts": "2025-12-24T18:41:32.468Z",
+      "index": 64
+    },
+    {
+      "dir": -1,
+      "pct": 89,
+      "ts": "2025-12-24T18:41:52.835Z",
+      "index": 65
+    },
+    {
+      "dir": 1,
+      "pct": 49,
+      "ts": "2025-12-24T18:42:12.186Z",
+      "index": 66
+    },
+    {
+      "dir": 1,
+      "pct": 50,
+      "ts": "2025-12-24T18:42:36.523Z",
+      "index": 67
+    },
+    {
+      "dir": -1,
+      "pct": 97,
+      "ts": "2025-12-24T18:42:59.528Z",
+      "index": 68
+    },
+    {
+      "dir": -1,
+      "pct": 72,
+      "ts": "2025-12-24T18:43:19.528Z",
+      "index": 69
+    },
+    {
+      "dir": 1,
+      "pct": 94,
+      "ts": "2025-12-24T18:43:41.003Z",
+      "index": 70
+    },
+    {
+      "dir": 1,
+      "pct": 20,
+      "ts": "2025-12-24T18:44:02.749Z",
+      "index": 71
+    },
+    {
+      "dir": -1,
+      "pct": 33,
+      "ts": "2025-12-24T18:44:24.629Z",
+      "index": 72
+    },
+    {
+      "dir": 1,
+      "pct": 57,
+      "ts": "2025-12-24T18:44:43.987Z",
+      "index": 73
+    },
+    {
+      "dir": 1,
+      "pct": 84,
+      "ts": "2025-12-24T18:45:06.995Z",
+      "index": 74
+    },
+    {
+      "dir": 1,
+      "pct": 66,
+      "ts": "2025-12-24T18:45:29.671Z",
+      "index": 75
+    },
+    {
+      "dir": 1,
+      "pct": 81,
+      "ts": "2025-12-24T18:45:51.055Z",
+      "index": 76
+    },
+    {
+      "dir": -1,
+      "pct": 71,
+      "ts": "2025-12-24T18:46:07.923Z",
+      "index": 77
+    },
+    {
+      "dir": -1,
+      "pct": 19,
+      "ts": "2025-12-24T18:46:34.061Z",
+      "index": 78
+    },
+    {
+      "dir": 1,
+      "pct": 1,
+      "ts": "2025-12-24T18:47:01.525Z",
+      "index": 79
+    },
+    {
+      "dir": -1,
+      "pct": 71,
+      "ts": "2025-12-24T18:47:15.367Z",
+      "index": 80
+    },
+    {
+      "dir": 1,
+      "pct": 70,
+      "ts": "2025-12-24T18:47:34.466Z",
+      "index": 81
+    },
+    {
+      "dir": 1,
+      "pct": 19,
+      "ts": "2025-12-24T18:48:23.932Z",
+      "index": 82
+    },
+    {
+      "dir": -1,
+      "pct": 41,
+      "ts": "2025-12-24T18:48:42.255Z",
+      "index": 83
+    },
+    {
+      "dir": 1,
+      "pct": 90,
+      "ts": "2025-12-24T18:48:54.061Z",
+      "index": 84
+    },
+    {
+      "dir": 1,
+      "pct": 94,
+      "ts": "2025-12-24T18:49:04.662Z",
+      "index": 85
+    },
+    {
+      "dir": 1,
+      "pct": 23,
+      "ts": "2025-12-24T18:49:21.273Z",
+      "index": 86
+    },
+    {
+      "dir": -1,
+      "pct": 10,
+      "ts": "2025-12-24T18:49:49.103Z",
+      "index": 87
+    },
+    {
+      "dir": 1,
+      "pct": 85,
+      "ts": "2025-12-24T18:50:09.524Z",
+      "index": 88
+    },
+    {
+      "dir": 1,
+      "pct": 87,
+      "ts": "2025-12-24T18:50:27.287Z",
+      "index": 89
+    },
+    {
+      "dir": -1,
+      "pct": 4,
+      "ts": "2025-12-24T18:50:49.519Z",
+      "index": 90
+    },
+    {
+      "dir": 1,
+      "pct": 49,
+      "ts": "2025-12-24T18:51:14.257Z",
+      "index": 91
+    },
+    {
+      "dir": 1,
+      "pct": 31,
+      "ts": "2025-12-24T18:51:30.366Z",
+      "index": 92
+    },
+    {
+      "dir": 1,
+      "pct": 100,
+      "ts": "2025-12-24T18:51:53.634Z",
+      "index": 93
+    },
+    {
+      "dir": -1,
+      "pct": 42,
+      "ts": "2025-12-24T18:52:14.222Z",
+      "index": 94
+    },
+    {
+      "dir": 1,
+      "pct": 53,
+      "ts": "2025-12-24T18:52:51.477Z",
+      "index": 95
+    },
+    {
+      "dir": 1,
+      "pct": 33,
+      "ts": "2025-12-24T18:52:55.462Z",
+      "index": 96
+    },
+    {
+      "dir": -1,
+      "pct": 75,
+      "ts": "2025-12-24T18:53:20.814Z",
+      "index": 97
+    },
+    {
+      "dir": 1,
+      "pct": 42,
+      "ts": "2025-12-24T18:53:45.856Z",
+      "index": 98
+    },
+    {
+      "dir": 1,
+      "pct": 56,
+      "ts": "2025-12-24T18:54:44.442Z",
+      "index": 99
+    },
+    {
+      "dir": 1,
+      "pct": 77,
+      "ts": "2025-12-24T18:54:45.702Z",
+      "index": 100
+    },
+    {
+      "dir": 1,
+      "pct": 49,
+      "ts": "2025-12-24T18:54:49.082Z",
+      "index": 101
+    },
+    {
+      "dir": 1,
+      "pct": 57,
+      "ts": "2025-12-24T18:55:13.398Z",
+      "index": 102
+    },
+    {
+      "dir": 1,
+      "pct": 17,
+      "ts": "2025-12-24T18:55:28.163Z",
+      "index": 103
+    },
+    {
+      "dir": 1,
+      "pct": 60,
+      "ts": "2025-12-24T18:55:49.952Z",
+      "index": 104
+    },
+    {
+      "dir": -1,
+      "pct": 16,
+      "ts": "2025-12-24T18:56:10.592Z",
+      "index": 105
+    },
+    {
+      "dir": -1,
+      "pct": 42,
+      "ts": "2025-12-24T18:56:34.281Z",
+      "index": 106
+    },
+    {
+      "dir": -1,
+      "pct": 70,
+      "ts": "2025-12-24T18:56:54.268Z",
+      "index": 107
+    }
+  ],
+  "results": [
+    {
+      "pattern": "2A2",
+      "signalIndex": 1,
+      "evalIndex": 2,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 44,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 44,
+      "wasBet": false,
+      "ts": "2025-12-24T18:19:57.738Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 1,
+      "evalIndex": 2,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 44,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -44,
+      "wasBet": false,
+      "ts": "2025-12-24T18:19:57.738Z"
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 5,
+      "evalIndex": 6,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 84,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 84,
+      "wasBet": true,
+      "ts": "2025-12-24T18:20:45.056Z",
+      "indicatorDirection": 1
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 6,
+      "evalIndex": 7,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 55,
+      "runLength": 1,
+      "verdict": "neutral",
+      "profit": 55,
+      "wasBet": true,
+      "ts": "2025-12-24T18:21:07.014Z",
+      "indicatorDirection": 1
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 7,
+      "evalIndex": 8,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 65,
+      "runLength": 2,
+      "verdict": "unfair",
+      "profit": -65,
+      "wasBet": true,
+      "ts": "2025-12-24T18:21:28.120Z",
+      "indicatorDirection": 1
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 8,
+      "evalIndex": 9,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 43,
+      "runLength": 3,
+      "verdict": "unfair",
+      "profit": -43,
+      "wasBet": false,
+      "ts": "2025-12-24T18:21:49.166Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 8,
+      "evalIndex": 9,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 43,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 43,
+      "wasBet": false,
+      "ts": "2025-12-24T18:21:49.167Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 9,
+      "evalIndex": 10,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 13,
+      "runLength": 4,
+      "verdict": "unfair",
+      "profit": -13,
+      "wasBet": false,
+      "ts": "2025-12-24T18:22:08.093Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 9,
+      "evalIndex": 10,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 13,
+      "runLength": 4,
+      "verdict": "fair",
+      "profit": 13,
+      "wasBet": false,
+      "ts": "2025-12-24T18:22:08.093Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 10,
+      "evalIndex": 11,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 15,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 15,
+      "wasBet": false,
+      "ts": "2025-12-24T18:22:32.628Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 10,
+      "evalIndex": 11,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 15,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -15,
+      "wasBet": false,
+      "ts": "2025-12-24T18:22:32.628Z"
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 13,
+      "evalIndex": 14,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 12,
+      "runLength": 2,
+      "verdict": "unfair",
+      "profit": -12,
+      "wasBet": true,
+      "ts": "2025-12-24T18:23:36.549Z",
+      "indicatorDirection": 1
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 14,
+      "evalIndex": 15,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 99,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 99,
+      "wasBet": false,
+      "ts": "2025-12-24T18:23:53.705Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 14,
+      "evalIndex": 15,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 99,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -99,
+      "wasBet": false,
+      "ts": "2025-12-24T18:23:53.706Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 15,
+      "evalIndex": 16,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 27,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 27,
+      "wasBet": false,
+      "ts": "2025-12-24T18:24:18.901Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 17,
+      "evalIndex": 18,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 48,
+      "runLength": 3,
+      "verdict": "unfair",
+      "profit": -48,
+      "wasBet": true,
+      "ts": "2025-12-24T18:25:02.798Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 17,
+      "evalIndex": 18,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 48,
+      "runLength": 3,
+      "verdict": "neutral",
+      "profit": 48,
+      "wasBet": false,
+      "ts": "2025-12-24T18:25:02.798Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 18,
+      "evalIndex": 19,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 4,
+      "verdict": "fake",
+      "profit": -85,
+      "wasBet": false,
+      "ts": "2025-12-24T18:25:19.711Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 18,
+      "evalIndex": 19,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 4,
+      "verdict": "fair",
+      "profit": 85,
+      "wasBet": false,
+      "ts": "2025-12-24T18:25:19.711Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 19,
+      "evalIndex": 20,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 41,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 41,
+      "wasBet": false,
+      "ts": "2025-12-24T18:25:45.331Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 19,
+      "evalIndex": 20,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 41,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -41,
+      "wasBet": false,
+      "ts": "2025-12-24T18:25:45.331Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 22,
+      "evalIndex": 23,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 15,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 15,
+      "wasBet": false,
+      "ts": "2025-12-24T18:26:49.660Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 22,
+      "evalIndex": 23,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 15,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -15,
+      "wasBet": false,
+      "ts": "2025-12-24T18:26:49.660Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 24,
+      "evalIndex": 25,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 18,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 18,
+      "wasBet": false,
+      "ts": "2025-12-24T18:27:33.022Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 24,
+      "evalIndex": 25,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 18,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -18,
+      "wasBet": false,
+      "ts": "2025-12-24T18:27:33.022Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 26,
+      "evalIndex": 27,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 3,
+      "verdict": "unfair",
+      "profit": -57,
+      "wasBet": false,
+      "ts": "2025-12-24T18:28:17.042Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 26,
+      "evalIndex": 27,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 57,
+      "wasBet": false,
+      "ts": "2025-12-24T18:28:17.042Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 27,
+      "evalIndex": 28,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 64,
+      "runLength": 4,
+      "verdict": "unfair",
+      "profit": -64,
+      "wasBet": false,
+      "ts": "2025-12-24T18:28:37.114Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 27,
+      "evalIndex": 28,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 64,
+      "runLength": 4,
+      "verdict": "fair",
+      "profit": 64,
+      "wasBet": true,
+      "ts": "2025-12-24T18:28:37.114Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 28,
+      "evalIndex": 29,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 79,
+      "runLength": 5,
+      "verdict": "fake",
+      "profit": -79,
+      "wasBet": false,
+      "ts": "2025-12-24T18:28:55.707Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 28,
+      "evalIndex": 29,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 79,
+      "runLength": 5,
+      "verdict": "fair",
+      "profit": 79,
+      "wasBet": false,
+      "ts": "2025-12-24T18:28:55.707Z"
+    },
+    {
+      "pattern": "5A5",
+      "signalIndex": 29,
+      "evalIndex": 30,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 61,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 61,
+      "wasBet": false,
+      "ts": "2025-12-24T18:29:20.758Z"
+    },
+    {
+      "pattern": "Anti5A5",
+      "signalIndex": 29,
+      "evalIndex": 30,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 61,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -61,
+      "wasBet": false,
+      "ts": "2025-12-24T18:29:20.758Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 31,
+      "evalIndex": 32,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 18,
+      "runLength": 3,
+      "verdict": "unfair",
+      "profit": -18,
+      "wasBet": false,
+      "ts": "2025-12-24T18:30:00.485Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 31,
+      "evalIndex": 32,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 18,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 18,
+      "wasBet": false,
+      "ts": "2025-12-24T18:30:00.485Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 32,
+      "evalIndex": 33,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 53,
+      "runLength": 4,
+      "verdict": "unfair",
+      "profit": -53,
+      "wasBet": false,
+      "ts": "2025-12-24T18:30:24.906Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 32,
+      "evalIndex": 33,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 53,
+      "runLength": 4,
+      "verdict": "neutral",
+      "profit": 53,
+      "wasBet": true,
+      "ts": "2025-12-24T18:30:24.906Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 33,
+      "evalIndex": 34,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 1,
+      "runLength": 5,
+      "verdict": "unfair",
+      "profit": -1,
+      "wasBet": false,
+      "ts": "2025-12-24T18:30:43.047Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 33,
+      "evalIndex": 34,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 1,
+      "runLength": 5,
+      "verdict": "fair",
+      "profit": 1,
+      "wasBet": true,
+      "ts": "2025-12-24T18:30:43.047Z"
+    },
+    {
+      "pattern": "5A5",
+      "signalIndex": 34,
+      "evalIndex": 35,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 76,
+      "runLength": 6,
+      "verdict": "fake",
+      "profit": -76,
+      "wasBet": false,
+      "ts": "2025-12-24T18:31:04.669Z"
+    },
+    {
+      "pattern": "Anti5A5",
+      "signalIndex": 34,
+      "evalIndex": 35,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 76,
+      "runLength": 6,
+      "verdict": "fair",
+      "profit": 76,
+      "wasBet": false,
+      "ts": "2025-12-24T18:31:04.669Z"
+    },
+    {
+      "pattern": "6A6",
+      "signalIndex": 35,
+      "evalIndex": 36,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 46,
+      "runLength": 7,
+      "verdict": "unfair",
+      "profit": -46,
+      "wasBet": false,
+      "ts": "2025-12-24T18:31:29.401Z"
+    },
+    {
+      "pattern": "Anti6A6",
+      "signalIndex": 35,
+      "evalIndex": 36,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 46,
+      "runLength": 7,
+      "verdict": "neutral",
+      "profit": 46,
+      "wasBet": false,
+      "ts": "2025-12-24T18:31:29.401Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 40,
+      "evalIndex": 41,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 78,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 78,
+      "wasBet": false,
+      "ts": "2025-12-24T18:33:17.357Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 40,
+      "evalIndex": 41,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 78,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -78,
+      "wasBet": false,
+      "ts": "2025-12-24T18:33:17.357Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 44,
+      "evalIndex": 45,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 82,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 82,
+      "wasBet": true,
+      "ts": "2025-12-24T18:34:44.997Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 44,
+      "evalIndex": 45,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 82,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -82,
+      "wasBet": false,
+      "ts": "2025-12-24T18:34:44.997Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 45,
+      "evalIndex": 46,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 59,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 59,
+      "wasBet": false,
+      "ts": "2025-12-24T18:35:00.759Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 47,
+      "evalIndex": 48,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 85,
+      "wasBet": true,
+      "ts": "2025-12-24T18:35:47.796Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 47,
+      "evalIndex": 48,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -85,
+      "wasBet": false,
+      "ts": "2025-12-24T18:35:47.796Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 48,
+      "evalIndex": 49,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 2,
+      "runLength": 2,
+      "verdict": "unfair",
+      "profit": -2,
+      "wasBet": true,
+      "ts": "2025-12-24T18:36:06.450Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 49,
+      "evalIndex": 50,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 79,
+      "runLength": 3,
+      "verdict": "fake",
+      "profit": -79,
+      "wasBet": true,
+      "ts": "2025-12-24T18:36:30.975Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 49,
+      "evalIndex": 50,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 79,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 79,
+      "wasBet": false,
+      "ts": "2025-12-24T18:36:30.975Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 50,
+      "evalIndex": 51,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 4,
+      "verdict": "unfair",
+      "profit": -57,
+      "wasBet": false,
+      "ts": "2025-12-24T18:36:49.171Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 50,
+      "evalIndex": 51,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 4,
+      "verdict": "fair",
+      "profit": 57,
+      "wasBet": true,
+      "ts": "2025-12-24T18:36:49.171Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 51,
+      "evalIndex": 52,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 34,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 34,
+      "wasBet": false,
+      "ts": "2025-12-24T18:37:11.630Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 51,
+      "evalIndex": 52,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 34,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -34,
+      "wasBet": true,
+      "ts": "2025-12-24T18:37:11.630Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 53,
+      "evalIndex": 54,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 57,
+      "wasBet": false,
+      "ts": "2025-12-24T18:37:55.981Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 53,
+      "evalIndex": 54,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -57,
+      "wasBet": true,
+      "ts": "2025-12-24T18:37:55.981Z"
+    },
+    {
+      "pattern": "AntiZZ",
+      "signalIndex": 56,
+      "evalIndex": 57,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 98,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -98,
+      "wasBet": true,
+      "ts": "2025-12-24T18:39:02.091Z",
+      "indicatorDirection": -1
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 59,
+      "evalIndex": 60,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 94,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 94,
+      "wasBet": false,
+      "ts": "2025-12-24T18:40:08.402Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 59,
+      "evalIndex": 60,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 94,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -94,
+      "wasBet": false,
+      "ts": "2025-12-24T18:40:08.402Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 60,
+      "evalIndex": 61,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 89,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 89,
+      "wasBet": false,
+      "ts": "2025-12-24T18:40:27.150Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 63,
+      "evalIndex": 64,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 100,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 100,
+      "wasBet": true,
+      "ts": "2025-12-24T18:41:32.468Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 63,
+      "evalIndex": 64,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 100,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -100,
+      "wasBet": false,
+      "ts": "2025-12-24T18:41:32.468Z"
+    },
+    {
+      "pattern": "ZZ",
+      "signalIndex": 66,
+      "evalIndex": 67,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 50,
+      "runLength": 2,
+      "verdict": "unfair",
+      "profit": -50,
+      "wasBet": true,
+      "ts": "2025-12-24T18:42:36.524Z",
+      "indicatorDirection": -1
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 67,
+      "evalIndex": 68,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 97,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 97,
+      "wasBet": true,
+      "ts": "2025-12-24T18:42:59.529Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 67,
+      "evalIndex": 68,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 97,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -97,
+      "wasBet": false,
+      "ts": "2025-12-24T18:42:59.529Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 68,
+      "evalIndex": 69,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 72,
+      "runLength": 2,
+      "verdict": "fake",
+      "profit": -72,
+      "wasBet": true,
+      "ts": "2025-12-24T18:43:19.529Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 69,
+      "evalIndex": 70,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 94,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 94,
+      "wasBet": true,
+      "ts": "2025-12-24T18:43:41.004Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 69,
+      "evalIndex": 70,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 94,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -94,
+      "wasBet": false,
+      "ts": "2025-12-24T18:43:41.004Z"
+    },
+    {
+      "pattern": "ST",
+      "signalIndex": 70,
+      "evalIndex": 71,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 20,
+      "runLength": 2,
+      "verdict": "fair",
+      "profit": 20,
+      "wasBet": true,
+      "ts": "2025-12-24T18:44:02.749Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 71,
+      "evalIndex": 72,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 33,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 33,
+      "wasBet": true,
+      "ts": "2025-12-24T18:44:24.629Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 71,
+      "evalIndex": 72,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 33,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -33,
+      "wasBet": false,
+      "ts": "2025-12-24T18:44:24.629Z"
+    },
+    {
+      "pattern": "ST",
+      "signalIndex": 72,
+      "evalIndex": 73,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -57,
+      "wasBet": true,
+      "ts": "2025-12-24T18:44:43.987Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 74,
+      "evalIndex": 75,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 66,
+      "runLength": 3,
+      "verdict": "unfair",
+      "profit": -66,
+      "wasBet": true,
+      "ts": "2025-12-24T18:45:29.672Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 74,
+      "evalIndex": 75,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 66,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 66,
+      "wasBet": false,
+      "ts": "2025-12-24T18:45:29.672Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 75,
+      "evalIndex": 76,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 81,
+      "runLength": 4,
+      "verdict": "fake",
+      "profit": -81,
+      "wasBet": false,
+      "ts": "2025-12-24T18:45:51.055Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 75,
+      "evalIndex": 76,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 81,
+      "runLength": 4,
+      "verdict": "fair",
+      "profit": 81,
+      "wasBet": true,
+      "ts": "2025-12-24T18:45:51.055Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 76,
+      "evalIndex": 77,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 71,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 71,
+      "wasBet": false,
+      "ts": "2025-12-24T18:46:07.923Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 76,
+      "evalIndex": 77,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 71,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -71,
+      "wasBet": false,
+      "ts": "2025-12-24T18:46:07.923Z"
+    },
+    {
+      "pattern": "OZ",
+      "signalIndex": 77,
+      "evalIndex": 78,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 19,
+      "runLength": 2,
+      "verdict": "unfair",
+      "profit": -19,
+      "wasBet": true,
+      "ts": "2025-12-24T18:46:34.061Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 78,
+      "evalIndex": 79,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 1,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 1,
+      "wasBet": false,
+      "ts": "2025-12-24T18:47:01.525Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 78,
+      "evalIndex": 79,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 1,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -1,
+      "wasBet": false,
+      "ts": "2025-12-24T18:47:01.525Z"
+    },
+    {
+      "pattern": "AntiZZ",
+      "signalIndex": 81,
+      "evalIndex": 82,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 19,
+      "runLength": 2,
+      "verdict": "fair",
+      "profit": 19,
+      "wasBet": true,
+      "ts": "2025-12-24T18:48:23.933Z",
+      "indicatorDirection": 1
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 82,
+      "evalIndex": 83,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 41,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 41,
+      "wasBet": false,
+      "ts": "2025-12-24T18:48:42.255Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 82,
+      "evalIndex": 83,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 41,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -41,
+      "wasBet": false,
+      "ts": "2025-12-24T18:48:42.256Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 83,
+      "evalIndex": 84,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 90,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 90,
+      "wasBet": false,
+      "ts": "2025-12-24T18:48:54.073Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 85,
+      "evalIndex": 86,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 23,
+      "runLength": 3,
+      "verdict": "unfair",
+      "profit": -23,
+      "wasBet": false,
+      "ts": "2025-12-24T18:49:21.275Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 85,
+      "evalIndex": 86,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 23,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 23,
+      "wasBet": false,
+      "ts": "2025-12-24T18:49:21.275Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 86,
+      "evalIndex": 87,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 10,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 10,
+      "wasBet": false,
+      "ts": "2025-12-24T18:49:49.103Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 86,
+      "evalIndex": 87,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 10,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -10,
+      "wasBet": true,
+      "ts": "2025-12-24T18:49:49.103Z"
+    },
+    {
+      "pattern": "OZ",
+      "signalIndex": 87,
+      "evalIndex": 88,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 85,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 85,
+      "wasBet": true,
+      "ts": "2025-12-24T18:50:09.524Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 89,
+      "evalIndex": 90,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 4,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 4,
+      "wasBet": false,
+      "ts": "2025-12-24T18:50:49.520Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 89,
+      "evalIndex": 90,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 4,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -4,
+      "wasBet": false,
+      "ts": "2025-12-24T18:50:49.520Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 90,
+      "evalIndex": 91,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 49,
+      "runLength": 1,
+      "verdict": "neutral",
+      "profit": 49,
+      "wasBet": false,
+      "ts": "2025-12-24T18:51:14.257Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 92,
+      "evalIndex": 93,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 100,
+      "runLength": 3,
+      "verdict": "fake",
+      "profit": -100,
+      "wasBet": false,
+      "ts": "2025-12-24T18:51:53.634Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 92,
+      "evalIndex": 93,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 100,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 100,
+      "wasBet": false,
+      "ts": "2025-12-24T18:51:53.634Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 93,
+      "evalIndex": 94,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 42,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 42,
+      "wasBet": false,
+      "ts": "2025-12-24T18:52:14.222Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 93,
+      "evalIndex": 94,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 42,
+      "runLength": 1,
+      "verdict": "unfair",
+      "profit": -42,
+      "wasBet": false,
+      "ts": "2025-12-24T18:52:14.222Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 96,
+      "evalIndex": 97,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 75,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 75,
+      "wasBet": false,
+      "ts": "2025-12-24T18:53:20.814Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 96,
+      "evalIndex": 97,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 75,
+      "runLength": 1,
+      "verdict": "fake",
+      "profit": -75,
+      "wasBet": true,
+      "ts": "2025-12-24T18:53:20.815Z"
+    },
+    {
+      "pattern": "PP",
+      "signalIndex": 97,
+      "evalIndex": 98,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 42,
+      "runLength": 1,
+      "verdict": "fair",
+      "profit": 42,
+      "wasBet": false,
+      "ts": "2025-12-24T18:53:45.856Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 99,
+      "evalIndex": 100,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 77,
+      "runLength": 3,
+      "verdict": "fake",
+      "profit": -77,
+      "wasBet": true,
+      "ts": "2025-12-24T18:54:45.702Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 99,
+      "evalIndex": 100,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 77,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 77,
+      "wasBet": false,
+      "ts": "2025-12-24T18:54:45.702Z"
+    },
+    {
+      "pattern": "3A3",
+      "signalIndex": 100,
+      "evalIndex": 101,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 49,
+      "runLength": 4,
+      "verdict": "unfair",
+      "profit": -49,
+      "wasBet": false,
+      "ts": "2025-12-24T18:54:49.082Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 100,
+      "evalIndex": 101,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 49,
+      "runLength": 4,
+      "verdict": "neutral",
+      "profit": 49,
+      "wasBet": false,
+      "ts": "2025-12-24T18:54:49.082Z"
+    },
+    {
+      "pattern": "4A4",
+      "signalIndex": 101,
+      "evalIndex": 102,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 5,
+      "verdict": "unfair",
+      "profit": -57,
+      "wasBet": true,
+      "ts": "2025-12-24T18:55:13.398Z"
+    },
+    {
+      "pattern": "Anti4A4",
+      "signalIndex": 101,
+      "evalIndex": 102,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 57,
+      "runLength": 5,
+      "verdict": "fair",
+      "profit": 57,
+      "wasBet": false,
+      "ts": "2025-12-24T18:55:13.399Z"
+    },
+    {
+      "pattern": "5A5",
+      "signalIndex": 102,
+      "evalIndex": 103,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 17,
+      "runLength": 6,
+      "verdict": "unfair",
+      "profit": -17,
+      "wasBet": false,
+      "ts": "2025-12-24T18:55:28.163Z"
+    },
+    {
+      "pattern": "Anti5A5",
+      "signalIndex": 102,
+      "evalIndex": 103,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 17,
+      "runLength": 6,
+      "verdict": "fair",
+      "profit": 17,
+      "wasBet": true,
+      "ts": "2025-12-24T18:55:28.163Z"
+    },
+    {
+      "pattern": "6A6",
+      "signalIndex": 103,
+      "evalIndex": 104,
+      "expectedDirection": -1,
+      "actualDirection": 1,
+      "pct": 60,
+      "runLength": 7,
+      "verdict": "unfair",
+      "profit": -60,
+      "wasBet": false,
+      "ts": "2025-12-24T18:55:49.952Z"
+    },
+    {
+      "pattern": "Anti6A6",
+      "signalIndex": 103,
+      "evalIndex": 104,
+      "expectedDirection": 1,
+      "actualDirection": 1,
+      "pct": 60,
+      "runLength": 7,
+      "verdict": "fair",
+      "profit": 60,
+      "wasBet": false,
+      "ts": "2025-12-24T18:55:49.952Z"
+    },
+    {
+      "pattern": "2A2",
+      "signalIndex": 106,
+      "evalIndex": 107,
+      "expectedDirection": 1,
+      "actualDirection": -1,
+      "pct": 70,
+      "runLength": 3,
+      "verdict": "fake",
+      "profit": -70,
+      "wasBet": false,
+      "ts": "2025-12-24T18:56:54.268Z"
+    },
+    {
+      "pattern": "Anti2A2",
+      "signalIndex": 106,
+      "evalIndex": 107,
+      "expectedDirection": -1,
+      "actualDirection": -1,
+      "pct": 70,
+      "runLength": 3,
+      "verdict": "fair",
+      "profit": 70,
+      "wasBet": true,
+      "ts": "2025-12-24T18:56:54.268Z"
+    }
+  ],
+  "patternCycles": {
+    "2A2": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "2A2",
+          "signalIndex": 106,
+          "evalIndex": 107,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 70,
+          "runLength": 3,
+          "verdict": "fake",
+          "profit": -70,
+          "wasBet": false,
+          "ts": "2025-12-24T18:56:54.268Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": 436,
+      "lastRunProfit": 0,
+      "breakRunProfit": -77,
+      "breakLoss": -77,
+      "wasKilled": false,
+      "lastFormationIndex": 106,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "Anti2A2": {
+      "state": "active",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "Anti2A2",
+          "signalIndex": 99,
+          "evalIndex": 100,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 77,
+          "runLength": 3,
+          "verdict": "fair",
+          "profit": 77,
+          "wasBet": false,
+          "ts": "2025-12-24T18:54:45.702Z"
+        }
+      ],
+      "activeResults": [
+        {
+          "pattern": "Anti2A2",
+          "signalIndex": 106,
+          "evalIndex": 107,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 70,
+          "runLength": 3,
+          "verdict": "fair",
+          "profit": 70,
+          "wasBet": true,
+          "ts": "2025-12-24T18:56:54.268Z"
+        }
+      ],
+      "cumulativeProfit": 77,
+      "allTimeProfit": -436,
+      "lastRunProfit": 70,
+      "breakRunProfit": -75,
+      "breakLoss": -75,
+      "wasKilled": false,
+      "lastFormationIndex": 106,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "3A3": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "3A3",
+          "signalIndex": 9,
+          "evalIndex": 10,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 13,
+          "runLength": 4,
+          "verdict": "unfair",
+          "profit": -13,
+          "wasBet": false,
+          "ts": "2025-12-24T18:22:08.093Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 18,
+          "evalIndex": 19,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 85,
+          "runLength": 4,
+          "verdict": "fake",
+          "profit": -85,
+          "wasBet": false,
+          "ts": "2025-12-24T18:25:19.711Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 27,
+          "evalIndex": 28,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 64,
+          "runLength": 4,
+          "verdict": "unfair",
+          "profit": -64,
+          "wasBet": false,
+          "ts": "2025-12-24T18:28:37.114Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 32,
+          "evalIndex": 33,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 53,
+          "runLength": 4,
+          "verdict": "unfair",
+          "profit": -53,
+          "wasBet": false,
+          "ts": "2025-12-24T18:30:24.906Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 50,
+          "evalIndex": 51,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 57,
+          "runLength": 4,
+          "verdict": "unfair",
+          "profit": -57,
+          "wasBet": false,
+          "ts": "2025-12-24T18:36:49.171Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 75,
+          "evalIndex": 76,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 81,
+          "runLength": 4,
+          "verdict": "fake",
+          "profit": -81,
+          "wasBet": false,
+          "ts": "2025-12-24T18:45:51.055Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 86,
+          "evalIndex": 87,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 10,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 10,
+          "wasBet": false,
+          "ts": "2025-12-24T18:49:49.103Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 93,
+          "evalIndex": 94,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 42,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 42,
+          "wasBet": false,
+          "ts": "2025-12-24T18:52:14.222Z"
+        },
+        {
+          "pattern": "3A3",
+          "signalIndex": 100,
+          "evalIndex": 101,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 49,
+          "runLength": 4,
+          "verdict": "unfair",
+          "profit": -49,
+          "wasBet": false,
+          "ts": "2025-12-24T18:54:49.082Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": -350,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": 107,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "Anti3A3": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "Anti3A3",
+          "signalIndex": 93,
+          "evalIndex": 94,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 42,
+          "runLength": 1,
+          "verdict": "unfair",
+          "profit": -42,
+          "wasBet": false,
+          "ts": "2025-12-24T18:52:14.222Z"
+        },
+        {
+          "pattern": "Anti3A3",
+          "signalIndex": 100,
+          "evalIndex": 101,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 49,
+          "runLength": 4,
+          "verdict": "neutral",
+          "profit": 49,
+          "wasBet": false,
+          "ts": "2025-12-24T18:54:49.082Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 49,
+      "allTimeProfit": 350,
+      "lastRunProfit": 0,
+      "breakRunProfit": 245,
+      "breakLoss": -10,
+      "wasKilled": false,
+      "lastFormationIndex": 107,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "4A4": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": 24,
+      "lastRunProfit": 0,
+      "breakRunProfit": -57,
+      "breakLoss": -57,
+      "wasKilled": false,
+      "lastFormationIndex": 101,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "Anti4A4": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "Anti4A4",
+          "signalIndex": 76,
+          "evalIndex": 77,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 71,
+          "runLength": 1,
+          "verdict": "fake",
+          "profit": -71,
+          "wasBet": false,
+          "ts": "2025-12-24T18:46:07.923Z"
+        },
+        {
+          "pattern": "Anti4A4",
+          "signalIndex": 101,
+          "evalIndex": 102,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 57,
+          "runLength": 5,
+          "verdict": "fair",
+          "profit": 57,
+          "wasBet": false,
+          "ts": "2025-12-24T18:55:13.399Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 57,
+      "allTimeProfit": -24,
+      "lastRunProfit": 0,
+      "breakRunProfit": -33,
+      "breakLoss": -34,
+      "wasKilled": false,
+      "lastFormationIndex": 101,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "5A5": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "5A5",
+          "signalIndex": 29,
+          "evalIndex": 30,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 61,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 61,
+          "wasBet": false,
+          "ts": "2025-12-24T18:29:20.758Z"
+        },
+        {
+          "pattern": "5A5",
+          "signalIndex": 34,
+          "evalIndex": 35,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 76,
+          "runLength": 6,
+          "verdict": "fake",
+          "profit": -76,
+          "wasBet": false,
+          "ts": "2025-12-24T18:31:04.669Z"
+        },
+        {
+          "pattern": "5A5",
+          "signalIndex": 102,
+          "evalIndex": 103,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 17,
+          "runLength": 6,
+          "verdict": "unfair",
+          "profit": -17,
+          "wasBet": false,
+          "ts": "2025-12-24T18:55:28.163Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": -32,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": 102,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "Anti5A5": {
+      "state": "active",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "Anti5A5",
+          "signalIndex": 29,
+          "evalIndex": 30,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 61,
+          "runLength": 1,
+          "verdict": "unfair",
+          "profit": -61,
+          "wasBet": false,
+          "ts": "2025-12-24T18:29:20.758Z"
+        },
+        {
+          "pattern": "Anti5A5",
+          "signalIndex": 34,
+          "evalIndex": 35,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 76,
+          "runLength": 6,
+          "verdict": "fair",
+          "profit": 76,
+          "wasBet": false,
+          "ts": "2025-12-24T18:31:04.669Z"
+        }
+      ],
+      "activeResults": [
+        {
+          "pattern": "Anti5A5",
+          "signalIndex": 102,
+          "evalIndex": 103,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 17,
+          "runLength": 6,
+          "verdict": "fair",
+          "profit": 17,
+          "wasBet": true,
+          "ts": "2025-12-24T18:55:28.163Z"
+        }
+      ],
+      "cumulativeProfit": 76,
+      "allTimeProfit": 32,
+      "lastRunProfit": 17,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": 102,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "6A6": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "6A6",
+          "signalIndex": 35,
+          "evalIndex": 36,
+          "expectedDirection": 1,
+          "actualDirection": -1,
+          "pct": 46,
+          "runLength": 7,
+          "verdict": "unfair",
+          "profit": -46,
+          "wasBet": false,
+          "ts": "2025-12-24T18:31:29.401Z"
+        },
+        {
+          "pattern": "6A6",
+          "signalIndex": 103,
+          "evalIndex": 104,
+          "expectedDirection": -1,
+          "actualDirection": 1,
+          "pct": 60,
+          "runLength": 7,
+          "verdict": "unfair",
+          "profit": -60,
+          "wasBet": false,
+          "ts": "2025-12-24T18:55:49.952Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": -106,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": 103,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "Anti6A6": {
+      "state": "active",
+      "isContinuous": false,
+      "observationResults": [
+        {
+          "pattern": "Anti6A6",
+          "signalIndex": 35,
+          "evalIndex": 36,
+          "expectedDirection": -1,
+          "actualDirection": -1,
+          "pct": 46,
+          "runLength": 7,
+          "verdict": "neutral",
+          "profit": 46,
+          "wasBet": false,
+          "ts": "2025-12-24T18:31:29.401Z"
+        },
+        {
+          "pattern": "Anti6A6",
+          "signalIndex": 103,
+          "evalIndex": 104,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 60,
+          "runLength": 7,
+          "verdict": "fair",
+          "profit": 60,
+          "wasBet": false,
+          "ts": "2025-12-24T18:55:49.952Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 106,
+      "allTimeProfit": 106,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": 103,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "AP5": {
+      "state": "active",
+      "isContinuous": false,
+      "observationResults": [],
+      "activeResults": [],
+      "cumulativeProfit": 138,
+      "allTimeProfit": 0,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": 0,
+      "wasKilled": false,
+      "lastFormationIndex": -1,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "OZ": {
+      "state": "observing",
+      "isContinuous": false,
+      "observationResults": [],
+      "activeResults": [],
+      "cumulativeProfit": 91,
+      "allTimeProfit": 66,
+      "lastRunProfit": 0,
+      "breakRunProfit": 85,
+      "breakLoss": -19,
+      "wasKilled": true,
+      "lastFormationIndex": 87,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "ZZ": {
+      "state": "observing",
+      "isContinuous": true,
+      "observationResults": [],
+      "activeResults": [],
+      "cumulativeProfit": 0,
+      "allTimeProfit": 12,
+      "lastRunProfit": 0,
+      "breakRunProfit": -50,
+      "breakLoss": -50,
+      "wasKilled": false,
+      "lastFormationIndex": 66,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "AntiZZ": {
+      "state": "active",
+      "isContinuous": false,
+      "observationResults": [],
+      "activeResults": [
+        {
+          "pattern": "AntiZZ",
+          "signalIndex": 81,
+          "evalIndex": 82,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 19,
+          "runLength": 2,
+          "verdict": "fair",
+          "profit": 19,
+          "wasBet": true,
+          "ts": "2025-12-24T18:48:23.933Z",
+          "indicatorDirection": 1
+        }
+      ],
+      "cumulativeProfit": 0,
+      "allTimeProfit": -79,
+      "lastRunProfit": 19,
+      "breakRunProfit": -98,
+      "breakLoss": -98,
+      "wasKilled": false,
+      "lastFormationIndex": 81,
+      "savedIndicatorDirection": 1,
+      "waitingForIndicator": false
+    },
+    "PP": {
+      "state": "observing",
+      "isContinuous": true,
+      "observationResults": [
+        {
+          "pattern": "PP",
+          "signalIndex": 97,
+          "evalIndex": 98,
+          "expectedDirection": 1,
+          "actualDirection": 1,
+          "pct": 42,
+          "runLength": 1,
+          "verdict": "fair",
+          "profit": 42,
+          "wasBet": false,
+          "ts": "2025-12-24T18:53:45.856Z"
+        }
+      ],
+      "activeResults": [],
+      "cumulativeProfit": 84,
+      "allTimeProfit": 282,
+      "lastRunProfit": 0,
+      "breakRunProfit": 0,
+      "breakLoss": -72,
+      "wasKilled": true,
+      "lastFormationIndex": 97,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    },
+    "ST": {
+      "state": "observing",
+      "isContinuous": true,
+      "observationResults": [],
+      "activeResults": [],
+      "cumulativeProfit": 61,
+      "allTimeProfit": -37,
+      "lastRunProfit": 0,
+      "breakRunProfit": -37,
+      "breakLoss": -57,
+      "wasKilled": true,
+      "lastFormationIndex": 72,
+      "savedIndicatorDirection": null,
+      "waitingForIndicator": false
+    }
+  },
+  "pendingSignals": [
+    {
+      "pattern": "3A3",
+      "signalIndex": 107,
+      "expectedDirection": 1,
+      "ts": "2025-12-24T18:56:54.268Z"
+    },
+    {
+      "pattern": "Anti3A3",
+      "signalIndex": 107,
+      "expectedDirection": -1,
+      "ts": "2025-12-24T18:56:54.268Z"
+    }
+  ],
+  "flags": {
+    "dailyTargetReached": true
+  },
+  "trades": [
+    {
+      "id": 1,
+      "openIndex": 4,
+      "evalIndex": 5,
+      "pattern": "ZZ",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 28,
+      "isWin": true,
+      "pnl": 56.00000000000001,
+      "reason": "[ZZ] P1 → Down (Cum: 0%) [M:0 W:14 B:0]",
+      "ts": "2025-12-24T18:20:22.023Z"
+    },
+    {
+      "id": 2,
+      "openIndex": 5,
+      "evalIndex": 6,
+      "pattern": "ZZ",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 84,
+      "isWin": true,
+      "pnl": 168,
+      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:0 W:14 B:0]",
+      "ts": "2025-12-24T18:20:45.057Z"
+    },
+    {
+      "id": 3,
+      "openIndex": 6,
+      "evalIndex": 7,
+      "pattern": "ZZ",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 55,
+      "isWin": true,
+      "pnl": 110.00000000000001,
+      "reason": "[ZZ] P1 → Down (Cum: 0%) [M:0 W:14 B:0]",
+      "ts": "2025-12-24T18:21:07.015Z"
+    },
+    {
+      "id": 4,
+      "openIndex": 7,
+      "evalIndex": 8,
+      "pattern": "ZZ",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 65,
+      "isWin": false,
+      "pnl": -130,
+      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:0 W:14 B:0]",
+      "ts": "2025-12-24T18:21:28.122Z"
+    },
+    {
+      "id": 5,
+      "openIndex": 13,
+      "evalIndex": 14,
+      "pattern": "ZZ",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 12,
+      "isWin": false,
+      "pnl": -24,
+      "reason": "[ZZ] P1 → Down (Cum: 0%) [M:0 W:14 B:0]",
+      "ts": "2025-12-24T18:23:36.550Z"
+    },
+    {
+      "id": 6,
+      "openIndex": 15,
+      "evalIndex": 16,
+      "pattern": "PP",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 27,
+      "isWin": true,
+      "pnl": 54,
+      "reason": "PP [MAIN] → Up (Cum: 133%) [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:24:18.901Z"
+    },
+    {
+      "id": 7,
+      "openIndex": 17,
+      "evalIndex": 18,
+      "pattern": "2A2",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 48,
+      "isWin": false,
+      "pnl": -96,
+      "reason": "2A2 [MAIN] → Down (Cum: 99%) [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:25:02.799Z"
+    },
+    {
+      "id": 8,
+      "openIndex": 20,
+      "evalIndex": 21,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 26,
+      "isWin": false,
+      "pnl": -52,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:26:06.722Z"
+    },
+    {
+      "id": 9,
+      "openIndex": 21,
+      "evalIndex": 22,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 9,
+      "isWin": true,
+      "pnl": 18,
+      "reason": "Same Direction ACTIVE (loss: 26/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:26:25.435Z"
+    },
+    {
+      "id": 10,
+      "openIndex": 22,
+      "evalIndex": 23,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 15,
+      "isWin": false,
+      "pnl": -30,
+      "reason": "Same Direction ACTIVE (loss: 26/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:26:49.661Z"
+    },
+    {
+      "id": 11,
+      "openIndex": 23,
+      "evalIndex": 24,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 54,
+      "isWin": true,
+      "pnl": 108,
+      "reason": "Same Direction ACTIVE (loss: 32/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:27:07.181Z"
+    },
+    {
+      "id": 12,
+      "openIndex": 24,
+      "evalIndex": 25,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 18,
+      "isWin": false,
+      "pnl": -36,
+      "reason": "Same Direction ACTIVE (loss: 32/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:27:33.022Z"
+    },
+    {
+      "id": 13,
+      "openIndex": 25,
+      "evalIndex": 26,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 69,
+      "isWin": true,
+      "pnl": 138,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:27:55.302Z"
+    },
+    {
+      "id": 14,
+      "openIndex": 26,
+      "evalIndex": 27,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 57,
+      "isWin": true,
+      "pnl": 113.99999999999999,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:28:17.042Z"
+    },
+    {
+      "id": 15,
+      "openIndex": 27,
+      "evalIndex": 28,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 64,
+      "isWin": true,
+      "pnl": 128,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:28:37.115Z"
+    },
+    {
+      "id": 16,
+      "openIndex": 28,
+      "evalIndex": 29,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 79,
+      "isWin": true,
+      "pnl": 158,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:1 W:13 B:0]",
+      "ts": "2025-12-24T18:28:55.709Z"
+    },
+    {
+      "id": 17,
+      "openIndex": 29,
+      "evalIndex": 30,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 61,
+      "isWin": false,
+      "pnl": -122,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:29:20.760Z"
+    },
+    {
+      "id": 18,
+      "openIndex": 30,
+      "evalIndex": 31,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 25,
+      "isWin": true,
+      "pnl": 50,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:29:49.531Z"
+    },
+    {
+      "id": 19,
+      "openIndex": 31,
+      "evalIndex": 32,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 18,
+      "isWin": true,
+      "pnl": 36,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:30:00.485Z"
+    },
+    {
+      "id": 20,
+      "openIndex": 32,
+      "evalIndex": 33,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 53,
+      "isWin": true,
+      "pnl": 106,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:30:24.907Z"
+    },
+    {
+      "id": 21,
+      "openIndex": 33,
+      "evalIndex": 34,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 1,
+      "isWin": true,
+      "pnl": 2,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:30:43.048Z"
+    },
+    {
+      "id": 22,
+      "openIndex": 34,
+      "evalIndex": 35,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 76,
+      "isWin": true,
+      "pnl": 152,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:31:04.671Z"
+    },
+    {
+      "id": 23,
+      "openIndex": 35,
+      "evalIndex": 36,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 46,
+      "isWin": true,
+      "pnl": 92,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:31:29.403Z"
+    },
+    {
+      "id": 24,
+      "openIndex": 36,
+      "evalIndex": 37,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 97,
+      "isWin": true,
+      "pnl": 194,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:31:51.665Z"
+    },
+    {
+      "id": 25,
+      "openIndex": 37,
+      "evalIndex": 38,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 41,
+      "isWin": true,
+      "pnl": 82,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:32:13.486Z"
+    },
+    {
+      "id": 26,
+      "openIndex": 38,
+      "evalIndex": 39,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 83,
+      "isWin": false,
+      "pnl": -166,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:32:36.522Z"
+    },
+    {
+      "id": 27,
+      "openIndex": 39,
+      "evalIndex": 40,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 34,
+      "isWin": true,
+      "pnl": 68,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:32:55.632Z"
+    },
+    {
+      "id": 28,
+      "openIndex": 40,
+      "evalIndex": 41,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 78,
+      "isWin": false,
+      "pnl": -156,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:33:17.359Z"
+    },
+    {
+      "id": 29,
+      "openIndex": 41,
+      "evalIndex": 42,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 74,
+      "isWin": false,
+      "pnl": -148,
+      "reason": "Same Direction ACTIVE (loss: 44/140) - betting continuation [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:33:39.190Z"
+    },
+    {
+      "id": 30,
+      "openIndex": 43,
+      "evalIndex": 44,
+      "pattern": "AntiZZ",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 45,
+      "isWin": true,
+      "pnl": 90,
+      "reason": "[Anti-ZZ] P1 → Down (Cum: 0%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:34:24.170Z"
+    },
+    {
+      "id": 31,
+      "openIndex": 44,
+      "evalIndex": 45,
+      "pattern": "2A2",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 82,
+      "isWin": true,
+      "pnl": 164,
+      "reason": "2A2 [MAIN] → Up (Cum: 78%) [M:5 W:9 B:0]",
+      "ts": "2025-12-24T18:34:45.004Z"
+    },
+    {
+      "id": 32,
+      "openIndex": 45,
+      "evalIndex": 46,
+      "pattern": "PP",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 59,
+      "isWin": true,
+      "pnl": 118,
+      "reason": "PP [MAIN] → Down (Cum: 143%) [M:5 W:9 B:0]",
+      "ts": "2025-12-24T18:35:00.759Z"
+    },
+    {
+      "id": 33,
+      "openIndex": 47,
+      "evalIndex": 48,
+      "pattern": "2A2",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 85,
+      "isWin": true,
+      "pnl": 170,
+      "reason": "2A2 [MAIN] → Up (Cum: 78%) [M:5 W:9 B:0]",
+      "ts": "2025-12-24T18:35:47.797Z"
+    },
+    {
+      "id": 34,
+      "openIndex": 48,
+      "evalIndex": 49,
+      "pattern": "PP",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 2,
+      "isWin": false,
+      "pnl": -4,
+      "reason": "PP [MAIN] → Down (Cum: 118%) [M:5 W:9 B:0]",
+      "ts": "2025-12-24T18:36:06.450Z"
+    },
+    {
+      "id": 35,
+      "openIndex": 49,
+      "evalIndex": 50,
+      "pattern": "2A2",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 79,
+      "isWin": false,
+      "pnl": -158,
+      "reason": "2A2 [MAIN] → Down (Cum: 78%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:36:30.976Z"
+    },
+    {
+      "id": 36,
+      "openIndex": 53,
+      "evalIndex": 54,
+      "pattern": "Anti2A2",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 57,
+      "isWin": false,
+      "pnl": -113.99999999999999,
+      "reason": "Anti2A2 [MAIN] → Down (Cum: 79%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:37:55.982Z"
+    },
+    {
+      "id": 37,
+      "openIndex": 56,
+      "evalIndex": 57,
+      "pattern": "AntiZZ",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 98,
+      "isWin": false,
+      "pnl": -196,
+      "reason": "[Anti-ZZ] P1 → Up (Cum: 0%) [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:39:02.092Z"
+    },
+    {
+      "id": 38,
+      "openIndex": 57,
+      "evalIndex": 58,
+      "pattern": "ZZ",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 82,
+      "isWin": true,
+      "pnl": 164,
+      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:39:22.774Z"
+    },
+    {
+      "id": 39,
+      "openIndex": 58,
+      "evalIndex": 59,
+      "pattern": "ZZ",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 83,
+      "isWin": false,
+      "pnl": -166,
+      "reason": "[ZZ] P1 → Down (Cum: 0%) [M:2 W:12 B:0]",
+      "ts": "2025-12-24T18:39:46.764Z"
+    },
+    {
+      "id": 40,
+      "openIndex": 60,
+      "evalIndex": 61,
+      "pattern": "PP",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 89,
+      "isWin": true,
+      "pnl": 178,
+      "reason": "PP [MAIN] → Up (Cum: 82%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:40:27.151Z"
+    },
+    {
+      "id": 41,
+      "openIndex": 62,
+      "evalIndex": 63,
+      "pattern": "ZZ",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 25,
+      "isWin": false,
+      "pnl": -50,
+      "reason": "[ZZ] P1 → Up (Cum: 0%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:41:09.121Z"
+    },
+    {
+      "id": 42,
+      "openIndex": 63,
+      "evalIndex": 64,
+      "pattern": "2A2",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 80,
+      "pct": 100,
+      "isWin": true,
+      "pnl": 200,
+      "reason": "2A2 [MAIN] → Up (Cum: 151%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:41:32.468Z"
+    },
+    {
+      "id": 43,
+      "openIndex": 66,
+      "evalIndex": 67,
+      "pattern": "AntiZZ",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 50,
+      "isWin": true,
+      "pnl": 100,
+      "reason": "[Anti-ZZ] P1 → Up (Cum: 0%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:42:36.526Z"
+    },
+    {
+      "id": 44,
+      "openIndex": 67,
+      "evalIndex": 68,
+      "pattern": "2A2",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 80,
+      "pct": 97,
+      "isWin": true,
+      "pnl": 194,
+      "reason": "2A2 [MAIN] → Down (Cum: 151%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:42:59.529Z"
+    },
+    {
+      "id": 45,
+      "openIndex": 68,
+      "evalIndex": 69,
+      "pattern": "PP",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 72,
+      "isWin": false,
+      "pnl": -144,
+      "reason": "PP [MAIN] → Up (Cum: 140%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:43:19.530Z"
+    },
+    {
+      "id": 46,
+      "openIndex": 69,
+      "evalIndex": 70,
+      "pattern": "2A2",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 80,
+      "pct": 94,
+      "isWin": true,
+      "pnl": 188,
+      "reason": "2A2 [MAIN] → Up (Cum: 151%) [M:3 W:10 B:1]",
+      "ts": "2025-12-24T18:43:41.004Z"
+    },
+    {
+      "id": 47,
+      "openIndex": 71,
+      "evalIndex": 72,
+      "pattern": "2A2",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 80,
+      "pct": 33,
+      "isWin": true,
+      "pnl": 66,
+      "reason": "2A2 [MAIN] → Down (Cum: 151%) [M:3 W:10 B:1]",
+      "ts": "2025-12-24T18:44:24.630Z"
+    },
+    {
+      "id": 48,
+      "openIndex": 74,
+      "evalIndex": 75,
+      "pattern": "2A2",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 80,
+      "pct": 66,
+      "isWin": false,
+      "pnl": -132,
+      "reason": "2A2 [MAIN] → Down (Cum: 151%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:45:29.672Z"
+    },
+    {
+      "id": 49,
+      "openIndex": 75,
+      "evalIndex": 76,
+      "pattern": "Anti3A3",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 81,
+      "isWin": true,
+      "pnl": 162,
+      "reason": "Anti3A3 [MAIN] → Up (Cum: 98%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:45:51.055Z"
+    },
+    {
+      "id": 50,
+      "openIndex": 77,
+      "evalIndex": 78,
+      "pattern": "OZ",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 70,
+      "pct": 19,
+      "isWin": false,
+      "pnl": -38,
+      "reason": "OZ [MAIN] → Up (Cum: 139%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:46:34.062Z"
+    },
+    {
+      "id": 51,
+      "openIndex": 78,
+      "evalIndex": 79,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 75,
+      "pct": 1,
+      "isWin": false,
+      "pnl": -2,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:47:01.526Z"
+    },
+    {
+      "id": 52,
+      "openIndex": 79,
+      "evalIndex": 80,
+      "pattern": "SameDir",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 71,
+      "isWin": false,
+      "pnl": -142,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:47:15.367Z"
+    },
+    {
+      "id": 53,
+      "openIndex": 81,
+      "evalIndex": 82,
+      "pattern": "AntiZZ",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 19,
+      "isWin": true,
+      "pnl": 38,
+      "reason": "[Anti-ZZ] P1 → Up (Cum: 0%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:48:23.933Z"
+    },
+    {
+      "id": 54,
+      "openIndex": 83,
+      "evalIndex": 84,
+      "pattern": "PP",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 90,
+      "isWin": true,
+      "pnl": 180,
+      "reason": "PP [MAIN] → Up (Cum: 127%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:48:54.080Z"
+    },
+    {
+      "id": 55,
+      "openIndex": 86,
+      "evalIndex": 87,
+      "pattern": "Anti3A3",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 10,
+      "isWin": false,
+      "pnl": -20,
+      "reason": "Anti3A3 [MAIN] → Up (Cum: 98%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:49:49.105Z"
+    },
+    {
+      "id": 56,
+      "openIndex": 87,
+      "evalIndex": 88,
+      "pattern": "OZ",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 70,
+      "pct": 85,
+      "isWin": true,
+      "pnl": 170,
+      "reason": "OZ [MAIN] → Up (Cum: 90%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:50:09.525Z"
+    },
+    {
+      "id": 57,
+      "openIndex": 90,
+      "evalIndex": 91,
+      "pattern": "PP",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 49,
+      "isWin": true,
+      "pnl": 98,
+      "reason": "PP [MAIN] → Up (Cum: 85%) [M:3 W:11 B:0]",
+      "ts": "2025-12-24T18:51:14.257Z"
+    },
+    {
+      "id": 58,
+      "openIndex": 96,
+      "evalIndex": 97,
+      "pattern": "Anti2A2",
+      "predictedDirection": 1,
+      "actualDirection": -1,
+      "confidence": 60,
+      "pct": 75,
+      "isWin": false,
+      "pnl": -150,
+      "reason": "Anti2A2 [MAIN] → Up (Cum: 100%) [M:4 W:10 B:0]",
+      "ts": "2025-12-24T18:53:20.816Z"
+    },
+    {
+      "id": 59,
+      "openIndex": 97,
+      "evalIndex": 98,
+      "pattern": "PP",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 80,
+      "pct": 42,
+      "isWin": true,
+      "pnl": 84,
+      "reason": "PP [MAIN] → Up (Cum: 151%) [M:4 W:9 B:1]",
+      "ts": "2025-12-24T18:53:45.856Z"
+    },
+    {
+      "id": 60,
+      "openIndex": 101,
+      "evalIndex": 102,
+      "pattern": "4A4",
+      "predictedDirection": -1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 57,
+      "isWin": false,
+      "pnl": -113.99999999999999,
+      "reason": "4A4 [MAIN] → Down (Cum: 105%) [M:2 W:11 B:1]",
+      "ts": "2025-12-24T18:55:13.399Z"
+    },
+    {
+      "id": 61,
+      "openIndex": 102,
+      "evalIndex": 103,
+      "pattern": "Anti5A5",
+      "predictedDirection": 1,
+      "actualDirection": 1,
+      "confidence": 60,
+      "pct": 17,
+      "isWin": true,
+      "pnl": 34,
+      "reason": "Anti5A5 [MAIN] → Up (Cum: 76%) [M:1 W:12 B:1]",
+      "ts": "2025-12-24T18:55:28.163Z"
+    },
+    {
+      "id": 62,
+      "openIndex": 105,
+      "evalIndex": 106,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 42,
+      "isWin": true,
+      "pnl": 84,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:11 B:1]",
+      "ts": "2025-12-24T18:56:34.282Z"
+    },
+    {
+      "id": 63,
+      "openIndex": 106,
+      "evalIndex": 107,
+      "pattern": "SameDir",
+      "predictedDirection": -1,
+      "actualDirection": -1,
+      "confidence": 75,
+      "pct": 70,
+      "isWin": true,
+      "pnl": 140,
+      "reason": "Same Direction ACTIVE (loss: 0/140) - betting continuation [M:2 W:11 B:1]",
+      "ts": "2025-12-24T18:56:54.268Z"
+    }
+  ],
+  "pendingTrade": null,
+  "pnlTotal": 2066,
+  "runData": {
+    "lengths": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      4,
+      1,
+      1,
+      2,
+      1,
+      4,
+      1,
+      2,
+      2,
+      5,
+      9,
+      2,
+      1,
+      1,
+      2,
+      1,
+      2,
+      4,
+      2,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      2,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      4,
+      2,
+      1,
+      1,
+      2,
+      1,
+      3,
+      1,
+      2,
+      1,
+      3,
+      1,
+      2,
+      1,
+      7,
+      3
+    ],
+    "directions": [
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+    ],
+    "currentLength": 3,
+    "currentDirection": -1
+  },
+  "ts": "2025-12-24T18:57:18.606Z",
+  "profitTracking": {
+    "totals": {
+      "actualProfit": 2066,
+      "activationAccumulatedProfit": 739,
+      "baitSwitchProfit": 0
+    },
+    "history": [
+      {
+        "blockIndex": 0,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:19:51.534Z"
+      },
+      {
+        "blockIndex": 1,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:19:54.041Z"
+      },
+      {
+        "blockIndex": 2,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 44,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:19:57.738Z"
+      },
+      {
+        "blockIndex": 3,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:20:00.466Z"
+      },
+      {
+        "blockIndex": 4,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:20:02.778Z"
+      },
+      {
+        "blockIndex": 5,
+        "actualProfitDelta": 56.00000000000001,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:20:22.023Z"
+      },
+      {
+        "blockIndex": 6,
+        "actualProfitDelta": 168,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:20:45.057Z"
+      },
+      {
+        "blockIndex": 7,
+        "actualProfitDelta": 110.00000000000001,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:21:07.016Z"
+      },
+      {
+        "blockIndex": 8,
+        "actualProfitDelta": -130,
+        "activationProfitDelta": 55,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:21:28.123Z"
+      },
+      {
+        "blockIndex": 9,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 54,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:21:49.168Z"
+      },
+      {
+        "blockIndex": 10,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 13,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:22:08.095Z"
+      },
+      {
+        "blockIndex": 11,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 15,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:22:32.629Z"
+      },
+      {
+        "blockIndex": 12,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:22:50.659Z"
+      },
+      {
+        "blockIndex": 13,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:23:13.867Z"
+      },
+      {
+        "blockIndex": 14,
+        "actualProfitDelta": -24,
+        "activationProfitDelta": 78,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:23:36.554Z"
+      },
+      {
+        "blockIndex": 15,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 56,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:23:53.707Z"
+      },
+      {
+        "blockIndex": 16,
+        "actualProfitDelta": 54,
+        "activationProfitDelta": -106,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:24:18.901Z"
+      },
+      {
+        "blockIndex": 17,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 27,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:24:38.743Z"
+      },
+      {
+        "blockIndex": 18,
+        "actualProfitDelta": -96,
+        "activationProfitDelta": -24,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:25:02.799Z"
+      },
+      {
+        "blockIndex": 19,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 85,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:25:19.712Z"
+      },
+      {
+        "blockIndex": 20,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 41,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:25:45.333Z"
+      },
+      {
+        "blockIndex": 21,
+        "actualProfitDelta": -52,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:26:06.722Z"
+      },
+      {
+        "blockIndex": 22,
+        "actualProfitDelta": 18,
+        "activationProfitDelta": 26,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:26:25.436Z"
+      },
+      {
+        "blockIndex": 23,
+        "actualProfitDelta": -30,
+        "activationProfitDelta": -33,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:26:49.661Z"
+      },
+      {
+        "blockIndex": 24,
+        "actualProfitDelta": 108,
+        "activationProfitDelta": 54,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:27:07.181Z"
+      },
+      {
+        "blockIndex": 25,
+        "actualProfitDelta": -36,
+        "activationProfitDelta": 18,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:27:33.023Z"
+      },
+      {
+        "blockIndex": 26,
+        "actualProfitDelta": 138,
+        "activationProfitDelta": 69,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:27:55.303Z"
+      },
+      {
+        "blockIndex": 27,
+        "actualProfitDelta": 113.99999999999999,
+        "activationProfitDelta": -30,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:28:17.043Z"
+      },
+      {
+        "blockIndex": 28,
+        "actualProfitDelta": 128,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:28:37.115Z"
+      },
+      {
+        "blockIndex": 29,
+        "actualProfitDelta": 158,
+        "activationProfitDelta": 23,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:28:55.709Z"
+      },
+      {
+        "blockIndex": 30,
+        "actualProfitDelta": -122,
+        "activationProfitDelta": 61,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:29:20.760Z"
+      },
+      {
+        "blockIndex": 31,
+        "actualProfitDelta": 50,
+        "activationProfitDelta": 25,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:29:49.534Z"
+      },
+      {
+        "blockIndex": 32,
+        "actualProfitDelta": 36,
+        "activationProfitDelta": 43,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:30:00.486Z"
+      },
+      {
+        "blockIndex": 33,
+        "actualProfitDelta": 106,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:30:24.907Z"
+      },
+      {
+        "blockIndex": 34,
+        "actualProfitDelta": 2,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:30:43.049Z"
+      },
+      {
+        "blockIndex": 35,
+        "actualProfitDelta": 152,
+        "activationProfitDelta": 15,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:31:04.672Z"
+      },
+      {
+        "blockIndex": 36,
+        "actualProfitDelta": 92,
+        "activationProfitDelta": 46,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:31:29.404Z"
+      },
+      {
+        "blockIndex": 37,
+        "actualProfitDelta": 194,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:31:51.665Z"
+      },
+      {
+        "blockIndex": 38,
+        "actualProfitDelta": 82,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:32:13.488Z"
+      },
+      {
+        "blockIndex": 39,
+        "actualProfitDelta": -166,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:32:36.522Z"
+      },
+      {
+        "blockIndex": 40,
+        "actualProfitDelta": 68,
+        "activationProfitDelta": 34,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:32:55.633Z"
+      },
+      {
+        "blockIndex": 41,
+        "actualProfitDelta": -156,
+        "activationProfitDelta": 3,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:33:17.360Z"
+      },
+      {
+        "blockIndex": 42,
+        "actualProfitDelta": -148,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:33:39.191Z"
+      },
+      {
+        "blockIndex": 43,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:34:01.872Z"
+      },
+      {
+        "blockIndex": 44,
+        "actualProfitDelta": 90,
+        "activationProfitDelta": 63,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:34:24.171Z"
+      },
+      {
+        "blockIndex": 45,
+        "actualProfitDelta": 164,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:34:45.010Z"
+      },
+      {
+        "blockIndex": 46,
+        "actualProfitDelta": 118,
+        "activationProfitDelta": -84,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:35:00.760Z"
+      },
+      {
+        "blockIndex": 47,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 59,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:35:23.335Z"
+      },
+      {
+        "blockIndex": 48,
+        "actualProfitDelta": 170,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:35:47.797Z"
+      },
+      {
+        "blockIndex": 49,
+        "actualProfitDelta": -4,
+        "activationProfitDelta": -116,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:36:06.452Z"
+      },
+      {
+        "blockIndex": 50,
+        "actualProfitDelta": -158,
+        "activationProfitDelta": 3,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:36:30.976Z"
+      },
+      {
+        "blockIndex": 51,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:36:49.172Z"
+      },
+      {
+        "blockIndex": 52,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": -45,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:37:11.631Z"
+      },
+      {
+        "blockIndex": 53,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 31,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:37:32.521Z"
+      },
+      {
+        "blockIndex": 54,
+        "actualProfitDelta": -113.99999999999999,
+        "activationProfitDelta": -22,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:37:55.983Z"
+      },
+      {
+        "blockIndex": 55,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:38:17.807Z"
+      },
+      {
+        "blockIndex": 56,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:38:37.842Z"
+      },
+      {
+        "blockIndex": 57,
+        "actualProfitDelta": -196,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:39:02.139Z"
+      },
+      {
+        "blockIndex": 58,
+        "actualProfitDelta": 164,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:39:22.777Z"
+      },
+      {
+        "blockIndex": 59,
+        "actualProfitDelta": -166,
+        "activationProfitDelta": 82,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:39:46.766Z"
+      },
+      {
+        "blockIndex": 60,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 94,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:40:08.404Z"
+      },
+      {
+        "blockIndex": 61,
+        "actualProfitDelta": 178,
+        "activationProfitDelta": 7,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:40:27.151Z"
+      },
+      {
+        "blockIndex": 62,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:40:45.369Z"
+      },
+      {
+        "blockIndex": 63,
+        "actualProfitDelta": -50,
+        "activationProfitDelta": 2,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:41:09.121Z"
+      },
+      {
+        "blockIndex": 64,
+        "actualProfitDelta": 200,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:41:32.469Z"
+      },
+      {
+        "blockIndex": 65,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:41:52.836Z"
+      },
+      {
+        "blockIndex": 66,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:42:12.187Z"
+      },
+      {
+        "blockIndex": 67,
+        "actualProfitDelta": 100,
+        "activationProfitDelta": 49,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:42:36.526Z"
+      },
+      {
+        "blockIndex": 68,
+        "actualProfitDelta": 194,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:42:59.530Z"
+      },
+      {
+        "blockIndex": 69,
+        "actualProfitDelta": -144,
+        "activationProfitDelta": -68,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:43:19.545Z"
+      },
+      {
+        "blockIndex": 70,
+        "actualProfitDelta": 188,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:43:41.005Z"
+      },
+      {
+        "blockIndex": 71,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:44:02.750Z"
+      },
+      {
+        "blockIndex": 72,
+        "actualProfitDelta": 66,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:44:24.630Z"
+      },
+      {
+        "blockIndex": 73,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": -164,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:44:43.994Z"
+      },
+      {
+        "blockIndex": 74,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 57,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:45:06.996Z"
+      },
+      {
+        "blockIndex": 75,
+        "actualProfitDelta": -132,
+        "activationProfitDelta": -28,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:45:29.673Z"
+      },
+      {
+        "blockIndex": 76,
+        "actualProfitDelta": 162,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:45:51.055Z"
+      },
+      {
+        "blockIndex": 77,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 71,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:46:07.924Z"
+      },
+      {
+        "blockIndex": 78,
+        "actualProfitDelta": -38,
+        "activationProfitDelta": -120,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:46:34.062Z"
+      },
+      {
+        "blockIndex": 79,
+        "actualProfitDelta": -2,
+        "activationProfitDelta": -65,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:47:01.527Z"
+      },
+      {
+        "blockIndex": 80,
+        "actualProfitDelta": -142,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:47:15.368Z"
+      },
+      {
+        "blockIndex": 81,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:47:34.468Z"
+      },
+      {
+        "blockIndex": 82,
+        "actualProfitDelta": 38,
+        "activationProfitDelta": 70,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:48:23.940Z"
+      },
+      {
+        "blockIndex": 83,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 41,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:48:42.258Z"
+      },
+      {
+        "blockIndex": 84,
+        "actualProfitDelta": 180,
+        "activationProfitDelta": -37,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:48:54.082Z"
+      },
+      {
+        "blockIndex": 85,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 90,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:49:04.669Z"
+      },
+      {
+        "blockIndex": 86,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": -109,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:49:21.276Z"
+      },
+      {
+        "blockIndex": 87,
+        "actualProfitDelta": -20,
+        "activationProfitDelta": -88,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:49:49.105Z"
+      },
+      {
+        "blockIndex": 88,
+        "actualProfitDelta": 170,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:50:09.526Z"
+      },
+      {
+        "blockIndex": 89,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 85,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:50:27.289Z"
+      },
+      {
+        "blockIndex": 90,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": -109,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:50:49.521Z"
+      },
+      {
+        "blockIndex": 91,
+        "actualProfitDelta": 98,
+        "activationProfitDelta": -36,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:51:14.258Z"
+      },
+      {
+        "blockIndex": 92,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 49,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:51:30.367Z"
+      },
+      {
+        "blockIndex": 93,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 145,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:51:54.168Z"
+      },
+      {
+        "blockIndex": 94,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 42,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:52:14.223Z"
+      },
+      {
+        "blockIndex": 95,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:52:51.477Z"
+      },
+      {
+        "blockIndex": 96,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 53,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:52:55.463Z"
+      },
+      {
+        "blockIndex": 97,
+        "actualProfitDelta": -150,
+        "activationProfitDelta": -25,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:53:20.816Z"
+      },
+      {
+        "blockIndex": 98,
+        "actualProfitDelta": 84,
+        "activationProfitDelta": -109,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:53:45.856Z"
+      },
+      {
+        "blockIndex": 99,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 42,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:54:44.443Z"
+      },
+      {
+        "blockIndex": 100,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 44,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:54:45.706Z"
+      },
+      {
+        "blockIndex": 101,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": -3,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:54:49.082Z"
+      },
+      {
+        "blockIndex": 102,
+        "actualProfitDelta": -113.99999999999999,
+        "activationProfitDelta": -48,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:55:13.399Z"
+      },
+      {
+        "blockIndex": 103,
+        "actualProfitDelta": 34,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:55:28.164Z"
+      },
+      {
+        "blockIndex": 104,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 60,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:55:49.953Z"
+      },
+      {
+        "blockIndex": 105,
+        "actualProfitDelta": 0,
+        "activationProfitDelta": 0,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:56:10.593Z"
+      },
+      {
+        "blockIndex": 106,
+        "actualProfitDelta": 84,
+        "activationProfitDelta": 42,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:56:34.282Z"
+      },
+      {
+        "blockIndex": 107,
+        "actualProfitDelta": 140,
+        "activationProfitDelta": 42,
+        "baitSwitchProfitDelta": 0,
+        "ts": "2025-12-24T18:56:54.268Z"
+      }
+    ],
+    "bspSimulations": []
+  }
+}

@@ -57,7 +57,7 @@ export class GameStateEngine {
   };
   private pendingSignals: PatternSignal[] = [];
   private results: EvaluatedResult[] = [];
-  private p1Mode = false;
+  // REMOVED: p1Mode - legacy hold removed, Same Direction System handles long runs
   private config: EvaluatorConfig;
   private detector: PatternDetector;
   private lifecycle: PatternLifecycleManager;
@@ -100,11 +100,7 @@ export class GameStateEngine {
     this.blocks.push(block);
     this.updateRuns(dir, index);
 
-    // Check for P1 mode
-    const wasP1 = this.p1Mode;
-    if (this.runData.currentLength >= this.config.p1ConsecutiveThreshold) {
-      this.p1Mode = true;
-    }
+    // REMOVED: P1 mode check - legacy hold removed, Same Direction System handles long runs
 
     // AP5 CONFIRMATION: Check if we just hit 3 blocks and previous run was 2+
     // This activates AP5 before the flip happens
@@ -292,21 +288,13 @@ export class GameStateEngine {
       }
     }
 
-    // Check if P1 should clear
-    if (this.p1Mode) {
-      const recentProfitable = evaluatedResults.some(
-        e => e.verdict === 'fair' && e.profit >= 70
-      );
-      if (recentProfitable) {
-        this.p1Mode = false;
-      }
-    }
+    // REMOVED: P1 mode clearing logic - legacy hold removed
 
     return {
       block,
       newSignals: allSignals,
       evaluatedResults,
-      p1ModeChanged: wasP1 !== this.p1Mode,
+      p1ModeChanged: false, // Legacy field - always false now
     };
   }
 
@@ -425,7 +413,7 @@ export class GameStateEngine {
    * Get current session state
    */
   getSessionState(): SessionState {
-    if (this.p1Mode) return 'p1_mode';
+    // REMOVED: P1 mode check - legacy hold removed
 
     // Check if any active pattern has pending signals
     const hasActivePending = this.pendingSignals.some(
@@ -437,9 +425,10 @@ export class GameStateEngine {
 
   /**
    * Check if P1 mode is active
+   * @deprecated Legacy hold removed - always returns false
    */
   isP1Mode(): boolean {
-    return this.p1Mode;
+    return false; // Legacy hold removed
   }
 
   /**
@@ -544,7 +533,7 @@ export class GameStateEngine {
     };
     this.pendingSignals = [];
     this.results = [];
-    this.p1Mode = false;
+    // REMOVED: p1Mode - legacy hold removed
     this.ozMonitoringStartBlock = -1;
     this.lifecycle.resetAll();
   }
@@ -557,7 +546,7 @@ export class GameStateEngine {
     runData: RunData;
     pendingSignals: PatternSignal[];
     results: EvaluatedResult[];
-    p1Mode: boolean;
+    p1Mode: boolean; // Legacy field - always false
     ozMonitoringStartBlock: number;
     patternCycles: ReturnType<PatternLifecycleManager['getAllCycles']>;
   } {
@@ -566,7 +555,7 @@ export class GameStateEngine {
       runData: this.getRunData(),
       pendingSignals: this.getPendingSignals(),
       results: this.getResults(),
-      p1Mode: this.p1Mode,
+      p1Mode: false, // Legacy field - always false now
       ozMonitoringStartBlock: this.ozMonitoringStartBlock,
       patternCycles: this.lifecycle.getAllCycles(),
     };
@@ -586,7 +575,7 @@ export class GameStateEngine {
 
     this.pendingSignals = state.pendingSignals;
     this.results = state.results;
-    this.p1Mode = state.p1Mode;
+    // REMOVED: p1Mode import - legacy hold removed
     this.ozMonitoringStartBlock = state.ozMonitoringStartBlock ?? -1;
     this.lifecycle.loadCycles(state.patternCycles);
   }

@@ -519,9 +519,10 @@ export class HostilityManager {
 
   /**
    * Check if betting should be suppressed
+   * @deprecated Hierarchy Manager now controls betting - this always returns false
    */
   shouldSuppressBetting(): boolean {
-    return this.state.isLocked;
+    return false; // Hierarchy Manager controls betting now
   }
 
   // ============================================================================

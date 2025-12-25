@@ -1027,3 +1027,129 @@ export interface HierarchyObservation {
     mainBucketPatterns: PatternName[];
   };
 }
+
+// ============================================================================
+// PROFIT/LOSS MANAGEMENT TYPES
+// ============================================================================
+
+/** Pause types for profit/loss management */
+export type PauseType = 'STOP_GAME' | 'MAJOR_PAUSE_10_BLOCKS' | 'MINOR_PAUSE_3_BLOCKS';
+
+/** Current pause state */
+export interface PauseState {
+  /** Type of pause */
+  type: PauseType;
+  /** Reason for the pause */
+  reason: string;
+  /** Block index when pause started */
+  startBlock: number;
+  /** Blocks remaining in pause (0 for STOP_GAME which is permanent) */
+  blocksRemaining: number;
+  /** The P/L value that triggered the pause */
+  triggerValue: number;
+}
+
+/** Entry in the actual/simulated ledger */
+export interface LedgerEntry {
+  /** Block index of the trade */
+  blockIndex: number;
+  /** Pattern that generated the trade */
+  pattern: PatternName;
+  /** Profit/loss from the trade */
+  pnl: number;
+  /** Whether this was an actual trade (true) or simulated during pause (false) */
+  isActual: boolean;
+  /** Timestamp of the trade */
+  timestamp: number;
+  /** Whether the trade was a win */
+  isWin: boolean;
+  /** Predicted direction */
+  predictedDirection: Direction;
+  /** Actual direction */
+  actualDirection: Direction;
+}
+
+/** Dual ledger for tracking actual vs simulated trades */
+export interface DualLedger {
+  /** Actual trades (real money) */
+  actual: LedgerEntry[];
+  /** Simulated trades (during pauses) */
+  simulated: LedgerEntry[];
+}
+
+/** Episode for bait-and-switch detection */
+export interface BaitSwitchEpisode {
+  /** Pattern this episode is tracking */
+  pattern: PatternName;
+  /** Block index when episode started */
+  startBlock: number;
+  /** Block index when episode ended (null if still active) */
+  endBlock: number | null;
+  /** Trades during this episode */
+  trades: LedgerEntry[];
+  /** Total PnL for this episode */
+  totalPnl: number;
+  /** Whether this episode is complete */
+  isComplete: boolean;
+}
+
+/** Block state snapshot for undo system */
+export interface BlockStateSnapshot {
+  /** Block index this snapshot was taken at */
+  blockIndex: number;
+  /** Timestamp when snapshot was taken */
+  timestamp: number;
+  /** Bucket states for all patterns */
+  bucketStates: Record<PatternName, 'MAIN' | 'WAITING' | 'BNS'>;
+  /** Pause state at time of snapshot */
+  pauseState: PauseState | null;
+  /** Health state at time of snapshot */
+  healthState: {
+    totalPnl: number;
+    consecutiveLosses: number;
+    drawdownLevel: number;
+    lastMajorPauseMilestone: number;
+  };
+  /** Same direction state at time of snapshot */
+  sameDirectionState: {
+    isActive: boolean;
+    runProfit: number;
+    accumulatedLoss: number;
+  };
+  /** Hostility state at time of snapshot */
+  hostilityState: {
+    score: number;
+    isLocked: boolean;
+  };
+  /** Ledger state at time of snapshot */
+  ledgerState: DualLedger;
+}
+
+/** Pause manager configuration */
+export interface PauseConfig {
+  /** Drawdown level that triggers STOP_GAME (-1000 default) */
+  stopGameDrawdown: number;
+  /** Actual loss level that triggers STOP_GAME (-500 default) */
+  stopGameActualLoss: number;
+  /** Interval for MAJOR_PAUSE (-300 every milestone) */
+  majorPauseInterval: number;
+  /** Number of blocks for MAJOR_PAUSE (10 default) */
+  majorPauseBlocks: number;
+  /** Number of consecutive losses for MINOR_PAUSE (2 default) */
+  minorPauseLosses: number;
+  /** Number of blocks for MINOR_PAUSE (3 default) */
+  minorPauseBlocks: number;
+  /** Patterns exempt from MAJOR_PAUSE */
+  majorPauseExemptPatterns: PatternName[];
+}
+
+/** Default pause configuration */
+export const DEFAULT_PAUSE_CONFIG: PauseConfig = {
+  stopGameDrawdown: -1000,
+  stopGameActualLoss: -500,
+  majorPauseInterval: -300,
+  majorPauseBlocks: 10,
+  minorPauseLosses: 2,
+  minorPauseBlocks: 3,
+  majorPauseExemptPatterns: ['ZZ', 'AntiZZ'],
+};
