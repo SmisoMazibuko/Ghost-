@@ -23,7 +23,8 @@
       "Bash(ls:*)",
       "Bash(git checkout:*)",
       "Bash(npm test:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(PORT=3001 npm run web:*)"
     ],
     "deny": [],
     "ask": []
