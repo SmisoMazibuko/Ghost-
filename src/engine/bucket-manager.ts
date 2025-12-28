@@ -354,10 +354,41 @@ export class BucketManager {
     // Skip ZZ/AntiZZ
     if (pattern === 'ZZ' || pattern === 'AntiZZ') return;
 
+    const currentBucket = this.patternBuckets.get(pattern);
     const opposite = this.getOppositePattern(pattern);
+
+    // === HANDLE THIS PATTERN'S BUCKET TRANSITION ON LOSS ===
+    // When a MAIN pattern loses, it must transition to WAITING or BNS
+    if (currentBucket === 'MAIN' && !isWin) {
+      const bigLoss = profit <= -70;
+
+      if (bigLoss) {
+        // Big loss (>=70%) - check if can enter B&S
+        const oppositeInBns = opposite && this.patternBuckets.get(opposite) === 'BNS';
+
+        if (oppositeInBns) {
+          // Opposite already in B&S, can't enter B&S - go to WAITING
+          this.recordBucketChange(pattern, 'MAIN', 'WAITING', blockIndex,
+            `Lost ${profit.toFixed(0)}% but ${opposite} in B&S`);
+          this.patternBuckets.set(pattern, 'WAITING');
+          console.log(`[Bucket] ${pattern} lost ${profit.toFixed(0)}% - cannot enter B&S (${opposite} already there) → WAITING`);
+        } else {
+          // Enter B&S
+          this.enterBnsMode(pattern, blockIndex, Math.abs(profit));
+          console.log(`[Bucket] ${pattern} lost ${profit.toFixed(0)}% → B&S`);
+        }
+      } else {
+        // Small loss (<70%) - go to WAITING
+        this.recordBucketChange(pattern, 'MAIN', 'WAITING', blockIndex,
+          `Lost ${profit.toFixed(0)}%`);
+        this.patternBuckets.set(pattern, 'WAITING');
+        console.log(`[Bucket] ${pattern} lost ${profit.toFixed(0)}% → WAITING`);
+      }
+    }
+
+    // === HANDLE OPPOSITE PATTERN'S B&S STATE ===
     if (!opposite) return;
 
-    // Check if the OPPOSITE pattern is in B&S waiting for bait
     const oppositeBucket = this.patternBuckets.get(opposite);
     const oppositeBnsState = this.bnsStates.get(opposite);
 
@@ -417,37 +448,6 @@ export class BucketManager {
       console.log(`[Bucket] ${pattern} exited B&S → WAITING (${reason}) - ${opposite} UNBLOCKED`);
 
       // Check if opposite should immediately activate based on accumulated profit
-      this.checkUnblockedActivation(opposite, blockIndex);
-    }
-
-    // Reset consecutive counter
-    this.consecutiveOppositeWins.set(pattern, 0);
-  }
-
-  /**
-   * Exit B&S mode to MAIN bucket
-   * Used when: switch loses ≥70% (B&S strategy invalidated)
-   */
-  private exitBnsToMain(pattern: PatternName, blockIndex: number, reason: string): void {
-    const currentBucket = this.patternBuckets.get(pattern);
-
-    // Only process if actually in BNS
-    if (currentBucket !== 'BNS') return;
-
-    // Record bucket change
-    this.recordBucketChange(pattern, 'BNS', 'MAIN', blockIndex, reason);
-    this.patternBuckets.set(pattern, 'MAIN');
-
-    // Clean up B&S state
-    this.bnsStates.delete(pattern);
-
-    // Unblock opposite pattern
-    const opposite = this.getOppositePattern(pattern);
-    if (opposite) {
-      this.oppositeBlocked.set(opposite, false);
-      console.log(`[Bucket] ${pattern} exited B&S → MAIN (${reason}) - ${opposite} UNBLOCKED`);
-
-      // Check if opposite should immediately activate
       this.checkUnblockedActivation(opposite, blockIndex);
     }
 
@@ -1185,11 +1185,19 @@ export class BucketManager {
           const wasSwitch = bnsState?.switchPlayed ?? false;
 
           if (wasSwitch) {
-            // SWITCH was played - apply new switch result rules
+            // SWITCH was played - apply switch result rules
             if (bigLoss) {
               // Big switch loss (≥70%) → MAIN (B&S strategy invalidated)
               // Both normal AND inverse failed, reset to normal play
-              this.exitBnsToMain(pattern, blockIndex, `Switch lost ${runProfit.toFixed(0)}% → B&S invalidated`);
+              this.patternBuckets.set(pattern, 'MAIN');
+              this.bnsStates.delete(pattern);
+              const opposite = this.getOppositePattern(pattern);
+              if (opposite) {
+                this.oppositeBlocked.set(opposite, false);
+                this.checkUnblockedActivation(opposite, blockIndex);
+              }
+              this.consecutiveOppositeWins.set(pattern, 0);
+              this.recordBucketChange(pattern, 'BNS', 'MAIN', blockIndex, `Switch lost ${runProfit.toFixed(0)}% → B&S invalidated`);
               newBucket = 'MAIN';
               reason = `Switch lost ${runProfit.toFixed(0)}% → B&S invalidated → MAIN`;
             } else if (runProfit < 0) {
@@ -1213,10 +1221,17 @@ export class BucketManager {
             }
           } else {
             // Not a switch trade - pattern broke while waiting for bait or without switch
-            // This shouldn't normally happen, but handle gracefully
             if (bigLoss) {
               // Big loss → MAIN
-              this.exitBnsToMain(pattern, blockIndex, `B&S broke (no switch) ${runProfit.toFixed(0)}%`);
+              this.patternBuckets.set(pattern, 'MAIN');
+              this.bnsStates.delete(pattern);
+              const opposite = this.getOppositePattern(pattern);
+              if (opposite) {
+                this.oppositeBlocked.set(opposite, false);
+                this.checkUnblockedActivation(opposite, blockIndex);
+              }
+              this.consecutiveOppositeWins.set(pattern, 0);
+              this.recordBucketChange(pattern, 'BNS', 'MAIN', blockIndex, `B&S broke (no switch) ${runProfit.toFixed(0)}%`);
               newBucket = 'MAIN';
               reason = `B&S broke (no switch) with ${runProfit.toFixed(0)}% → MAIN`;
             } else {
@@ -1269,8 +1284,14 @@ export class BucketManager {
           reason = 'Blocked by opposite B&S while active';
         }
       }
-      // Pattern is observing and wasn't just broken - stay in current bucket
-      // (WAITING or BNS depending on how it got there)
+      // FIX: Pattern is observing but bucket is MAIN - this is a desync
+      // This can happen after B&S exit. Bucket must go to WAITING.
+      else if (cycle.state === 'observing' && currentBucket === 'MAIN') {
+        console.log(`[Bucket] ${pattern} desync: observing but bucket=MAIN - forcing to WAITING`);
+        newBucket = 'WAITING';
+        reason = 'Pattern observing but was in MAIN (desync fix)';
+      }
+      // Pattern is observing and bucket is WAITING or BNS - this is correct, stay there
 
       // Record bucket change if it happened
       if (newBucket !== currentBucket) {

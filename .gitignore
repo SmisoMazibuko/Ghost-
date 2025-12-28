@@ -21,8 +21,11 @@ logs/
 # Test coverage
 coverage/
 
-# Session data (optional - uncomment if you don't want to track sessions)
-# data/sessions/
+# Session data (runtime generated)
+data/sessions/
+
+# Analysis notes (temporary)
+ANALYSIS-PROMPT.md
 
 # Environment
 .env

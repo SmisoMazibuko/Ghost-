@@ -88,6 +88,7 @@ export class HierarchyManager {
 
       const pattern = zzState.activePattern as PatternName;
       const direction = this.getPocketDirection(zzStateManager, previousBlock);
+      const sdMachineState = this.getSDMachineState(sameDirectionManager);
 
       const decision: HierarchyDecision = {
         blockIndex,
@@ -98,10 +99,11 @@ export class HierarchyManager {
         reason: `Pocket (${pattern}) in P1 - betting`,
         pausedSystems,
         ts: new Date().toISOString(),
+        sdState: sdMachineState,
       };
 
       console.log(`[HIERARCHY]   → BETTING: ${pattern}`);
-      console.log(`[HIERARCHY]   SameDir PAUSED, Bucket PAUSED`);
+      console.log(`[HIERARCHY]   SameDir PAUSED (${sdMachineState}), Bucket PAUSED`);
 
       this.recordDecision(decision);
       return decision;
@@ -114,13 +116,16 @@ export class HierarchyManager {
     // ========================================================================
 
     const sdActive = sameDirectionManager.isActive();
+    const sdPaused = sameDirectionManager.isPaused();
+    const sdCanBet = sameDirectionManager.canBet();
     const sdAccumulatedLoss = sameDirectionManager.getAccumulatedLoss();
+    const sdMachineState = this.getSDMachineState(sameDirectionManager);
 
     console.log(`[HIERARCHY] Priority 2 (SameDir):`);
-    console.log(`[HIERARCHY]   active=${sdActive}, accumulatedLoss=${sdAccumulatedLoss}`);
+    console.log(`[HIERARCHY]   state=${sdMachineState}, accumulatedLoss=${sdAccumulatedLoss}`);
 
-    if (sdActive) {
-      // Same Direction bets - pause Bucket
+    if (sdCanBet) {
+      // Same Direction can bet (active AND not paused) - pause Bucket
       pausedSystems.push('bucket');
 
       const direction = sameDirectionManager.getBetDirection(previousBlock);
@@ -134,6 +139,7 @@ export class HierarchyManager {
         reason: `Same Direction active (loss: ${sdAccumulatedLoss}/140) - betting continuation`,
         pausedSystems,
         ts: new Date().toISOString(),
+        sdState: sdMachineState,
       };
 
       console.log(`[HIERARCHY]   → BETTING: ${direction === 1 ? 'GREEN' : 'RED'} (continuation)`);
@@ -143,7 +149,15 @@ export class HierarchyManager {
       return decision;
     }
 
-    console.log(`[HIERARCHY]   → PASS (not active)`);
+    if (sdPaused) {
+      // SD is paused - record imaginary direction but fall through to bucket
+      const imaginaryDirection = sameDirectionManager.getBetDirection(previousBlock);
+      console.log(`[HIERARCHY]   → PAUSED (would bet ${imaginaryDirection === 1 ? 'GREEN' : 'RED'}) - falling through to Bucket`);
+    } else if (sdActive) {
+      console.log(`[HIERARCHY]   → PASS (active but cannot bet)`);
+    } else {
+      console.log(`[HIERARCHY]   → PASS (${sdMachineState})`);
+    }
 
     // ========================================================================
     // PRIORITY 3: BUCKET SYSTEM
@@ -154,6 +168,9 @@ export class HierarchyManager {
     const bucketBet = this.getBucketBet(bucketManager, lifecycle, pendingSignals);
 
     if (bucketBet) {
+      // Include imaginary direction if SD is paused
+      const sdImaginaryDir = sdPaused ? sameDirectionManager.getBetDirection(previousBlock) : undefined;
+
       const decision: HierarchyDecision = {
         blockIndex,
         source: 'bucket',
@@ -163,6 +180,8 @@ export class HierarchyManager {
         reason: `Bucket (${bucketBet.pattern}) in ${bucketBet.bucket} - betting`,
         pausedSystems,
         ts: new Date().toISOString(),
+        sdState: sdMachineState,
+        sdImaginaryDirection: sdImaginaryDir ?? undefined,
       };
 
       console.log(`[HIERARCHY]   → BETTING: ${bucketBet.pattern} (${bucketBet.bucket})`);
@@ -177,6 +196,9 @@ export class HierarchyManager {
     // NO SYSTEM BETS
     // ========================================================================
 
+    // Include imaginary direction if SD is paused
+    const sdImaginaryDir = sdPaused ? sameDirectionManager.getBetDirection(previousBlock) : undefined;
+
     const decision: HierarchyDecision = {
       blockIndex,
       source: 'none',
@@ -186,6 +208,8 @@ export class HierarchyManager {
       reason: 'No system ready to bet',
       pausedSystems,
       ts: new Date().toISOString(),
+      sdState: sdMachineState,
+      sdImaginaryDirection: sdImaginaryDir ?? undefined,
     };
 
     console.log(`[HIERARCHY] FINAL: No bet this block`);
@@ -193,6 +217,26 @@ export class HierarchyManager {
 
     this.recordDecision(decision);
     return decision;
+  }
+
+  // ==========================================================================
+  // SAME DIRECTION HELPERS
+  // ==========================================================================
+
+  /**
+   * Get SD machine state for decision logging
+   */
+  private getSDMachineState(
+    sameDirectionManager: SameDirectionManager
+  ): 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED' {
+    const sdState = sameDirectionManager.getState();
+    if (!sdState.active) {
+      return sdState.accumulatedLoss > 140 ? 'EXPIRED' : 'INACTIVE';
+    } else if (sdState.paused) {
+      return 'PAUSED';
+    } else {
+      return 'ACTIVE';
+    }
   }
 
   // ==========================================================================

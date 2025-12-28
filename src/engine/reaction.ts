@@ -397,10 +397,6 @@ export class ReactionEngine {
         console.log(`[Prediction] B&S pattern ${pattern} BAIT CONFIRMED (active) - playing inverse`);
       }
 
-      // NOTE: Opposite patterns can both be active at the same time
-      // e.g., 2A2 in B&S and Anti2A2 in MAIN can both generate predictions
-      // They are independent strategies - B&S waits for bait, MAIN works normally
-
       // Get the play direction based on bucket
       const mainDirection = signal.expectedDirection;
       let playDirection: Direction;
@@ -507,13 +503,18 @@ export class ReactionEngine {
     // === TRACK ZZ/XAX RESULT FOR SD PAUSE/RESUME ===
     // Update SameDirectionManager with ZZ/XAX trade results
     // This is used to detect ZZ/XAX breaks for resume triggers
-    this.sameDirectionManager.recordZZXAXResult(trade.pattern, isWin, trade.evalIndex);
+    // NOTE: For ZZ pattern, we handle this separately AFTER recordZZResult
+    // so we can pass the zzAction type (first_bet_negative vs run_ends)
+    if (trade.pattern !== 'ZZ') {
+      this.sameDirectionManager.recordZZXAXResult(trade.pattern, isWin, trade.evalIndex);
 
-    // === SD RESUME CHECK (Phase 3) ===
-    // Check if SD should resume after ZZ/XAX break
-    // Resume takes effect on NEXT trade (this just changes state)
-    if (this.sameDirectionManager.checkResumeCondition(block.index)) {
-      console.log(`[Reaction] SD resumed after ZZ/XAX break at block ${block.index}`);
+      // === SD RESUME CHECK (Phase 3) ===
+      // Check if SD should resume after XAX/AntiZZ break
+      // Resume takes effect on NEXT trade (this just changes state)
+      // NOTE: For ZZ pattern, resume check is done after recordZZResult
+      if (this.sameDirectionManager.checkResumeCondition(block.index)) {
+        console.log(`[Reaction] SD resumed after ${trade.pattern} break at block ${block.index}`);
+      }
     }
 
     // Update session health with trade result (for drawdown tracking)
@@ -695,6 +696,14 @@ export class ReactionEngine {
         } else if (zzOutcome.action === 'run_ends') {
           // Run ended
           console.log(`[Reaction] ZZ run ended → waiting for next indicator`);
+        }
+
+        // === SD RESUME CHECK FOR ZZ (with action type) ===
+        // Now that we know the ZZ action type, update SD manager and check resume
+        // Only resume if ZZ's first bet was successful (action !== 'first_bet_negative')
+        this.sameDirectionManager.recordZZXAXResult(trade.pattern, isWin, trade.evalIndex, zzOutcome.action);
+        if (this.sameDirectionManager.checkResumeCondition(block.index)) {
+          console.log(`[Reaction] SD resumed after ZZ ${zzOutcome.action} at block ${block.index}`);
         }
       } else if (trade.pattern === 'AntiZZ') {
         this.zzStateManager.recordAntiZZResult(zzResult, trade.evalIndex);

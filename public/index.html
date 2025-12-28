@@ -203,6 +203,7 @@
                 <div class="stat-divider"></div>
                 <div class="stat"><span class="stat-label">SD</span><span id="sdState" class="badge yellow">OFF</span></div>
                 <div class="stat"><span class="stat-label">Loss</span><span class="stat-value" id="sdLoss">0</span><span class="stat-sub">/140</span></div>
+                <div class="stat" id="sdPauseInfo" style="display:none"><span class="stat-label">Img</span><span class="stat-value" id="sdImgPnl">0</span></div>
             </div>
         </div>
 
@@ -352,6 +353,18 @@
                             <div class="bucket-label">Accum. Loss</div>
                             <div id="sdAccumLoss" style="font-size:1.2rem; font-weight:bold; color:var(--green)">0%</div>
                             <div class="bucket-patterns">Threshold: 140%</div>
+                        </div>
+                    </div>
+                    <!-- Pause Info (shown when paused) -->
+                    <div id="sdPauseBox" style="display:none; margin-top:6px; padding:6px; background:rgba(255,170,0,0.1); border:1px solid var(--yellow); border-radius:4px">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+                            <span style="color:var(--yellow); font-weight:bold; font-size:0.65rem">PAUSED</span>
+                            <span id="sdPauseReason" style="color:var(--dim); font-size:0.55rem">-</span>
+                        </div>
+                        <div style="display:flex; gap:8px; font-size:0.55rem">
+                            <span>Img W: <span id="sdImgWins" style="color:var(--green)">0</span></span>
+                            <span>Img L: <span id="sdImgLosses" style="color:var(--red)">0</span></span>
+                            <span>Img P/L: <span id="sdImgPnlCard" style="color:var(--dim)">0%</span></span>
                         </div>
                     </div>
                     <!-- Run History -->
@@ -802,21 +815,37 @@
             // Same Direction State Display
             const sdState = state.sameDirectionState || {};
             const sdActive = sdState.active || false;
+            const sdPaused = sdState.paused || false;
             const sdAccumLoss = sdState.accumulatedLoss || 0;
             const sdRunBlocks = sdState.currentRunBlocks || [];
             const sdRunDir = sdState.currentRunDirection;
-            const sdHistory = sdState.runHistory || [];
+            const sdHistoryData = sdState.runHistory || [];
+            const sdPauseReason = sdState.pauseReason || '';
+            const sdImgWins = sdState.imaginaryWins || 0;
+            const sdImgLosses = sdState.imaginaryLosses || 0;
+            const sdImgPnL = sdState.imaginaryPnL || 0;
 
             // Stats bar indicators
             const sdStateEl = document.getElementById('sdState');
             const sdLossEl = document.getElementById('sdLoss');
+            const sdPauseInfoEl = document.getElementById('sdPauseInfo');
+            const sdImgPnlEl = document.getElementById('sdImgPnl');
 
-            if (sdActive) {
+            if (sdPaused) {
+                sdStateEl.textContent = 'PAUSED';
+                sdStateEl.className = 'badge orange';
+                // Show imaginary P/L in stats bar when paused
+                sdPauseInfoEl.style.display = 'flex';
+                sdImgPnlEl.textContent = (sdImgPnL >= 0 ? '+' : '') + sdImgPnL.toFixed(0);
+                sdImgPnlEl.className = 'stat-value ' + (sdImgPnL >= 0 ? 'green' : 'red');
+            } else if (sdActive) {
                 sdStateEl.textContent = 'ON';
                 sdStateEl.className = 'badge green';
+                sdPauseInfoEl.style.display = 'none';
             } else {
                 sdStateEl.textContent = 'OFF';
                 sdStateEl.className = 'badge yellow';
+                sdPauseInfoEl.style.display = 'none';
             }
 
             sdLossEl.textContent = sdAccumLoss.toFixed(0);
@@ -828,18 +857,37 @@
             const sdRunInfo = document.getElementById('sdRunInfo');
             const sdAccumLossEl = document.getElementById('sdAccumLoss');
             const sdHistoryEl = document.getElementById('sdHistory');
+            const sdPauseBox = document.getElementById('sdPauseBox');
+            const sdPauseReasonEl = document.getElementById('sdPauseReason');
+            const sdImgWinsEl = document.getElementById('sdImgWins');
+            const sdImgLossesEl = document.getElementById('sdImgLosses');
+            const sdImgPnlCardEl = document.getElementById('sdImgPnlCard');
 
-            // Status badge
-            if (sdActive) {
+            // Status badge and pause box
+            if (sdPaused) {
+                sdStatusBadge.textContent = 'PAUSED';
+                sdStatusBadge.className = 'badge orange';
+                sdStatusText.textContent = 'Betting Paused';
+                sdStatusText.style.color = 'var(--yellow)';
+                // Show pause box
+                sdPauseBox.style.display = 'block';
+                sdPauseReasonEl.textContent = sdPauseReason || 'Unknown';
+                sdImgWinsEl.textContent = sdImgWins;
+                sdImgLossesEl.textContent = sdImgLosses;
+                sdImgPnlCardEl.textContent = (sdImgPnL >= 0 ? '+' : '') + sdImgPnL.toFixed(0) + '%';
+                sdImgPnlCardEl.style.color = sdImgPnL >= 0 ? 'var(--green)' : 'var(--red)';
+            } else if (sdActive) {
                 sdStatusBadge.textContent = 'ACTIVE';
                 sdStatusBadge.className = 'badge green';
                 sdStatusText.textContent = 'Betting Continuation';
                 sdStatusText.style.color = 'var(--green)';
+                sdPauseBox.style.display = 'none';
             } else {
                 sdStatusBadge.textContent = 'INACTIVE';
                 sdStatusBadge.className = 'badge yellow';
                 sdStatusText.textContent = 'Observing';
                 sdStatusText.style.color = 'var(--dim)';
+                sdPauseBox.style.display = 'none';
             }
 
             // Run info
@@ -851,14 +899,16 @@
             sdAccumLossEl.style.color = sdAccumLoss > 100 ? 'var(--red)' : sdAccumLoss > 50 ? 'var(--yellow)' : 'var(--green)';
 
             // Run history (last 5)
-            if (sdHistory.length > 0) {
-                const recentRuns = sdHistory.slice(-5).reverse();
+            if (sdHistoryData.length > 0) {
+                const recentRuns = sdHistoryData.slice(-5).reverse();
                 sdHistoryEl.innerHTML = recentRuns.map(r => {
                     const dirIcon = r.direction === 1 ? '▲' : '▼';
                     const profitColor = r.runProfit >= 0 ? 'var(--green)' : 'var(--red)';
                     let tag = '';
                     if (r.wasActivation) tag = ' <span style="color:var(--cyan)">[ACT]</span>';
                     if (r.wasDeactivation) tag = ' <span style="color:var(--red)">[CUT]</span>';
+                    if (r.wasPaused) tag += ' <span style="color:var(--yellow)">[PAUSE]</span>';
+                    if (r.wasResumed) tag += ' <span style="color:var(--green)">[RESUME]</span>';
                     return `<span>${dirIcon}${r.runLength} <span style="color:${profitColor}">${r.runProfit >= 0 ? '+' : ''}${r.runProfit.toFixed(0)}%</span>${tag}</span>`;
                 }).join(' | ');
             } else {

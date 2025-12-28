@@ -22,6 +22,9 @@ import {
   ZZPocketAnalysis,
   ZZBlockSnapshot,
   BucketType,
+  SDStateSnapshot,
+  SDSessionSummary,
+  SDBetType,
 } from './types';
 import {
   PatternName,
@@ -90,6 +93,22 @@ export class SessionRecorder {
   // Research logger for P1/B&S data collection
   private researchLogger: ResearchLogger;
   private researchConfig: ResearchConfig;
+
+  // === SAMEDIR PAUSE/RESUME TRACKING ===
+  private sdRealTrades = 0;
+  private sdImaginaryTrades = 0;
+  private sdRealPnL = 0;
+  private sdImaginaryPnL = 0;
+  private sdPauseCount = 0;
+  private sdResumeCount = 0;
+  private sdPauseReasons: { HIGH_PCT_REVERSAL: number; CONSECUTIVE_LOSSES: number } = {
+    HIGH_PCT_REVERSAL: 0,
+    CONSECUTIVE_LOSSES: 0,
+  };
+  private sdBlocksInPause = 0;
+  private sdActivationCount = 0;
+  private sdExpirationCount = 0;
+  private lastSDState: 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED' = 'INACTIVE';
 
   constructor(config: EvaluatorConfig, sessionsDir = './data/sessions', logsDir = './data/logs', researchConfig?: ResearchConfig) {
     this.sessionId = generateSessionId();
@@ -501,6 +520,136 @@ export class SessionRecorder {
     return bucketManager.getAllPatternStates();
   }
 
+  // =========================================================================
+  // SAMEDIR PAUSE/RESUME TRACKING HELPERS
+  // =========================================================================
+
+  /**
+   * Create SD state snapshot for current block
+   */
+  private createSDStateSnapshot(reactionEngine: ReactionEngine): SDStateSnapshot {
+    const sdManager = reactionEngine.getSameDirectionManager();
+    const sdState = sdManager.getState();
+    const pauseInfo = sdManager.getPauseInfo();
+    const zzInfo = sdManager.getLastZZXAXInfo();
+
+    // Determine machine state
+    let machineState: 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
+    if (!sdState.active) {
+      machineState = sdState.accumulatedLoss > 140 ? 'EXPIRED' : 'INACTIVE';
+    } else if (sdState.paused) {
+      machineState = 'PAUSED';
+    } else {
+      machineState = 'ACTIVE';
+    }
+
+    return {
+      state: machineState,
+      accumulatedLoss: sdState.accumulatedLoss,
+      pauseReason: pauseInfo.reason,
+      imaginaryPnL: pauseInfo.imaginaryPnL,
+      imaginaryWins: pauseInfo.imaginaryWins,
+      imaginaryLosses: pauseInfo.imaginaryLosses,
+      consecutiveLosses: sdState.sdConsecutiveLosses,
+      lastZZXAXResult: zzInfo.result,
+      lastZZXAXPattern: zzInfo.pattern,
+    };
+  }
+
+  /**
+   * Track SD state changes for summary
+   */
+  private trackSDStateChanges(
+    reactionEngine: ReactionEngine,
+    closedTrade: ReturnType<ReactionEngine['evaluateTrade']>
+  ): SDBetType {
+    const sdManager = reactionEngine.getSameDirectionManager();
+    const sdState = sdManager.getState();
+    const pauseInfo = sdManager.getPauseInfo();
+
+    // Determine current machine state
+    let currentState: 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
+    if (!sdState.active) {
+      currentState = sdState.accumulatedLoss > 140 ? 'EXPIRED' : 'INACTIVE';
+    } else if (sdState.paused) {
+      currentState = 'PAUSED';
+    } else {
+      currentState = 'ACTIVE';
+    }
+
+    // Track state transitions
+    if (currentState !== this.lastSDState) {
+      // Activation
+      if (currentState === 'ACTIVE' && this.lastSDState === 'INACTIVE') {
+        this.sdActivationCount++;
+      }
+      // Pause
+      if (currentState === 'PAUSED' && this.lastSDState === 'ACTIVE') {
+        this.sdPauseCount++;
+        if (pauseInfo.reason === 'HIGH_PCT_REVERSAL') {
+          this.sdPauseReasons.HIGH_PCT_REVERSAL++;
+        } else if (pauseInfo.reason === 'CONSECUTIVE_LOSSES') {
+          this.sdPauseReasons.CONSECUTIVE_LOSSES++;
+        }
+      }
+      // Resume
+      if (currentState === 'ACTIVE' && this.lastSDState === 'PAUSED') {
+        this.sdResumeCount++;
+      }
+      // Expiration
+      if (currentState === 'EXPIRED' && (this.lastSDState === 'ACTIVE' || this.lastSDState === 'PAUSED')) {
+        this.sdExpirationCount++;
+      }
+      // Re-activation after expiration
+      if (currentState === 'ACTIVE' && this.lastSDState === 'EXPIRED') {
+        this.sdActivationCount++;
+      }
+
+      this.lastSDState = currentState;
+    }
+
+    // Track blocks in pause
+    if (currentState === 'PAUSED') {
+      this.sdBlocksInPause++;
+    }
+
+    // Track SD trades (SameDir is a pseudo-pattern, cast as string for comparison)
+    let betType: SDBetType = 'NONE';
+    if (closedTrade && (closedTrade.pattern as unknown as string) === 'SameDir') {
+      if (sdState.paused) {
+        // Trade was imaginary (tracked during pause)
+        betType = 'IMAGINARY';
+        this.sdImaginaryTrades++;
+        this.sdImaginaryPnL += closedTrade.pnl;
+      } else {
+        // Trade was real
+        betType = 'REAL';
+        this.sdRealTrades++;
+        this.sdRealPnL += closedTrade.pnl;
+      }
+    }
+
+    return betType;
+  }
+
+  /**
+   * Build SD session summary
+   */
+  private buildSDSessionSummary(): SDSessionSummary {
+    return {
+      realTrades: this.sdRealTrades,
+      imaginaryTrades: this.sdImaginaryTrades,
+      realPnL: this.sdRealPnL,
+      imaginaryPnL: this.sdImaginaryPnL,
+      pauseCount: this.sdPauseCount,
+      resumeCount: this.sdResumeCount,
+      pauseReasons: { ...this.sdPauseReasons },
+      blocksInPause: this.sdBlocksInPause,
+      activationCount: this.sdActivationCount,
+      expirationCount: this.sdExpirationCount,
+    };
+  }
+
   /**
    * Start recording a new session
    */
@@ -600,6 +749,10 @@ export class SessionRecorder {
       // === ENHANCED: Add bucket and ZZ snapshots ===
       play.bucketSnapshot = this.createBucketSnapshot(reactionEngine, bucketChanges);
       play.zzSnapshot = this.createZZSnapshot(reactionEngine, gameState);
+
+      // === SAMEDIR PAUSE/RESUME: Add SD state snapshot ===
+      play.sdStateSnapshot = this.createSDStateSnapshot(reactionEngine);
+      play.sdBetType = this.trackSDStateChanges(reactionEngine, closedTrade);
 
       // Research logging - collect P1/B&S data (non-invasive, read-only)
       try {
@@ -766,6 +919,9 @@ export class SessionRecorder {
       lossesInBns: this.lossesInBns,
       lossesInMain: this.lossesInMain,
       bnsEffectiveness: this.buildBnsEffectiveness(),
+
+      // === SAMEDIR PAUSE/RESUME SUMMARY ===
+      sdSummary: this.buildSDSessionSummary(),
     };
   }
 

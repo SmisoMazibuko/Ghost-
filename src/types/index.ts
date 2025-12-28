@@ -155,6 +155,16 @@ export interface PatternCycle {
    * Whether the pattern was killed (stopped by B&S or other mechanism)
    */
   wasKilled?: boolean;
+
+  // ST-specific tracking for proper activation
+  /** Whether ST has seen a ≥3 indicator run */
+  stIndicatorSeen?: boolean;
+  /** Number of doubles seen after the indicator (first double is 2A2 territory) */
+  stDoublesAfterIndicator?: number;
+
+  // PP-specific tracking for proper activation
+  /** Number of complete 1-2 cycles seen (for rhythm confirmation) */
+  ppCyclesSeen?: number;
 }
 
 // ============================================================================
@@ -1002,6 +1012,12 @@ export interface HierarchyDecision {
   pausedSystems: ('same-direction' | 'bucket')[];
   /** Timestamp */
   ts: string;
+
+  // === SAMEDIR PAUSE/RESUME FIELDS ===
+  /** SameDir machine state at decision time */
+  sdState?: 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
+  /** If SD is paused, what direction would it bet (for imaginary tracking) */
+  sdImaginaryDirection?: Direction;
 }
 
 /** Hierarchy observation state for a single block */
@@ -1018,6 +1034,8 @@ export interface HierarchyObservation {
   /** Same Direction state after observation */
   sameDirection: {
     active: boolean;
+    paused: boolean;
+    state: 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
     accumulatedLoss: number;
     currentRunLength: number;
   };

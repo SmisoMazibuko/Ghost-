@@ -137,14 +137,27 @@ export class GameStateEngine {
 
     // NOTE: OZ BREAK moved to after evaluatePendingSignals() so bet losses are counted
 
-    // PP CONFIRMATION: Check if we just hit 2 blocks (double) and previous run was a single (1)
-    // This is: 1+ same → single → 2 flip back (confirm 70% on 1st block)
+    // =========================================================================
+    // ST INDICATOR TRACKING: Notify ST when we see a ≥3 run (indicator)
+    // This is required before ST can activate
+    // =========================================================================
+    if (this.runData.currentLength === 3) {
+      this.lifecycle.notifySTIndicator(index);
+    }
+
+    // =========================================================================
+    // PP CYCLE TRACKING & CONFIRMATION
+    // PP requires at least one complete 1-2 cycle before activation
+    // =========================================================================
     if (this.runData.currentLength === 2 && this.runData.lengths.length >= 2) {
       const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
       if (previousRunLength === 1) {
-        // Previous was a single - this is PP setup
+        // Previous was a single, current is a double - this is a complete 1-2 cycle
+        // Notify PP of the cycle completion
+        this.lifecycle.notifyPPCycle(index);
+
+        // PP CONFIRMATION: Now try to confirm activation
         // Get the 1st block of current run (confirmation block)
-        // Current block is at index (2nd), so 1st block is at index - 1
         const firstBlockIndex = index - 1;
         if (firstBlockIndex >= 0 && firstBlockIndex < this.blocks.length) {
           const firstBlockPct = this.blocks[firstBlockIndex].pct;
@@ -153,43 +166,56 @@ export class GameStateEngine {
       }
     }
 
-    // PP BREAK: PP is continuous during 1-2-1-2 rhythm, breaks when:
-    // 1. Run reaches 3+ (exits PP rhythm, enters OZ territory)
-    // 2. Two singles in a row (1-1) - expected double after single
-    // Loss-based breaks are handled by lifecycle via recordResult()
-    if (this.lifecycle.isActive('PP')) {
-      // Kill condition 1: Run reaches 3+
-      if (this.runData.currentLength >= 3) {
+    // PP STRUCTURE BREAK: Resets observation when rhythm breaks
+    // This must happen for BOTH active AND observing states
+    if (this.runData.currentLength >= 3) {
+      // Run >= 3 breaks PP rhythm
+      if (this.lifecycle.isActive('PP')) {
         this.lifecycle.breakPPPattern(index);
+      } else {
+        // Reset observation cumulative profit - THIS IS THE BUG FIX
+        this.lifecycle.resetPPObservation(index);
       }
-      // Kill condition 2: Two singles in a row (rhythm broken)
-      else if (this.runData.currentLength === 1 && this.runData.lengths.length >= 2) {
-        const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
-        if (previousRunLength === 1) {
-          // Previous was single, current is single = two singles in a row
-          // PP rhythm broken (expected double after single)
+    } else if (this.runData.currentLength === 1 && this.runData.lengths.length >= 2) {
+      const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+      if (previousRunLength === 1) {
+        // Two singles in a row breaks PP rhythm
+        if (this.lifecycle.isActive('PP')) {
           console.log(`[State] PP broken - two singles in a row (rhythm broken)`);
           this.lifecycle.breakPPPattern(index);
+        } else {
+          // Reset observation cumulative profit - THIS IS THE BUG FIX
+          this.lifecycle.resetPPObservation(index);
         }
       }
     }
 
-    // ST CONFIRMATION: Check if we just hit 2 blocks (double) and previous run was 2+
-    // This is: 2+ → flip → RR (check 70% on 2nd R) → ACTIVATE
+    // =========================================================================
+    // ST DOUBLE TRACKING & CONFIRMATION
+    // ST requires: indicator (≥3) → 1st double (2A2 territory) → 2nd+ double (ST activates)
+    // =========================================================================
     if (this.runData.currentLength === 2 && this.runData.lengths.length >= 2) {
       const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
       if (previousRunLength >= 2) {
-        // Previous was 2+ - this is ST setup
+        // Previous was 2+ - notify ST of the double
+        this.lifecycle.notifySTDouble(index);
+
+        // ST CONFIRMATION: Now try to confirm activation
         // Get the 2nd block of current run (the current block - confirmation block)
         const secondBlockPct = this.blocks[index].pct;
         this.lifecycle.confirmSTPattern(secondBlockPct, index);
       }
     }
 
-    // ST BREAK: ST is continuous during 2A2 rhythm, breaks on 3+ (enters OZ territory)
-    // Loss-based breaks are handled by lifecycle via recordResult()
-    if (this.lifecycle.isActive('ST') && this.runData.currentLength >= 3) {
-      this.lifecycle.breakSTPattern(index);
+    // ST STRUCTURE BREAK: Resets observation when rhythm breaks (3+ run)
+    // This must happen for BOTH active AND observing states
+    if (this.runData.currentLength >= 3) {
+      if (this.lifecycle.isActive('ST')) {
+        this.lifecycle.breakSTPattern(index);
+      } else {
+        // Reset observation cumulative profit and indicator tracking - THIS IS THE BUG FIX
+        this.lifecycle.resetSTObservation(index);
+      }
     }
 
     // =========================================================================

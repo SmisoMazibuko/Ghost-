@@ -37,6 +37,21 @@ export const ZZ_XAX_PATTERNS = [
   '5A5', 'Anti5A5',
 ] as const;
 
+/**
+ * Patterns that trigger SD resume when they LOSE (alternation patterns only).
+ * These patterns bet OPPOSITE to SD (on direction change).
+ * When they lose, direction CONTINUES - good for SD to resume.
+ *
+ * DO NOT include Anti patterns - they bet SAME as SD (on continuation).
+ * When Anti patterns lose, direction CHANGED - bad for SD.
+ */
+export const RESUME_TRIGGER_PATTERNS = [
+  'ZZ', '2A2', '3A3', '4A4', '5A5', '6A6'
+] as const;
+
+/** ZZ action type for determining if first bet was successful */
+export type ZZActionType = 'first_bet_negative' | 'run_ends' | 'continue' | null;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -91,6 +106,8 @@ export interface SameDirectionState {
   lastZZXAXTradeBlock: number;
   /** Pattern of last ZZ/XAX trade (null if none) */
   lastZZXAXPattern: string | null;
+  /** Last ZZ action type for resume logic (first_bet_negative vs run_ends) */
+  lastZZAction: ZZActionType;
 
   // === PAUSE STATE (Phase 2) ===
   /** Whether SD is currently paused */
@@ -151,6 +168,7 @@ export class SameDirectionManager {
       lastZZXAXResult: null,
       lastZZXAXTradeBlock: -1,
       lastZZXAXPattern: null,
+      lastZZAction: null,
       // Pause state
       paused: false,
       pauseReason: null,
@@ -483,8 +501,14 @@ export class SameDirectionManager {
    * @param pattern - The pattern name
    * @param isWin - Whether the trade won
    * @param blockIndex - Block index where trade was evaluated
+   * @param zzAction - For ZZ pattern, the action type ('first_bet_negative' or 'run_ends')
    */
-  recordZZXAXResult(pattern: string, isWin: boolean, blockIndex: number): void {
+  recordZZXAXResult(
+    pattern: string,
+    isWin: boolean,
+    blockIndex: number,
+    zzAction?: ZZActionType
+  ): void {
     // Only track ZZ/XAX patterns
     if (!ZZ_XAX_PATTERNS.includes(pattern as typeof ZZ_XAX_PATTERNS[number])) {
       return;
@@ -495,7 +519,12 @@ export class SameDirectionManager {
     this.state.lastZZXAXTradeBlock = blockIndex;
     this.state.lastZZXAXPattern = pattern;
 
-    console.log(`[SD] ZZ/XAX result: ${pattern} ${result} at block ${blockIndex}`);
+    // Store ZZ action type for resume logic
+    if (pattern === 'ZZ' && zzAction) {
+      this.state.lastZZAction = zzAction;
+    }
+
+    console.log(`[SD] ZZ/XAX result: ${pattern} ${result} at block ${blockIndex}${zzAction ? ` (action: ${zzAction})` : ``}`);
   }
 
   /**
@@ -618,6 +647,18 @@ export class SameDirectionManager {
    * Check if SD should resume based on ZZ/XAX break.
    * Called after recording ZZ/XAX result.
    *
+   * IMPORTANT: Only resume when ALTERNATION patterns break (lose).
+   * - ZZ, 2A2, 3A3, 4A4, 5A5, 6A6 bet on direction CHANGE
+   * - When they lose, direction CONTINUES → good for SD
+   *
+   * CRITICAL: For ZZ pattern, only resume if first bet was successful.
+   * - If ZZ broke on first bet (first_bet_negative), market is still hostile
+   * - If ZZ run ended (run_ends), first bet was successful → OK to resume
+   *
+   * DO NOT resume when Anti patterns break:
+   * - AntiZZ, Anti2A2, etc. bet on direction CONTINUATION (same as SD)
+   * - When they lose, direction CHANGED → bad for SD
+   *
    * @returns Whether SD resumed
    */
   checkResumeCondition(blockIndex: number): boolean {
@@ -626,10 +667,30 @@ export class SameDirectionManager {
       return false;
     }
 
-    // Resume when ZZ/XAX breaks (loses)
-    if (this.state.lastZZXAXResult === 'LOSS') {
+    // Only resume when ALTERNATION patterns break
+    if (this.state.lastZZXAXResult === 'LOSS' &&
+        this.state.lastZZXAXPattern &&
+        RESUME_TRIGGER_PATTERNS.includes(this.state.lastZZXAXPattern as typeof RESUME_TRIGGER_PATTERNS[number])) {
+
+      // CRITICAL: For ZZ pattern, only resume if first bet was successful
+      if (this.state.lastZZXAXPattern === 'ZZ') {
+        if (this.state.lastZZAction === 'first_bet_negative') {
+          console.log(`[SD] Resume BLOCKED: ZZ broke on first bet (market still hostile)`);
+          return false;
+        }
+        // 'run_ends' means first bet was successful, OK to resume
+        console.log(`[SD] Resume triggered: ZZ run ended (first bet was successful)`);
+      } else {
+        console.log(`[SD] Resume triggered: ${this.state.lastZZXAXPattern} broke (alternation pattern)`);
+      }
+
       this.resume(blockIndex);
       return true;
+    }
+
+    // Anti pattern broke - stay paused (direction changed, bad for SD)
+    if (this.state.lastZZXAXResult === 'LOSS' && this.state.lastZZXAXPattern) {
+      console.log(`[SD] Resume BLOCKED: ${this.state.lastZZXAXPattern} broke (continuation pattern - bad for SD)`);
     }
 
     return false;

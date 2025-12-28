@@ -163,6 +163,14 @@ export interface LoggedPlay {
 
   /** ZZ state snapshot at this block (if ZZ active) */
   zzSnapshot?: ZZBlockSnapshot;
+
+  // === SAMEDIR PAUSE/RESUME TRACKING ===
+
+  /** Bet type for SameDir trades */
+  sdBetType?: SDBetType;
+
+  /** SameDir state snapshot at this block */
+  sdStateSnapshot?: SDStateSnapshot;
 }
 
 // ============================================================================
@@ -302,6 +310,65 @@ export interface P1FlowAnalysis {
 }
 
 // ============================================================================
+// SAMEDIR STATE TRACKING TYPES
+// ============================================================================
+
+/** SameDir bet type */
+export type SDBetType = 'REAL' | 'IMAGINARY' | 'NONE';
+
+/** SameDir machine state */
+export type SDMachineState = 'INACTIVE' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
+
+/** SameDir state snapshot for logging */
+export interface SDStateSnapshot {
+  /** Current SD machine state */
+  state: SDMachineState;
+  /** Accumulated loss (life consumed) */
+  accumulatedLoss: number;
+  /** Pause reason if paused */
+  pauseReason: string | null;
+  /** Imaginary P/L during pause */
+  imaginaryPnL: number;
+  /** Imaginary wins during pause */
+  imaginaryWins: number;
+  /** Imaginary losses during pause */
+  imaginaryLosses: number;
+  /** Consecutive SD losses (real) */
+  consecutiveLosses: number;
+  /** Last ZZ/XAX result */
+  lastZZXAXResult: 'WIN' | 'LOSS' | null;
+  /** Last ZZ/XAX pattern */
+  lastZZXAXPattern: string | null;
+}
+
+/** SD summary for session */
+export interface SDSessionSummary {
+  /** Number of real SD trades */
+  realTrades: number;
+  /** Number of imaginary SD trades (during pause) */
+  imaginaryTrades: number;
+  /** Real SD P/L */
+  realPnL: number;
+  /** Imaginary SD P/L */
+  imaginaryPnL: number;
+  /** Number of times SD paused */
+  pauseCount: number;
+  /** Number of times SD resumed */
+  resumeCount: number;
+  /** Pause reasons breakdown */
+  pauseReasons: {
+    HIGH_PCT_REVERSAL: number;
+    CONSECUTIVE_LOSSES: number;
+  };
+  /** Total blocks spent paused */
+  blocksInPause: number;
+  /** Number of activations */
+  activationCount: number;
+  /** Number of expirations (life exhausted) */
+  expirationCount: number;
+}
+
+// ============================================================================
 // ZZ/ANTIZZ POCKET SYSTEM TRACKING TYPES
 // ============================================================================
 
@@ -427,6 +494,11 @@ export interface SessionSummary {
   lossesInMain: number;
   /** B&S switch effectiveness */
   bnsEffectiveness: BnsEffectiveness;
+
+  // === SAMEDIR PAUSE/RESUME SUMMARY ===
+
+  /** SameDir session summary */
+  sdSummary?: SDSessionSummary;
 }
 
 /** Configuration snapshot for the session */
