@@ -76,6 +76,11 @@ export class PatternLifecycleManager {
       lastFormationIndex: -1,
       savedIndicatorDirection: null,
       waitingForIndicator: false,
+      // ST-specific tracking
+      stIndicatorSeen: false,
+      stDoublesAfterIndicator: 0,
+      // PP-specific tracking
+      ppCyclesSeen: 0,
     };
   }
 
@@ -682,6 +687,12 @@ export class PatternLifecycleManager {
       return false; // Already active or doesn't exist
     }
 
+    // Check if we have seen at least one complete 1-2 cycle
+    if ((cycle.ppCyclesSeen ?? 0) < 1) {
+      console.log(`[Lifecycle] PP confirmation skipped - no complete 1-2 cycle seen yet`);
+      return false;
+    }
+
     // Track cumulative for PP activation
     if (firstBlockProfit >= 0) {
       cycle.cumulativeProfit += firstBlockProfit;
@@ -769,14 +780,43 @@ export class PatternLifecycleManager {
     cycle.activeResults = [];
     cycle.cumulativeProfit = 0;
     cycle.lastRunProfit = 0;
+    cycle.ppCyclesSeen = 0;
+  }
+
+  /**
+   * Reset PP observation state when structure breaks during observation.
+   *
+   * This is called when PP structure breaks BEFORE activation to reset
+   * cumulative profit and cycle tracking. This fixes the bug where
+   * cumulative profit would carry over across broken observation cycles.
+   *
+   * Structure breaks during observation:
+   * - Run reaches 3+ (exits 1-2 rhythm)
+   * - Two singles in a row (expected double after single)
+   */
+  resetPPObservation(blockIndex?: number): void {
+    const cycle = this.cycles.get('PP');
+    if (!cycle || cycle.state === 'active') {
+      return; // Only reset if in observation
+    }
+
+    if (cycle.cumulativeProfit > 0 || (cycle.ppCyclesSeen ?? 0) > 0) {
+      console.log(`[Lifecycle] PP observation reset at block ${blockIndex ?? '?'} - was: cumulative=${cycle.cumulativeProfit.toFixed(0)}%, cycles=${cycle.ppCyclesSeen ?? 0}`);
+    }
+
+    cycle.cumulativeProfit = 0;
+    cycle.observationResults = [];
+    cycle.ppCyclesSeen = 0;
   }
 
   /**
    * Confirm ST pattern activation
    *
-   * ST is like AP5 but for 2A2 (doubles):
-   * - 2+ → flip → 2 (double with 70% on 1st) → ACTIVATE
-   * - Then on flip, predict 2nd block of continuation
+   * ST requires:
+   * - ≥3 indicator run (tracked via notifySTIndicator)
+   * - First double after indicator is 2A2 territory (skip)
+   * - 2nd+ double can activate ST
+   * - 70% single OR 100% cumulative threshold
    *
    * @param firstBlockProfit - The profit percentage of the 1st block
    * @param blockIndex - Current block index for analytics
@@ -787,6 +827,13 @@ export class PatternLifecycleManager {
       return false; // Already active or doesn't exist
     }
 
+    // Check if we have seen an indicator (≥3 run)
+    if (!cycle.stIndicatorSeen) {
+      console.log(`[Lifecycle] ST confirmation skipped - no indicator seen yet`);
+      return false;
+    }
+
+    // ST can activate on any double after indicator (co-exists with 2A2)
     // Track cumulative for ST activation
     if (firstBlockProfit >= 0) {
       cycle.cumulativeProfit += firstBlockProfit;
@@ -874,6 +921,89 @@ export class PatternLifecycleManager {
     cycle.activeResults = [];
     cycle.cumulativeProfit = 0;
     cycle.lastRunProfit = 0;
+    // Reset ST-specific tracking
+    cycle.stIndicatorSeen = false;
+    cycle.stDoublesAfterIndicator = 0;
+  }
+
+  /**
+   * Reset ST observation state when structure breaks during observation.
+   *
+   * This is called when ST structure breaks BEFORE activation to reset
+   * cumulative profit and indicator tracking. This fixes the bug where
+   * cumulative profit would carry over across broken observation cycles.
+   *
+   * Structure breaks during observation:
+   * - Run reaches 3+ (exits 2-2 rhythm, enters OZ territory)
+   */
+  resetSTObservation(blockIndex?: number): void {
+    const cycle = this.cycles.get('ST');
+    if (!cycle || cycle.state === 'active') {
+      return; // Only reset if in observation
+    }
+
+    // NOTE: We do NOT reset stIndicatorSeen here!
+    // The ≥3 run IS the indicator. When we see a ≥3 run:
+    // 1. notifySTIndicator() sets stIndicatorSeen = true
+    // 2. This function resets cumulative profit (rhythm broke)
+    // But the indicator should PERSIST - we still saw the ≥3 run.
+    // Only reset doubles count and cumulative profit.
+
+    if (cycle.cumulativeProfit > 0 || (cycle.stDoublesAfterIndicator ?? 0) > 0) {
+      console.log(`[Lifecycle] ST observation reset at block ${blockIndex ?? '?'} - was: cumulative=${cycle.cumulativeProfit.toFixed(0)}%, doubles=${cycle.stDoublesAfterIndicator ?? 0} (indicator preserved: ${cycle.stIndicatorSeen})`);
+    }
+
+    cycle.cumulativeProfit = 0;
+    cycle.observationResults = [];
+    // DO NOT reset stIndicatorSeen - the ≥3 run that triggered this IS the indicator
+    cycle.stDoublesAfterIndicator = 0;
+  }
+
+  /**
+   * Notify ST that an indicator (≥3 run) has been seen.
+   * This is required before ST can activate.
+   */
+  notifySTIndicator(blockIndex?: number): void {
+    const cycle = this.cycles.get('ST');
+    if (!cycle || cycle.state === 'active') {
+      return;
+    }
+
+    if (!cycle.stIndicatorSeen) {
+      cycle.stIndicatorSeen = true;
+      cycle.stDoublesAfterIndicator = 0;
+      console.log(`[Lifecycle] ST indicator seen at block ${blockIndex ?? '?'} - now tracking doubles`);
+    }
+  }
+
+  /**
+   * Notify ST that a double (2-block run) has been seen after the indicator.
+   * First double is 2A2 territory, ST can only activate on 2nd+ double.
+   */
+  notifySTDouble(blockIndex?: number): void {
+    const cycle = this.cycles.get('ST');
+    if (!cycle || cycle.state === 'active') {
+      return;
+    }
+
+    if (cycle.stIndicatorSeen) {
+      cycle.stDoublesAfterIndicator = (cycle.stDoublesAfterIndicator ?? 0) + 1;
+      console.log(`[Lifecycle] ST double #${cycle.stDoublesAfterIndicator} seen at block ${blockIndex ?? '?'}`);
+    }
+  }
+
+  /**
+   * Notify PP that a complete 1-2 cycle has been seen.
+   * PP should require at least one complete cycle before activation.
+   */
+  notifyPPCycle(blockIndex?: number): void {
+    const cycle = this.cycles.get('PP');
+    if (!cycle || cycle.state === 'active') {
+      return;
+    }
+
+    cycle.ppCyclesSeen = (cycle.ppCyclesSeen ?? 0) + 1;
+    console.log(`[Lifecycle] PP cycle #${cycle.ppCyclesSeen} completed at block ${blockIndex ?? '?'}`);
   }
 
   /**
