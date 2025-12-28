@@ -91,7 +91,7 @@ class SDStateMachineSimulator {
     };
   }
 
-  transition(to, trigger, blockIndex, reason) {
+  transition(to, trigger, blockIndex, reason, triggerPattern = null) {
     const from = this.state;
     this.transitions.push({
       from,
@@ -99,6 +99,7 @@ class SDStateMachineSimulator {
       trigger,
       blockIndex,
       reason,
+      triggerPattern,
       metrics: {
         remainingLife: this.remainingLife,
         accumulatedLoss: this.accumulatedLoss,
@@ -129,7 +130,7 @@ class SDStateMachineSimulator {
       `${reason}${details ? ': ' + details : ''}`);
   }
 
-  resume(blockIndex, reason) {
+  resume(blockIndex, reason, triggerPattern = null) {
     if (this.state !== 'PAUSED') return;
     if (this.remainingLife <= 0) {
       this.expire(blockIndex, 'Attempted resume but life exhausted');
@@ -138,7 +139,7 @@ class SDStateMachineSimulator {
     this.pauseReason = null;
     this.pauseStartBlock = null;
     this.consecutiveImaginaryWins = 0;
-    this.transition('ACTIVE', 'RESUME', blockIndex, reason);
+    this.transition('ACTIVE', 'RESUME', blockIndex, reason, triggerPattern);
   }
 
   expire(blockIndex, reason) {
@@ -218,9 +219,32 @@ class SDStateMachineSimulator {
   handlePatternEvent(eventType, pattern, blockIndex) {
     if (eventType === 'BREAK' && this.state === 'PAUSED') {
       if (this.remainingLife > 0) {
-        this.resume(blockIndex, `${pattern} pattern broke, life remaining: ${this.remainingLife}`);
+        this.resume(blockIndex, `${pattern} pattern broke, life remaining: ${this.remainingLife}`, pattern);
       }
     }
+  }
+
+  getResumePatternStats() {
+    const resumeEvents = this.transitions.filter(t => t.trigger === 'RESUME');
+    const stats = {
+      total: resumeEvents.length,
+      byPattern: {},
+      goodResumes: 0,  // ZZ, 2A2, 3A3, 4A4, 5A5, 6A6
+      badResumes: 0,   // AntiZZ, Anti2A2, etc., OZ
+    };
+
+    const GOOD_PATTERNS = ['ZZ', '2A2', '3A3', '4A4', '5A5', '6A6'];
+    const BAD_PATTERNS = ['AntiZZ', 'Anti2A2', 'Anti3A3', 'Anti4A4', 'Anti5A5', 'Anti6A6', 'OZ'];
+
+    resumeEvents.forEach(e => {
+      const p = e.triggerPattern || 'Unknown';
+      stats.byPattern[p] = (stats.byPattern[p] || 0) + 1;
+
+      if (GOOD_PATTERNS.includes(p)) stats.goodResumes++;
+      else if (BAD_PATTERNS.includes(p)) stats.badResumes++;
+    });
+
+    return stats;
   }
 }
 
@@ -487,8 +511,13 @@ function runCounterfactual(session, params, variantName) {
       sm.processSDTrade(sdTrade, blocks, prevBlock);
     }
 
+    // Check for pattern breaks - include ALL patterns that can trigger resume
+    const ALL_RESUME_PATTERNS = [
+      'ZZ', 'AntiZZ', '2A2', 'Anti2A2', '3A3', 'Anti3A3',
+      '4A4', 'Anti4A4', '5A5', 'Anti5A5', '6A6', 'Anti6A6', 'OZ'
+    ];
     const patternTrade = blockTrades.find(t =>
-      ['ZZ', 'AntiZZ', '2A2', '3A3'].includes(t.pattern) && !t.isWin
+      ALL_RESUME_PATTERNS.includes(t.pattern) && !t.isWin
     );
     if (patternTrade) {
       sm.handlePatternEvent('BREAK', patternTrade.pattern, i);
@@ -499,6 +528,7 @@ function runCounterfactual(session, params, variantName) {
   const equityCurve = sm.getEquityCurve();
   const maxDrawdown = calculateMaxDrawdown(equityCurve);
   const volatility = calculateVolatility(equityCurve);
+  const resumePatternStats = sm.getResumePatternStats();
 
   const falseDeactivations = detectFalseDeactivations(blocks, trades, params);
   const longFlows = detectLongFlows(blocks, trades, params);
@@ -522,6 +552,7 @@ function runCounterfactual(session, params, variantName) {
     falseDeactivations,
     longFlowCaptureRate,
     equityCurve,
+    resumePatternStats,
   };
 }
 
@@ -584,20 +615,41 @@ function runAnalysis(sessions) {
   console.log(`\nTotal: ${allBlocks.length} blocks, ${allTrades.length} trades`);
   console.log();
 
-  // SD trades summary
+  // SD trades summary (ACTUAL from session - with pause system active)
   const sdTrades = allTrades.filter(t => t.pattern === 'SameDir');
-  const sdPnL = sdTrades.reduce((sum, t) => sum + t.pnl, 0);
+  const actualSDPnL = sdTrades.reduce((sum, t) => sum + t.pnl, 0);
   const sdWins = sdTrades.filter(t => t.isWin).length;
   const sdLosses = sdTrades.filter(t => !t.isWin).length;
 
+  // Detect pause gaps (gaps > 3 blocks between SD trades suggest pause was active)
+  const sortedSDTrades = [...sdTrades].sort((a, b) => a.evalIndex - b.evalIndex);
+  const pauseGaps = [];
+  for (let i = 1; i < sortedSDTrades.length; i++) {
+    const gap = sortedSDTrades[i].evalIndex - sortedSDTrades[i-1].evalIndex;
+    if (gap > 3) {
+      pauseGaps.push({
+        fromBlock: sortedSDTrades[i-1].evalIndex,
+        toBlock: sortedSDTrades[i].evalIndex,
+        duration: gap - 1
+      });
+    }
+  }
+
   console.log('='.repeat(80));
-  console.log('  SAME DIRECTION SYSTEM SUMMARY');
+  console.log('  ACTUAL SD PERFORMANCE (with pause system active)');
   console.log('='.repeat(80));
   console.log(`Total SD Trades: ${sdTrades.length}`);
   console.log(`Wins: ${sdWins}, Losses: ${sdLosses}`);
   console.log(`Win Rate: ${(sdWins / sdTrades.length * 100).toFixed(1)}%`);
-  console.log(`Total SD PnL: ${sdPnL}`);
+  console.log(`ACTUAL SD PnL: ${actualSDPnL}`);
   console.log();
+  if (pauseGaps.length > 0) {
+    console.log(`Detected ${pauseGaps.length} pause period(s):`);
+    pauseGaps.forEach((g, i) => {
+      console.log(`  ${i+1}. Block ${g.fromBlock} → ${g.toBlock} (${g.duration} blocks paused)`);
+    });
+    console.log();
+  }
 
   // False deactivation analysis
   console.log('='.repeat(80));
@@ -662,12 +714,6 @@ function runAnalysis(sessions) {
   }
   console.log();
 
-  // Counterfactual comparison
-  console.log('='.repeat(80));
-  console.log('  COUNTERFACTUAL COMPARISON');
-  console.log('='.repeat(80));
-  console.log();
-
   // Combine sessions for simulation
   const combinedSession = {
     ...sessions[0],
@@ -675,28 +721,118 @@ function runAnalysis(sessions) {
     trades: allTrades,
   };
 
-  const baseline = runCounterfactual(combinedSession, BASELINE_PARAMS, 'baseline');
+  // ============================================================================
+  // PAUSE SYSTEM VALUE ANALYSIS
+  // ============================================================================
+  console.log('='.repeat(80));
+  console.log('  PAUSE SYSTEM VALUE (Actual vs No-Pause Simulation)');
+  console.log('='.repeat(80));
+  console.log();
+
+  const noPauseBaseline = runCounterfactual(combinedSession, BASELINE_PARAMS, 'no_pause');
+  const pauseValueAdded = actualSDPnL - noPauseBaseline.totalPnL;
+
+  console.log('| Scenario                | SD PnL    | Trades | Win Rate |');
+  console.log('|-------------------------|-----------|--------|----------|');
+  console.log(`| ACTUAL (pause active)   | ${String(actualSDPnL).padStart(9)} | ${String(sdTrades.length).padStart(6)} | ${(sdWins / sdTrades.length * 100).toFixed(1).padStart(7)}% |`);
+  console.log(`| Simulated (NO pause)    | ${String(noPauseBaseline.totalPnL).padStart(9)} | ${String(noPauseBaseline.realTradesCount).padStart(6)} | ${(noPauseBaseline.winRate * 100).toFixed(1).padStart(7)}% |`);
+  console.log('|-------------------------|-----------|--------|----------|');
+  console.log(`| PAUSE VALUE ADDED       | ${(pauseValueAdded >= 0 ? '+' : '') + String(pauseValueAdded).padStart(8)} |        |          |`);
+  console.log();
+
+  if (pauseValueAdded > 0) {
+    console.log(`>>> PAUSE SYSTEM SAVED ${pauseValueAdded} by avoiding bad trades during hostile conditions`);
+  } else if (pauseValueAdded < 0) {
+    console.log(`>>> PAUSE SYSTEM COST ${Math.abs(pauseValueAdded)} - consider tuning thresholds`);
+  } else {
+    console.log(`>>> PAUSE SYSTEM had neutral effect on this session`);
+  }
+  console.log();
+
+  // ============================================================================
+  // THRESHOLD OPTIMIZATION
+  // ============================================================================
+  console.log('='.repeat(80));
+  console.log('  THRESHOLD OPTIMIZATION (which settings would be best?)');
+  console.log('='.repeat(80));
+  console.log();
 
   const variants = [
-    { name: 'depreciation_k100', params: { ...DEFAULT_PARAMS, initialLife: 100 } },
-    { name: 'depreciation_k140', params: { ...DEFAULT_PARAMS, initialLife: 140 } },
-    { name: 'depreciation_k180', params: { ...DEFAULT_PARAMS, initialLife: 180 } },
+    { name: 'NO PAUSE (baseline)', params: BASELINE_PARAMS },
     { name: 'thresh60', params: { ...DEFAULT_PARAMS, highPctThreshold: 60 } },
-    { name: 'thresh70', params: { ...DEFAULT_PARAMS, highPctThreshold: 70 } },
+    { name: 'thresh65', params: { ...DEFAULT_PARAMS, highPctThreshold: 65 } },
+    { name: 'thresh70 (current)', params: { ...DEFAULT_PARAMS, highPctThreshold: 70 } },
+    { name: 'thresh75', params: { ...DEFAULT_PARAMS, highPctThreshold: 75 } },
     { name: 'thresh80', params: { ...DEFAULT_PARAMS, highPctThreshold: 80 } },
-  ].map(v => runCounterfactual(combinedSession, v.params, v.name));
+    { name: 'k100', params: { ...DEFAULT_PARAMS, initialLife: 100 } },
+    { name: 'k180', params: { ...DEFAULT_PARAMS, initialLife: 180 } },
+  ].map(v => ({ ...runCounterfactual(combinedSession, v.params, v.name), name: v.name }));
 
-  console.log('| Variant                 | Total PnL | Max DD | Win Rate | Pause | Resume | LF Capture |');
-  console.log('|-------------------------|-----------|--------|----------|-------|--------|------------|');
-  console.log(`| baseline (current)      | ${String(baseline.totalPnL).padStart(9)} | ${String(baseline.maxDrawdown).padStart(6)} | ${(baseline.winRate * 100).toFixed(1).padStart(7)}% | ${String(baseline.pauseEvents).padStart(5)} | ${String(baseline.resumeEvents).padStart(6)} | ${(baseline.longFlowCaptureRate * 100).toFixed(0).padStart(9)}% |`);
+  console.log('| Variant                 | Sim PnL   | vs Actual | Pause | Resume |');
+  console.log('|-------------------------|-----------|-----------|-------|--------|');
   variants.forEach(v => {
-    console.log(`| ${v.variant.padEnd(23)} | ${String(v.totalPnL).padStart(9)} | ${String(v.maxDrawdown).padStart(6)} | ${(v.winRate * 100).toFixed(1).padStart(7)}% | ${String(v.pauseEvents).padStart(5)} | ${String(v.resumeEvents).padStart(6)} | ${(v.longFlowCaptureRate * 100).toFixed(0).padStart(9)}% |`);
+    const vsActual = v.totalPnL - actualSDPnL;
+    const vsActualStr = (vsActual >= 0 ? '+' : '') + vsActual;
+    console.log(`| ${v.name.padEnd(23)} | ${String(v.totalPnL).padStart(9)} | ${vsActualStr.padStart(9)} | ${String(v.pauseEvents).padStart(5)} | ${String(v.resumeEvents).padStart(6)} |`);
   });
   console.log();
 
   const bestVariant = variants.reduce((a, b) => a.totalPnL > b.totalPnL ? a : b);
-  console.log(`Best Variant: ${bestVariant.variant} (PnL: ${bestVariant.totalPnL})`);
-  console.log(`Improvement over baseline: ${bestVariant.totalPnL - baseline.totalPnL}`);
+  const bestVsActual = bestVariant.totalPnL - actualSDPnL;
+  console.log(`OPTIMAL: ${bestVariant.name} (PnL: ${bestVariant.totalPnL})`);
+  if (bestVsActual > 0) {
+    console.log(`>>> Could gain +${bestVsActual} more with ${bestVariant.name} settings`);
+  } else {
+    console.log(`>>> Current settings are optimal or near-optimal for this session`);
+  }
+  console.log();
+
+  // ============================================================================
+  // RESUME TRIGGER PATTERN ANALYSIS (CRITICAL)
+  // ============================================================================
+  console.log('='.repeat(80));
+  console.log('  RESUME TRIGGER PATTERN ANALYSIS (CRITICAL)');
+  console.log('='.repeat(80));
+  console.log();
+
+  // Get resume stats from the no-pause baseline (which still tracks pattern breaks)
+  const defaultRun = runCounterfactual(combinedSession, DEFAULT_PARAMS, 'default');
+  const resumeStats = defaultRun.resumePatternStats;
+
+  const GOOD_PATTERNS = ['ZZ', '2A2', '3A3', '4A4', '5A5', '6A6'];
+  const BAD_PATTERNS = ['AntiZZ', 'Anti2A2', 'Anti3A3', 'Anti4A4', 'Anti5A5', 'Anti6A6', 'OZ'];
+
+  console.log(`Total Resume Events: ${resumeStats.total}`);
+  console.log(`  GOOD (directional patterns): ${resumeStats.goodResumes} - SD SHOULD resume`);
+  console.log(`  BAD (anti-directional/OZ):   ${resumeStats.badResumes} - SD should NOT resume!`);
+  console.log();
+
+  if (Object.keys(resumeStats.byPattern).length > 0) {
+    console.log('Resume Triggers by Pattern:');
+    console.log('| Pattern      | Count | Type | Correct? |');
+    console.log('|--------------|-------|------|----------|');
+
+    Object.entries(resumeStats.byPattern)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([pattern, count]) => {
+        const isGood = GOOD_PATTERNS.includes(pattern);
+        const isBad = BAD_PATTERNS.includes(pattern);
+        const type = isGood ? 'GOOD' : isBad ? 'BAD' : '???';
+        const correct = isGood ? 'YES' : isBad ? 'NO!' : '???';
+        console.log(`| ${pattern.padEnd(12)} | ${String(count).padStart(5)} | ${type.padStart(4)} | ${correct.padStart(8)} |`);
+      });
+    console.log();
+
+    if (resumeStats.badResumes > 0) {
+      console.log(`>>> WARNING: ${resumeStats.badResumes} BAD resumes detected!`);
+      console.log(`>>> Anti patterns and OZ are triggering SD resume incorrectly.`);
+      console.log(`>>> FIX: Only resume when ZZ/2A2/3A3/4A4/5A5/6A6 break.`);
+    } else if (resumeStats.total > 0) {
+      console.log(`>>> All ${resumeStats.total} resumes are from correct patterns.`);
+    }
+  } else {
+    console.log('No resume events detected in this session.');
+  }
   console.log();
 
   // Sensitivity sweeps
@@ -733,16 +869,31 @@ function runAnalysis(sessions) {
   console.log('  EXECUTIVE SUMMARY');
   console.log('='.repeat(80));
   console.log();
-  console.log(`PRIMARY ISSUE: ${falseDeactCost > missedFlowPnL
-    ? 'False Deactivation Loop - SD deactivates prematurely and reactivates too late'
-    : 'Long Flow Miss - SD fails to capture long directional runs'}`);
+  console.log('PAUSE SYSTEM STATUS: ACTIVE');
   console.log();
-  console.log(`Total SD Loss: ${Math.abs(sdTrades.filter(t => !t.isWin).reduce((sum, t) => sum + t.pnl, 0))}`);
-  console.log(`False Deactivation Cost: ${falseDeactCost}`);
-  console.log(`Missed Long Flow PnL: ${missedFlowPnL}`);
+  console.log(`  ACTUAL SD PnL:        ${actualSDPnL >= 0 ? '+' : ''}${actualSDPnL}`);
+  console.log(`  Without Pause (sim):  ${noPauseBaseline.totalPnL >= 0 ? '+' : ''}${noPauseBaseline.totalPnL}`);
+  console.log(`  ─────────────────────────────`);
+  console.log(`  PAUSE VALUE ADDED:    ${pauseValueAdded >= 0 ? '+' : ''}${pauseValueAdded}`);
   console.log();
-  console.log(`BEST FIX CANDIDATE: ${bestVariant.variant}`);
-  console.log(`ESTIMATED IMPROVEMENT: ${bestVariant.totalPnL - baseline.totalPnL}`);
+  console.log(`  Pause periods detected: ${pauseGaps.length}`);
+  console.log(`  Total blocks paused:    ${pauseGaps.reduce((sum, g) => sum + g.duration, 0)}`);
+  console.log();
+
+  if (pauseValueAdded > 0) {
+    console.log(`VERDICT: Pause system SAVED ${pauseValueAdded} on this session`);
+  } else if (pauseValueAdded < 0) {
+    console.log(`VERDICT: Pause system COST ${Math.abs(pauseValueAdded)} - may need tuning`);
+  } else {
+    console.log(`VERDICT: Pause system had neutral impact`);
+  }
+  console.log();
+
+  if (bestVsActual > 50) {
+    console.log(`OPTIMIZATION: ${bestVariant.name} could add +${bestVsActual} more`);
+  } else {
+    console.log(`OPTIMIZATION: Current settings are near-optimal`);
+  }
   console.log();
 
   // Recommendations

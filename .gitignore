@@ -1,0 +1,6 @@
+# Claude settings (local)
+.claude/settings.local.json
+
+# Temporary/stray files
+"${t.evalIndex}"*
+nul
