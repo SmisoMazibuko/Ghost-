@@ -1,8 +1,8 @@
 # SD State Machine - Technical Specification
 
-**Version:** 1.0
-**Date:** 2025-12-25
-**Status:** Draft
+**Version:** 1.1
+**Date:** 2025-12-30
+**Status:** Implemented
 **Author:** Claude + Human collaboration
 
 ---
@@ -236,8 +236,41 @@ stateEnteredAt = blockIndex;
 **Resume Conditions (any one):**
 1. `consecutiveImaginaryWins ≥ 3` - SD would have won 3 in a row
 2. `imaginaryPnL ≥ imaginaryProfitThreshold` (default: 100)
-3. `ZZ/XAX pattern broke` - ZZ/XAX lost, opportunity to resume
+3. **ALTERNATION pattern broke** - See pattern rules below
 4. `pauseBlocksElapsed ≥ maxPauseBlocks` (optional timeout)
+
+**CRITICAL: Pattern-Based Resume Rules (Updated 2025-12-30)**
+
+Only **ALTERNATION patterns** breaking should trigger SD resume:
+
+| Pattern | Type | On LOSS | SD Should |
+|---------|------|---------|-----------|
+| ZZ | Alternation | Direction continues | **RESUME** |
+| 2A2 | Alternation | Direction continues | **RESUME** |
+| 3A3 | Alternation | Direction continues | **RESUME** |
+| 4A4 | Alternation | Direction continues | **RESUME** |
+| 5A5 | Alternation | Direction continues | **RESUME** |
+| 6A6 | Alternation | Direction continues | **RESUME** |
+| AntiZZ | Continuation | Direction changed | **STAY PAUSED** |
+| Anti2A2 | Continuation | Direction changed | **STAY PAUSED** |
+| Anti3A3 | Continuation | Direction changed | **STAY PAUSED** |
+| Anti4A4 | Continuation | Direction changed | **STAY PAUSED** |
+| Anti5A5 | Continuation | Direction changed | **STAY PAUSED** |
+| OZ | Outside Zone | Different logic | **STAY PAUSED** |
+
+**Rationale:**
+- Alternation patterns (ZZ, XAX) bet on **direction change**
+- When they LOSE, direction is **continuing** → good for SD
+- Anti patterns bet on **continuation** (same as SD!)
+- When Anti patterns LOSE, direction **changed** → bad for SD
+
+```typescript
+// RESUME_TRIGGER_PATTERNS - only these trigger resume
+const RESUME_TRIGGER_PATTERNS = ['ZZ', '2A2', '3A3', '4A4', '5A5', '6A6'];
+
+// Anti patterns do NOT trigger resume
+// AntiZZ, Anti2A2, etc. breaking means direction changed - bad for SD
+```
 
 **Additional Requirement:**
 - `remainingLife > 0` - Must have life left to resume
