@@ -566,6 +566,34 @@ export class PatternLifecycleManager {
   }
 
   /**
+   * Reset AP5 observation state when structure breaks during observation.
+   *
+   * A4: Break Handling Must Reset Accumulated Profit
+   *
+   * AP5 structure requires: previous run >= 2 → current run reaching 5+
+   * Confirmation happens at currentLength === 3 (betting on continuation to 5+).
+   * Structure breaks during observation when:
+   * - Flip happens at run length < 3 (before confirmation point)
+   * - Previous run was < 2 (not valid AP5 setup)
+   *
+   * This fixes the bug where cumulative profit carries over across
+   * broken observation cycles, causing "activates out of nowhere".
+   */
+  resetAP5Observation(blockIndex?: number): void {
+    const cycle = this.cycles.get('AP5');
+    if (!cycle || cycle.state === 'active') {
+      return; // Only reset if in observation
+    }
+
+    if (cycle.cumulativeProfit > 0) {
+      console.log(`[Lifecycle] AP5 observation reset at block ${blockIndex ?? '?'} - was: cumulative=${cycle.cumulativeProfit.toFixed(0)}%`);
+    }
+
+    cycle.cumulativeProfit = 0;
+    cycle.observationResults = [];
+  }
+
+  /**
    * Confirm OZ pattern activation
    *
    * OZ activates when:
@@ -668,6 +696,33 @@ export class PatternLifecycleManager {
     cycle.activeResults = [];
     cycle.cumulativeProfit = 0;
     cycle.lastRunProfit = 0;
+  }
+
+  /**
+   * Reset OZ observation state when structure breaks during observation.
+   *
+   * A4: Break Handling Must Reset Accumulated Profit
+   *
+   * OZ structure requires: any run → single → 3+ flip back
+   * Structure breaks during observation when:
+   * - Flip happens before reaching 3+ (< 3 blocks)
+   * - Two singles in a row (single → single, not OZ setup)
+   *
+   * This fixes the bug where cumulative profit carries over across
+   * broken observation cycles, causing "activates out of nowhere".
+   */
+  resetOZObservation(blockIndex?: number): void {
+    const cycle = this.cycles.get('OZ');
+    if (!cycle || cycle.state === 'active') {
+      return; // Only reset if in observation
+    }
+
+    if (cycle.cumulativeProfit > 0) {
+      console.log(`[Lifecycle] OZ observation reset at block ${blockIndex ?? '?'} - was: cumulative=${cycle.cumulativeProfit.toFixed(0)}%`);
+    }
+
+    cycle.cumulativeProfit = 0;
+    cycle.observationResults = [];
   }
 
   /**

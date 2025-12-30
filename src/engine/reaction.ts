@@ -506,14 +506,28 @@ export class ReactionEngine {
     // NOTE: For ZZ pattern, we handle this separately AFTER recordZZResult
     // so we can pass the zzAction type (first_bet_negative vs run_ends)
     if (trade.pattern !== 'ZZ') {
-      this.sameDirectionManager.recordZZXAXResult(trade.pattern, isWin, trade.evalIndex);
+      // Only process ZZ/XAX patterns for SD pause/resume logic
+      // CRITICAL: Do NOT call checkResumeCondition for non-ZZ/XAX patterns
+      // as it would use stale data and incorrectly trigger resume
+      const isZZXAXPattern = this.sameDirectionManager.isZZXAXPattern(trade.pattern);
 
-      // === SD RESUME CHECK (Phase 3) ===
-      // Check if SD should resume after XAX/AntiZZ break
-      // Resume takes effect on NEXT trade (this just changes state)
-      // NOTE: For ZZ pattern, resume check is done after recordZZResult
-      if (this.sameDirectionManager.checkResumeCondition(block.index)) {
-        console.log(`[Reaction] SD resumed after ${trade.pattern} break at block ${block.index}`);
+      if (isZZXAXPattern) {
+        this.sameDirectionManager.recordZZXAXResult(trade.pattern, isWin, trade.evalIndex);
+
+        // === A2: XAX DECAY DURING SD PAUSE ===
+        // If SD is paused and XAX pattern wins, apply decay to accumulatedLoss
+        // This allows SD to recover during alternation phases (constitutional rule A2)
+        if (isWin) {
+          this.sameDirectionManager.applyXAXDecay(trade.pattern, block.pct);
+        }
+
+        // === SD RESUME CHECK (Phase 3) ===
+        // Check if SD should resume after XAX/AntiZZ break
+        // Resume takes effect on NEXT trade (this just changes state)
+        // NOTE: For ZZ pattern, resume check is done after recordZZResult
+        if (this.sameDirectionManager.checkResumeCondition(block.index)) {
+          console.log(`[Reaction] SD resumed after ${trade.pattern} break at block ${block.index}`);
+        }
       }
     }
 
@@ -684,11 +698,8 @@ export class ReactionEngine {
         const zzOutcome = this.zzStateManager.recordZZResult(zzResult, trade.evalIndex);
         console.log(`[Reaction] ZZ trade result recorded: ${isWin ? 'WIN' : 'LOSS'}, action: ${zzOutcome.action}`);
 
-        // RULE: If ZZ wins, clear Same Direction accumulated loss
-        // Losses during ZZ's active period don't count against Same Direction
-        if (isWin) {
-          this.sameDirectionManager.clearAccumulatedLoss();
-        }
+        // A1: ZZ-Family Hard Isolation - ZZ must NEVER affect SD accumulatedLoss
+        // (removed clearAccumulatedLoss call per constitutional rule A1)
 
         if (zzOutcome.action === 'first_bet_negative') {
           // First bet negative → AntiZZ becomes candidate
@@ -709,11 +720,8 @@ export class ReactionEngine {
         this.zzStateManager.recordAntiZZResult(zzResult, trade.evalIndex);
         console.log(`[Reaction] AntiZZ trade result recorded: ${isWin ? 'WIN' : 'LOSS'}`);
 
-        // RULE: If AntiZZ wins, clear Same Direction accumulated loss
-        // Losses during AntiZZ's active period don't count against Same Direction
-        if (isWin) {
-          this.sameDirectionManager.clearAccumulatedLoss();
-        }
+        // A1: ZZ-Family Hard Isolation - AntiZZ must NEVER affect SD accumulatedLoss
+        // (removed clearAccumulatedLoss call per constitutional rule A1)
 
         console.log(`[Reaction] AntiZZ deactivated → waiting for next indicator`);
       }
@@ -942,7 +950,9 @@ export class ReactionEngine {
     // - Run tracking (adding blocks to current run)
     // - Run break detection (when direction changes)
     // - RunProfit calculation and activation/deactivation
-    this.sameDirectionManager.processBlock(blockResult.block);
+    // A1: Pass ZZ-family active flag to skip flip loss accumulation during ZZ/AntiZZ period
+    const isZZFamilyActive = this.zzStateManager.isSystemActive();
+    this.sameDirectionManager.processBlock(blockResult.block, isZZFamilyActive);
 
     // Get run data for B&S kill checks
     const runData = this.gameState.getRunData();
@@ -1334,6 +1344,11 @@ export class ReactionEngine {
     const zzIndicator = this.detectZZIndicator(runData, blockIndex);
     if (!zzIndicator) return;
 
+    // A1: ZZ-Family Hard Isolation - Reverse flip losses from indicator period
+    // The alternating blocks that triggered the indicator should not count against SD
+    const blocks = this.gameState.getBlocks();
+    this.sameDirectionManager.reverseZZIndicatorLosses(zzIndicator.alternatingCount, blocks);
+
     // Get CURRENT block direction - needed for ZZ prediction (opposite of current)
     const currentBlockDirection = this.gameState.getCurrentRunDirection();
 
@@ -1368,15 +1383,17 @@ export class ReactionEngine {
    *
    * This is called directly instead of relying on detector signals,
    * since ZZ/AntiZZ are skipped in detectAll() to avoid conflicts.
+   *
+   * @returns Object with detected flag and count of alternating singles, or null if no indicator
    */
-  private detectZZIndicator(runData: { lengths: number[]; directions: number[]; currentLength: number; currentDirection: number }, blockIndex: number): boolean {
+  private detectZZIndicator(runData: { lengths: number[]; directions: number[]; currentLength: number; currentDirection: number }, blockIndex: number): { detected: boolean; alternatingCount: number } | null {
     // Need at least 4 runs to establish the pattern (indicator + 3 singles)
-    if (runData.lengths.length < 4) return false;
+    if (runData.lengths.length < 4) return null;
 
     const L1 = runData.lengths[runData.lengths.length - 1]; // Current run
 
     // Current run must be length 1 (alternation continuing)
-    if (L1 !== 1) return false;
+    if (L1 !== 1) return null;
 
     // Find the indicator: scan backwards for a run of ≥2
     // The indicator must be followed by all 1s (alternation)
@@ -1397,13 +1414,13 @@ export class ReactionEngine {
           // Need at least 3 ones (R-G-R) for initial trigger
           if (onesCount >= 3) {
             console.log(`[Reaction] ZZ indicator detected at block ${blockIndex}: indicator run of ${runData.lengths[i]}, followed by ${onesCount} alternating singles`);
-            return true;
+            return { detected: true, alternatingCount: onesCount };
           }
         }
       }
     }
 
-    return false;
+    return null;
   }
 
   /**

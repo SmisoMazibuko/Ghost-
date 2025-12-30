@@ -138,6 +138,47 @@ export class GameStateEngine {
     // NOTE: OZ BREAK moved to after evaluatePendingSignals() so bet losses are counted
 
     // =========================================================================
+    // OZ OBSERVATION RESET (A4: Break Handling Must Reset Accumulated Profit)
+    // OZ structure: any run → single → 3+ flip back
+    // Reset observation when structure breaks during observation
+    // =========================================================================
+    if (this.runData.currentLength === 1 && this.runData.lengths.length >= 2) {
+      const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+      if (previousRunLength === 1 && !this.lifecycle.isActive('OZ')) {
+        // Two singles in a row - not OZ structure (single → single)
+        this.lifecycle.resetOZObservation(index);
+      }
+    }
+    if (this.runData.currentLength === 2 && this.runData.lengths.length >= 2) {
+      const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+      if (previousRunLength === 1 && !this.lifecycle.isActive('OZ')) {
+        // Single followed by run of 2 - flip back didn't reach 3
+        // This breaks OZ observation
+        this.lifecycle.resetOZObservation(index);
+      }
+    }
+
+    // =========================================================================
+    // AP5 OBSERVATION RESET (A4: Break Handling Must Reset Accumulated Profit)
+    // AP5 structure: previous run >= 2 → current run reaching 5+
+    // Reset observation when structure breaks during observation
+    // =========================================================================
+    if (this.runData.currentLength === 1 && this.runData.lengths.length >= 2) {
+      const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+      if (previousRunLength < 3 && !this.lifecycle.isActive('AP5')) {
+        // Flip happened before reaching 3 blocks - AP5 structure broke
+        this.lifecycle.resetAP5Observation(index);
+      }
+    }
+    if (this.runData.currentLength === 2 && this.runData.lengths.length >= 2) {
+      const previousRunLength = this.runData.lengths[this.runData.lengths.length - 2];
+      if (previousRunLength < 2 && !this.lifecycle.isActive('AP5')) {
+        // Previous run was < 2, not valid AP5 setup
+        this.lifecycle.resetAP5Observation(index);
+      }
+    }
+
+    // =========================================================================
     // ST INDICATOR TRACKING: Notify ST when we see a ≥3 run (indicator)
     // This is required before ST can activate
     // =========================================================================

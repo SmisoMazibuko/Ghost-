@@ -188,8 +188,11 @@ export class SameDirectionManager {
   /**
    * Process a new block - MUST be called for every block regardless of who bets.
    * This handles run tracking and run break detection.
+   *
+   * @param block - The block to process
+   * @param isZZFamilyActive - If true, skip flip loss accumulation (A1: ZZ-Family Hard Isolation)
    */
-  processBlock(block: Block): void {
+  processBlock(block: Block, isZZFamilyActive: boolean = false): void {
     this.state.totalBlocksProcessed++;
 
     // First block ever
@@ -214,7 +217,8 @@ export class SameDirectionManager {
       // CRITICAL: When ACTIVE and run was SINGLE BLOCK (< 2), add flip loss
       // For longer runs, RunProfit calculation already accounts for the loss
       // But for single-block runs, RunProfit is skipped, so we must add the loss here
-      if (this.state.active && runLength < 2) {
+      // A1: SKIP if ZZ-family is active - their losses don't count against SD
+      if (this.state.active && runLength < 2 && !isZZFamilyActive) {
         const flipLoss = block.pct;
         this.state.accumulatedLoss += flipLoss;
         console.log(`[SD] SINGLE-BLOCK FLIP LOSS: +${flipLoss}% added to accumulatedLoss (now: ${this.state.accumulatedLoss}%)`);
@@ -223,6 +227,8 @@ export class SameDirectionManager {
         if (this.state.accumulatedLoss > DEACTIVATION_THRESHOLD) {
           this.deactivate();
         }
+      } else if (this.state.active && runLength < 2 && isZZFamilyActive) {
+        console.log(`[SD] A1: Flip loss SKIPPED (ZZ-family active) - accumulatedLoss stays at ${this.state.accumulatedLoss}%`);
       }
 
       // Process the completed run (for activation check when inactive, big win reset when active)
@@ -240,6 +246,61 @@ export class SameDirectionManager {
     this.state.currentRunDirection = block.dir;
     this.state.currentRunBlocks = [block];
     this.state.currentRunStartIndex = block.index;
+  }
+
+  // ==========================================================================
+  // A1: ZZ INDICATOR LOSS REVERSAL
+  // ==========================================================================
+
+  /**
+   * Reverse flip losses that were accumulated during ZZ indicator formation.
+   * A1: ZZ-Family Hard Isolation - alternating blocks that trigger ZZ indicator
+   * should not count against SD's accumulatedLoss.
+   *
+   * Called when ZZ indicator is detected. The alternating blocks (each length 1)
+   * that formed the indicator pattern had their flip losses added to SD.
+   * This method reverses those losses.
+   *
+   * @param alternatingCount - Number of alternating single blocks in the indicator
+   * @param blocks - All blocks in the session
+   */
+  reverseZZIndicatorLosses(alternatingCount: number, blocks: Block[]): void {
+    // Only reverse if SD was active (losses were actually accumulated)
+    if (!this.state.active) {
+      console.log(`[SD] A1: ZZ indicator detected but SD inactive - no losses to reverse`);
+      return;
+    }
+
+    if (alternatingCount < 1 || blocks.length < alternatingCount) {
+      return;
+    }
+
+    // Get the last N blocks (the alternating ones that formed the indicator)
+    // Note: Each alternating block is a single-block run, so each caused a flip loss
+    // The flip loss is the pct of the BREAK block (the block that ended the run)
+    // For alternating singles, each block IS the break block for the previous run
+
+    // Calculate total loss to reverse
+    // The first alternating block is the break block for the indicator run (≥2 length)
+    // That one doesn't count as a flip loss (the run was ≥2)
+    // The subsequent alternating blocks (2nd, 3rd, etc.) each caused flip losses
+    const alternatingBlocks = blocks.slice(-alternatingCount);
+
+    // Skip the first alternating block (it broke a run of ≥2, so no flip loss was added)
+    // Only reverse losses from blocks 2..N of the alternating sequence
+    const blocksWithFlipLoss = alternatingBlocks.slice(1);
+
+    let totalReversed = 0;
+    for (const block of blocksWithFlipLoss) {
+      totalReversed += block.pct;
+    }
+
+    if (totalReversed > 0) {
+      const oldLoss = this.state.accumulatedLoss;
+      this.state.accumulatedLoss = Math.max(0, this.state.accumulatedLoss - totalReversed);
+      console.log(`[SD] A1: ZZ indicator - REVERSED ${totalReversed}% flip losses from ${blocksWithFlipLoss.length} alternating blocks`);
+      console.log(`[SD]     accumulatedLoss: ${oldLoss}% → ${this.state.accumulatedLoss}%`);
+    }
   }
 
   // ==========================================================================
@@ -433,14 +494,11 @@ export class SameDirectionManager {
   }
 
   /**
-   * Clear accumulated loss (called when ZZ wins)
-   * RULE: If ZZ plays and wins, accumulated loss from ZZ's active period doesn't count
+   * @deprecated This method violates constitutional rule A1 (ZZ-Family Hard Isolation).
+   * ZZ/AntiZZ must NEVER affect SD accumulatedLoss. Kept for backward compatibility only.
    */
   clearAccumulatedLoss(): void {
-    if (this.state.accumulatedLoss > 0) {
-      console.log(`[SD] Clearing accumulated loss (${this.state.accumulatedLoss}%) - ZZ win rule`);
-      this.state.accumulatedLoss = 0;
-    }
+    console.warn(`[SD] clearAccumulatedLoss() is DEPRECATED - violates A1 (ZZ-Family Hard Isolation)`);
   }
 
   // ==========================================================================
@@ -492,6 +550,15 @@ export class SameDirectionManager {
   // ==========================================================================
   // ZZ/XAX RESULT TRACKING (for pause/resume)
   // ==========================================================================
+
+  /**
+   * Check if a pattern is a ZZ/XAX pattern (used for pause/resume logic).
+   * @param pattern - The pattern name to check
+   * @returns true if pattern is in ZZ_XAX_PATTERNS
+   */
+  isZZXAXPattern(pattern: string): boolean {
+    return ZZ_XAX_PATTERNS.includes(pattern as typeof ZZ_XAX_PATTERNS[number]);
+  }
 
   /**
    * Record the result of a ZZ/XAX trade.
@@ -696,6 +763,56 @@ export class SameDirectionManager {
     return false;
   }
 
+  // ==========================================================================
+  // A2: XAX DECAY DURING PAUSE
+  // ==========================================================================
+
+  /** XAX patterns that can apply decay to SD during pause */
+  private static readonly XAX_DECAY_PATTERNS = ['2A2', '3A3', '4A4', '5A5', '6A6'] as const;
+
+  /**
+   * Apply XAX decay to accumulatedLoss during SD pause.
+   * Constitutional rule A2: Pause ≠ Full Freeze - SD paused can still receive decay from XAX parties.
+   *
+   * Called when an XAX pattern (2A2, 3A3, 4A4, 5A5, 6A6) wins an imaginary trade while SD is paused.
+   * The decay reduces accumulatedLoss, giving SD a path to recovery during alternation phases.
+   *
+   * @param pattern - The XAX pattern that won
+   * @param xaxProfit - The profit from the XAX win (block.pct)
+   * @returns Whether decay was applied
+   */
+  applyXAXDecay(pattern: string, xaxProfit: number): boolean {
+    // Only apply decay when SD is paused
+    if (!this.state.paused) {
+      return false;
+    }
+
+    // Only XAX patterns (not ZZ/AntiZZ per A1 isolation rule)
+    if (!SameDirectionManager.XAX_DECAY_PATTERNS.includes(pattern as typeof SameDirectionManager.XAX_DECAY_PATTERNS[number])) {
+      return false;
+    }
+
+    // Only on XAX wins (positive profit)
+    if (xaxProfit <= 0) {
+      return false;
+    }
+
+    // No decay if no accumulated loss
+    if (this.state.accumulatedLoss <= 0) {
+      return false;
+    }
+
+    // Apply 50% of XAX profit as decay
+    const decayAmount = xaxProfit * 0.5;
+    const oldLoss = this.state.accumulatedLoss;
+    this.state.accumulatedLoss = Math.max(0, this.state.accumulatedLoss - decayAmount);
+
+    console.log(`[SD] A2 XAX decay: ${pattern} win applied decay`);
+    console.log(`[SD]     accumulatedLoss: ${oldLoss.toFixed(1)}% → ${this.state.accumulatedLoss.toFixed(1)}% (decay: ${decayAmount.toFixed(1)}%)`);
+
+    return true;
+  }
+
   /**
    * Check if SD can place a bet (active AND not paused).
    */
@@ -733,15 +850,18 @@ export class SameDirectionManager {
     }
 
     // Not paused - this is a REAL trade
-    // Update consecutive losses BEFORE checking pause
+    // Check if should pause BEFORE updating counter
+    // This ensures "2+ consecutive losses" means counter >= 1 at check time (already had 1 loss)
+    const pauseCheck = this.shouldPause(isWin, pct, isReversal);
+
+    // Update consecutive losses AFTER checking pause
     if (isWin) {
       this.state.sdConsecutiveLosses = 0;
     } else {
       this.state.sdConsecutiveLosses++;
     }
 
-    // Check if should pause
-    const pauseCheck = this.shouldPause(isWin, pct, isReversal);
+    // Now apply pause if triggered
     if (pauseCheck.shouldPause) {
       this.pause(pauseCheck.reason, blockIndex);
       return { didPause: true, reason: pauseCheck.reason };
