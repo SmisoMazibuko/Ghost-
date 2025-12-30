@@ -1,8 +1,8 @@
 # SAME DIRECTION SYSTEM SPECIFICATION
 
-> **VERSION:** v1.0 (Authoritative)
+> **VERSION:** v1.1 (Authoritative)
 > **STATUS:** FINAL - DO NOT REINTERPRET
-> **DATE:** 2025-12-17
+> **DATE:** 2025-12-30 (Updated from v1.0 2025-12-17)
 
 This document is the **single source of truth** for the Same Direction System implementation.
 All code must conform exactly to these rules. Any deviation is a bug.
@@ -468,6 +468,104 @@ if (sameDirectionManager.isActive()) {
   return { source: 'same-direction', ... };
 }
 ```
+
+---
+
+## 8.5 ZZ-FAMILY HARD ISOLATION (V-001/A1)
+
+### 8.5.1 The Problem
+
+ZZ/AntiZZ and XAX patterns (2A2-5A5, Anti2A2-Anti5A5) are **alternation-prediction patterns**. When they are active:
+
+1. They predict **direction change** (opposite of continuation)
+2. SD predicts **continuation** (same direction)
+3. These are **conflicting strategies**
+
+If ZZ/XAX flip losses are accumulated on SD, it creates **false contamination** - SD appears to fail when it didn't actually bet.
+
+### 8.5.2 ZZ Indicator vs Active ZZ
+
+| Concept | Definition | Impact on SD |
+|---------|------------|--------------|
+| **ZZ Indicator** | 3 alternating blocks detected | Losses during this period are REVERSED |
+| **Active ZZ** | ZZ/AntiZZ is actively betting | Losses during this period are SKIPPED |
+| **ZZ Family Active** | ZZ, AntiZZ, or XAX is in P1 | SD flip losses not accumulated |
+
+### 8.5.3 ZZ Indicator Loss Reversal
+
+When ZZ indicator fires (3 alternating blocks detected):
+- Any flip losses accumulated during those blocks are **REVERSED**
+- These losses were from alternating behavior, not continuation failure
+
+```typescript
+reverseZZIndicatorLosses(alternatingCount: number): void {
+  // The alternating blocks leading to ZZ indicator
+  // produced flip losses that should be reversed
+  // because they were ZZ-pattern behavior, not SD failure
+}
+```
+
+### 8.5.4 Active ZZ Period Skip
+
+When ZZ/AntiZZ or XAX is active:
+- Pass `isZZFamilyActive = true` to `processBlock()`
+- SD does NOT accumulate flip losses during this period
+- SD continues observing runs but ignores flip losses
+
+### 8.5.5 ZZ/AntiZZ Wins Do NOT Clear SD Accumulated Loss
+
+**CRITICAL (V-001):** When ZZ or AntiZZ WINS, SD's accumulated loss is **NOT reset**.
+
+| Event | SD accumulatedLoss Effect |
+|-------|---------------------------|
+| ZZ wins | **NO CHANGE** to SD accumulatedLoss |
+| AntiZZ wins | **NO CHANGE** to SD accumulatedLoss |
+| SD big win (RunProfit > accumulatedLoss) | RESET to 0 |
+
+**Rationale:** ZZ/AntiZZ wins are from alternation betting. They don't prove the same-direction regime is profitable. Only SD's own RunProfit can reset its accumulated loss.
+
+### 8.5.6 ZZ_XAX_PATTERNS List
+
+```typescript
+const ZZ_XAX_PATTERNS = [
+  'ZZ', 'AntiZZ',
+  '2A2', '3A3', '4A4', '5A5',
+  'Anti2A2', 'Anti3A3', 'Anti4A4', 'Anti5A5'
+];
+```
+
+---
+
+## 8.6 XAX DECAY DURING PAUSE (A2)
+
+### 8.6.1 Purpose
+
+When SD is paused and an XAX pattern wins, apply partial decay to SD's accumulated loss. This recognizes that XAX success indicates market conditions may be shifting back toward continuation.
+
+### 8.6.2 Decay Rule
+
+```
+IF SD is PAUSED
+AND XAX pattern wins (2A2, 3A3, 4A4, 5A5)
+THEN accumulatedLoss -= (XAX_win_profit * 0.5)
+```
+
+### 8.6.3 Implementation
+
+```typescript
+applyXAXDecay(profit: number): void {
+  if (this.state.sdPaused) {
+    const decay = profit * 0.5;  // 50% decay factor
+    this.state.accumulatedLoss = Math.max(0, this.state.accumulatedLoss - decay);
+  }
+}
+```
+
+### 8.6.4 When to Apply
+
+- Only during PAUSED state
+- Only for XAX patterns (2A2-5A5), NOT AntiXAX
+- Does not apply to ZZ/AntiZZ wins
 
 ---
 

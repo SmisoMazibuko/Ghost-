@@ -1,5 +1,8 @@
 # ZZ and Anti-ZZ Pattern Analysis Report
 
+> **VERSION:** v1.1
+> **DATE:** 2025-12-30
+
 ## Executive Summary
 
 This document provides a detailed analysis of the ZZ and Anti-ZZ patterns, their objectives, activation rules, and the current implementation in Ghost Evaluator v15.3.
@@ -320,6 +323,52 @@ Anti-ZZ Run 2: -80%
 - `src/patterns/lifecycle.ts` - Pattern lifecycle management
 - `src/engine/state.ts` - Signal generation
 - `src/engine/reaction.ts` - Coordination, activation, resolution
+
+---
+
+## 10. ZZ/AntiZZ and Same Direction Interaction
+
+### 10.1 ZZ-Family Hard Isolation (V-001/A1)
+
+ZZ/AntiZZ and SD are **conflicting strategies**:
+- ZZ/AntiZZ predicts **alternation** (direction change)
+- SD predicts **continuation** (same direction)
+
+When ZZ/AntiZZ is active, SD's flip losses must be isolated.
+
+### 10.2 Key Rules
+
+| Rule | Description |
+|------|-------------|
+| **V-001** | ZZ/AntiZZ wins do NOT clear SD accumulated loss |
+| **A1** | Flip losses during ZZ indicator/active period don't count against SD |
+
+### 10.3 ZZ Indicator Loss Reversal
+
+When ZZ indicator fires (3 alternating blocks detected):
+- Any flip losses SD accumulated during those blocks are **reversed**
+- Those losses were from alternation behavior, not continuation failure
+
+### 10.4 Active ZZ Period
+
+When ZZ/AntiZZ is actively betting:
+- SD continues observing runs
+- SD does NOT accumulate flip losses
+- `isZZFamilyActive = true` flag skips loss accumulation
+
+### 10.5 Why This Matters
+
+Without isolation:
+1. ZZ indicator fires during alternating market
+2. SD accumulates flip losses from alternation
+3. SD deactivates due to "losses" it never actually bet
+4. SD misses the next same-direction run
+
+With isolation:
+1. ZZ indicator fires during alternating market
+2. SD's flip losses from indicator blocks are reversed
+3. SD remains healthy for next same-direction run
+4. Both systems work without contaminating each other
 
 ---
 

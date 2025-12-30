@@ -1,5 +1,8 @@
 # ZZ/AntiZZ Strategy Rules (Corrected Implementation)
 
+> **VERSION:** v1.1
+> **DATE:** 2025-12-30
+
 ## Overview
 
 This document defines the complete rules for ZZ/AntiZZ pattern behavior.
@@ -306,4 +309,51 @@ Block 16: ZZ bets, loses -85%
                             │
                             ▼
                    ZZ moves to P1
+```
+
+---
+
+## 15. ZZ/AntiZZ and Same Direction Interaction
+
+### 15.1 Conflicting Strategies
+
+ZZ/AntiZZ and Same Direction (SD) predict **opposite outcomes**:
+- ZZ/AntiZZ predicts **alternation** (direction change)
+- SD predicts **continuation** (same direction)
+
+### 15.2 ZZ-Family Hard Isolation Rules
+
+| Rule ID | Rule | Effect |
+|---------|------|--------|
+| V-001 | ZZ/AntiZZ wins do NOT clear SD accumulated loss | SD only resets on its own RunProfit |
+| A1 | Flip losses during ZZ indicator/active period don't count against SD | SD stays healthy during alternation |
+
+### 15.3 ZZ Indicator Loss Reversal
+
+When ZZ indicator fires (3 alternating blocks detected):
+```
+reverseZZIndicatorLosses(alternatingCount):
+  // Reverse any flip losses SD accumulated during indicator blocks
+  // These were alternation behavior, not SD failure
+```
+
+### 15.4 Active ZZ Period Skip
+
+When ZZ/AntiZZ is actively betting:
+```
+processBlock(block, isZZFamilyActive):
+  if (isZZFamilyActive):
+    // Skip accumulating flip losses
+    // SD continues observing runs only
+```
+
+### 15.5 SD Resume on ZZ/XAX Break
+
+SD resumes from pause ONLY when **alternation patterns** break:
+
+```
+RESUME_TRIGGER_PATTERNS = ['ZZ', '2A2', '3A3', '4A4', '5A5', '6A6']
+
+// AntiZZ, Anti2A2, etc. do NOT trigger resume
+// They predict continuation (same as SD), so their loss means direction changed
 ```

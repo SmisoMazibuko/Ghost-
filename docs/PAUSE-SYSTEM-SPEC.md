@@ -1,5 +1,8 @@
 # Pause System Specification
 
+> **VERSION:** v1.1
+> **DATE:** 2025-12-30
+
 ## Overview
 
 The Pause System provides profit/loss protection by temporarily halting trading for specific systems when certain thresholds are reached. Each trading system has independent pause tracking.
@@ -56,7 +59,27 @@ Block 40: Bucket pause ends, resumes trading
 ### 3. MINOR_PAUSE_3_BLOCKS (Per-System)
 
 **Triggers:**
-- 2 consecutive losses (per system)
+- 2+ consecutive losses (per system)
+
+**CRITICAL: "2+ Consecutive Losses" Definition:**
+- Pause triggers on the **2nd consecutive loss**, NOT the 1st
+- Counter starts at 0
+- 1st loss: counter becomes 1, NO pause
+- 2nd loss: counter was 1 at check time, PAUSE triggers
+
+**Implementation Detail:**
+```typescript
+// CORRECT: Check BEFORE incrementing counter
+const pauseCheck = shouldPause(isWin, pct, isReversal);  // counter=1 on 2nd loss
+if (isWin) {
+  consecutiveLosses = 0;
+} else {
+  consecutiveLosses++;  // Increment AFTER check
+}
+if (pauseCheck.shouldPause) {
+  pause(pauseCheck.reason, blockIndex);
+}
+```
 
 **Effect:**
 - Only blocks the system that triggered it
@@ -66,13 +89,48 @@ Block 40: Bucket pause ends, resumes trading
 **Example:**
 ```
 Block 20: SameDir loss #1
+  → consecutiveLosses was 0 at check, no pause
+  → consecutiveLosses now 1
+
 Block 21: SameDir loss #2
+  → consecutiveLosses was 1 at check, PAUSE triggers
   → MINOR_PAUSE for SameDir (3 blocks)
   → Bucket continues trading
   → Pocket continues trading
 
 Block 24: SameDir pause ends, resumes trading
 ```
+
+## SD Resume Trigger Patterns
+
+### Resume From Pause
+
+SD can resume from pause when **alternation patterns break** (lose). Only these patterns trigger resume:
+
+```typescript
+const RESUME_TRIGGER_PATTERNS = ['ZZ', '2A2', '3A3', '4A4', '5A5', '6A6'];
+```
+
+### Why Only Alternation Patterns
+
+| Pattern Type | On LOSS | SD Should |
+|--------------|---------|-----------|
+| **ZZ** (alternation) | Direction continues | **RESUME** |
+| **XAX** (2A2-6A6) | Direction continues | **RESUME** |
+| **AntiZZ** (continuation) | Direction changed | Stay PAUSED |
+| **AntiXAX** | Direction changed | Stay PAUSED |
+| **AP5, OZ, PP, ST** | Different logic | Stay PAUSED |
+
+**Rationale:**
+- ZZ/XAX predict **direction change** (alternation)
+- When they LOSE, direction **continued** → good for SD
+- AntiZZ/AntiXAX predict **continuation** (same as SD)
+- When Anti patterns LOSE, direction **changed** → bad for SD
+- AP5/OZ/PP/ST are not alternation-based, so don't indicate SD favorability
+
+### High-PCT Reversal Pause
+
+SD also pauses on **HIGH_PCT_REVERSAL** (≥60% reversal that causes loss). This is independent of consecutive losses.
 
 ## Independent Tracking
 

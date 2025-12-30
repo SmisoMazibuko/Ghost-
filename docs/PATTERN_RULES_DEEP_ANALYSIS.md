@@ -59,6 +59,35 @@ The system has 3 buckets: WAITING, MAIN, B&S (Bait & Switch)
 - This makes them inconsistent with standard patterns.
 - **FIXED:** All patterns now use `lastRunProfit = 0` on activation.
 
+### BUGS FIXED (v15.3 - 2025-12-30)
+
+**BUG 3 (V-002):** OZ/AP5/ST/PP `cumulativeProfit` carries over during observation when structure breaks.
+- When a pattern is observing and the underlying structure breaks (OZ zone invalidated, AP5 trend changed, etc.)
+- The `cumulativeProfit` was carrying over to the new observation
+- This could lead to false activations based on stale profit data
+
+**FIXED:** Added `resetOZObservation()` and `resetAP5Observation()` methods in `lifecycle.ts`.
+- These methods are called from `state.ts` when structure break is detected during observation
+- Resets `cumulativeProfit = 0` and clears `observationResults` array
+- Ensures fresh observation starts after structure break
+
+```typescript
+// In lifecycle.ts
+resetOZObservation(): void {
+  if (this.ozState.state === 'observing') {
+    this.ozState.cycle.cumulativeProfit = 0;
+    this.ozState.cycle.observationResults = [];
+  }
+}
+
+resetAP5Observation(): void {
+  if (this.ap5State.state === 'observing') {
+    this.ap5State.cycle.cumulativeProfit = 0;
+    this.ap5State.cycle.observationResults = [];
+  }
+}
+```
+
 ### Profit Accumulation Rules (CORRECT - All Patterns Should Follow)
 
 #### Phase 1: OBSERVATION (state = 'observing')
