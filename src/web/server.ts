@@ -1,5 +1,5 @@
 /**
- * Ghost Evaluator v15.4 - Web Server
+ * Ghost Evaluator v16.0 - Web Server
  * ===================================
  * Express server with WebSocket for real-time updates
  */
@@ -452,7 +452,7 @@ export function startWebServer(port = 3000, configPath?: string) {
     console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║   Ghost Evaluator v15.4 - Web Server                     ║
+║   Ghost Evaluator v16.0 - Web Server                     ║
 ║   Running at http://localhost:${port}                       ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
