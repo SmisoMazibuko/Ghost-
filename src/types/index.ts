@@ -1051,7 +1051,7 @@ export interface HierarchyObservation {
 // ============================================================================
 
 /** Pause types for profit/loss management */
-export type PauseType = 'STOP_GAME' | 'MAJOR_PAUSE_10_BLOCKS' | 'MINOR_PAUSE_3_BLOCKS';
+export type PauseType = 'STOP_GAME' | 'MAJOR_PAUSE_10_BLOCKS' | 'MINOR_PAUSE_3_BLOCKS' | 'HOSTILITY_PAUSE';
 
 /** Current pause state */
 export interface PauseState {
@@ -1170,4 +1170,143 @@ export const DEFAULT_PAUSE_CONFIG: PauseConfig = {
   minorPauseLosses: 2,
   minorPauseBlocks: 3,
   majorPauseExemptPatterns: ['ZZ', 'AntiZZ'],
+};
+
+
+// ============================================================================
+// ENHANCED HOSTILITY DETECTION TYPES (v16.1)
+// ============================================================================
+
+/** Types of enhanced hostility indicators */
+export type EnhancedHostilityIndicatorType =
+  | 'CASCADE'           // 3+ consecutive losses (same pattern)
+  | 'CROSS_PATTERN'     // 2+ different patterns lose in 3 blocks
+  | 'OPPOSITE_SYNC'     // Pattern + Opposite both lose (e.g., ZZ then AntiZZ)
+  | 'HIGH_PCT'          // Single loss at 80%+
+  | 'HIGH_PCT_CLUSTER'  // 3+ losses >70% in 5 blocks
+  | 'WR_COLLAPSE';      // Rolling 10-trade WR <30%
+
+/** Enhanced hostility indicator record */
+export interface EnhancedHostilityIndicator {
+  type: EnhancedHostilityIndicatorType;
+  weight: number;
+  triggeredAt: number;
+  details: string;
+  patterns?: PatternName[];
+  ts: string;
+}
+
+/** Hostility level based on score thresholds */
+export type HostilityLevel = 'normal' | 'caution' | 'pause' | 'extended_pause';
+
+/** Trade result for hostility tracking */
+export interface HostilityTradeResult {
+  blockIndex: number;
+  pattern: PatternName;
+  isWin: boolean;
+  pct: number;
+  pnl: number;
+  ts: string;
+}
+
+/** Opposite pattern failure tracking */
+export interface OppositeFailure {
+  firstPattern: PatternName;
+  oppositePattern: PatternName;
+  firstFailureBlock: number;
+  oppositeFailureBlock: number;
+  weight: number;
+}
+
+/** Complete enhanced hostility state */
+export interface EnhancedHostilityState {
+  score: number;
+  level: HostilityLevel;
+  indicators: EnhancedHostilityIndicator[];
+  recentTrades: HostilityTradeResult[];
+  patternConsecutiveLosses: Record<string, number>;
+  recentLossesByBlock: Record<number, PatternName[]>;
+  oppositeFailures: OppositeFailure[];
+  pauseBlocksRemaining: number;
+  recoverySignalSeen: boolean;
+  lastBlockIndex: number;
+}
+
+/** Enhanced hostility configuration */
+export interface EnhancedHostilityConfig {
+  weights: {
+    CASCADE: number;
+    CROSS_PATTERN: number;
+    OPPOSITE_SYNC: number;
+    HIGH_PCT: number;
+    HIGH_PCT_CLUSTER: number;
+    WR_COLLAPSE: number;
+  };
+  thresholds: {
+    cautionLevel: number;
+    pauseLevel: number;
+    extendedPauseLevel: number;
+  };
+  pauseDurations: {
+    pause: number;
+    extendedPause: number;
+  };
+  decay: {
+    perWin: number;
+    perIdleBlock: number;
+  };
+  cautionMinConfidence: number;
+  resumeScoreThreshold: number;
+  exemptPatterns: PatternName[];
+  triggers: {
+    cascadeLosses: number;
+    crossPatternWindow: number;
+    crossPatternMinPatterns: number;
+    highPctThreshold: number;
+    highPctClusterCount: number;
+    highPctClusterWindow: number;
+    highPctClusterThreshold: number;
+    wrCollapseThreshold: number;
+    wrCollapseWindow: number;
+  };
+}
+
+/** Default enhanced hostility configuration */
+/** Default enhanced hostility configuration - TUNED via backtest */
+export const DEFAULT_ENHANCED_HOSTILITY_CONFIG: EnhancedHostilityConfig = {
+  weights: {
+    CASCADE: 3,
+    CROSS_PATTERN: 2,
+    OPPOSITE_SYNC: 4,
+    HIGH_PCT: 1,
+    HIGH_PCT_CLUSTER: 3,
+    WR_COLLAPSE: 2,
+  },
+  thresholds: {
+    cautionLevel: 10,      // Skip low-confidence trades at score 10+
+    pauseLevel: 20,        // Only pause on clear hostility (score 20+)
+    extendedPauseLevel: 25, // Extended pause for severe hostility
+  },
+  pauseDurations: {
+    pause: 5,
+    extendedPause: 10,
+  },
+  decay: {
+    perWin: 3,             // Faster recovery on wins (was 2)
+    perIdleBlock: 0.5,
+  },
+  cautionMinConfidence: 60,
+  resumeScoreThreshold: 8,  // Raised from 4 - require stronger recovery
+  exemptPatterns: ['ZZ', 'AntiZZ'],
+  triggers: {
+    cascadeLosses: 3,
+    crossPatternWindow: 3,
+    crossPatternMinPatterns: 2,
+    highPctThreshold: 90,   // Only fire on 90%+ losses (was 80)
+    highPctClusterCount: 3,
+    highPctClusterWindow: 5,
+    highPctClusterThreshold: 70,
+    wrCollapseThreshold: 30,
+    wrCollapseWindow: 10,
+  },
 };

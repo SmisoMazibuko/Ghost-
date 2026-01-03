@@ -64,6 +64,7 @@ export function startWebServer(port = 3000, configPath?: string) {
     const lifecycle = gameState.getLifecycle();
     const healthReport = session.getHealthReport();
     const hostilityManager = reaction.getHostilityManager();
+    const hostilityDetector = reaction.getHostilityDetector();
     const bucketManager = reaction.getBucketManager();
 
     return {
@@ -82,12 +83,22 @@ export function startWebServer(port = 3000, configPath?: string) {
       patternDivergences: healthReport.patternDivergences,
       recovery: healthReport.recovery,
       reentry: healthReport.reentry,
-      // Hostility data
+      // Hostility data (legacy)
       hostility: {
         state: hostilityManager.getState(),
         activeIndicators: hostilityManager.getActiveIndicators(gameState.getBlockCount()),
         patternRecovery: hostilityManager.getAllPatternRecoveryStates(),
         statusMessage: hostilityManager.getStatusMessage(),
+      },
+      // Enhanced hostility detection
+      enhancedHostility: {
+        state: hostilityDetector.getState(),
+        level: hostilityDetector.getLevel(),
+        score: hostilityDetector.getScore(),
+        isPaused: hostilityDetector.isPaused(),
+        isInCaution: hostilityDetector.isInCaution(),
+        activeIndicators: hostilityDetector.getActiveIndicators(),
+        summary: hostilityDetector.getSummary(),
       },
       // Profit tracking (AP, AAP, BSP)
       profitTracking: reaction.getProfitTracking(),

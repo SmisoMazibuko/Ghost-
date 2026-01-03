@@ -204,6 +204,9 @@
                 <div class="stat"><span class="stat-label">SD</span><span id="sdState" class="badge yellow">OFF</span></div>
                 <div class="stat"><span class="stat-label">Loss</span><span class="stat-value" id="sdLoss">0</span><span class="stat-sub">/140</span></div>
                 <div class="stat" id="sdPauseInfo" style="display:none"><span class="stat-label">Img</span><span class="stat-value" id="sdImgPnl">0</span></div>
+                <div class="stat-divider"></div>
+                <div class="stat"><span class="stat-label">Hostility</span><span id="hostilityLevel" class="badge green">NORMAL</span></div>
+                <div class="stat"><span class="stat-label">Score</span><span class="stat-value green" id="hostilityScore">0</span><span class="stat-sub">/20</span></div>
             </div>
         </div>
 
@@ -369,6 +372,25 @@
                     </div>
                     <!-- Run History -->
                     <div id="sdHistory" style="font-size:0.5rem; color:var(--dim); margin-top:6px; max-height:50px; overflow-y:auto"></div>
+                </div>
+
+                <!-- Hostility Detection Card -->
+                <div class="bucket-card" style="margin-top:6px">
+                    <div class="card-title">Hostility Detection <span id="hostilityStatusBadge" class="badge green">NORMAL</span></div>
+                    <div class="bucket-grid" style="grid-template-columns:1fr 1fr">
+                        <div class="bucket-col">
+                            <div class="bucket-label">Score</div>
+                            <div id="hostilityScoreCard" style="font-size:1.2rem; font-weight:bold; color:var(--green)">0</div>
+                            <div class="bucket-patterns">Caution: 10 | Pause: 20</div>
+                        </div>
+                        <div class="bucket-col">
+                            <div class="bucket-label">Pause Blocks</div>
+                            <div id="hostilityPauseBlocks" style="font-size:1.2rem; font-weight:bold; color:var(--dim)">0</div>
+                            <div class="bucket-patterns" id="hostilityRecovery">-</div>
+                        </div>
+                    </div>
+                    <!-- Active Indicators -->
+                    <div id="hostilityIndicators" style="font-size:0.5rem; color:var(--dim); margin-top:6px; max-height:60px; overflow-y:auto"></div>
                 </div>
             </div>
         </div>
@@ -913,6 +935,100 @@
                 }).join(' | ');
             } else {
                 sdHistoryEl.innerHTML = '<span style="color:var(--dim)">No runs yet</span>';
+            }
+
+            // Enhanced Hostility Detection Display
+            const enhHostility = state.enhancedHostility || {};
+            const hostilityLevelEl = document.getElementById('hostilityLevel');
+            const hostilityScoreEl = document.getElementById('hostilityScore');
+
+            const hLevel = enhHostility.level || 'normal';
+            const hScore = enhHostility.score || 0;
+
+            // Level badge
+            if (hLevel === 'normal') {
+                hostilityLevelEl.textContent = 'NORMAL';
+                hostilityLevelEl.className = 'badge green';
+            } else if (hLevel === 'caution') {
+                hostilityLevelEl.textContent = 'CAUTION';
+                hostilityLevelEl.className = 'badge yellow';
+            } else if (hLevel === 'pause') {
+                hostilityLevelEl.textContent = 'PAUSE';
+                hostilityLevelEl.className = 'badge red';
+            } else if (hLevel === 'extended_pause') {
+                hostilityLevelEl.textContent = 'EXT PAUSE';
+                hostilityLevelEl.className = 'badge red';
+            }
+
+            // Score display
+            hostilityScoreEl.textContent = hScore.toFixed(0);
+            if (hScore < 10) {
+                hostilityScoreEl.className = 'stat-value green';
+            } else if (hScore < 20) {
+                hostilityScoreEl.className = 'stat-value yellow';
+            } else {
+                hostilityScoreEl.className = 'stat-value red';
+            }
+
+            // Hostility Card Update
+            const hState = enhHostility.state || {};
+            const hIndicators = enhHostility.activeIndicators || [];
+            const hPauseBlocks = hState.pauseBlocksRemaining || 0;
+            const hRecoverySignal = hState.recoverySignalSeen || false;
+
+            // Status badge in card
+            const hostilityStatusBadge = document.getElementById('hostilityStatusBadge');
+            if (hLevel === 'normal') {
+                hostilityStatusBadge.textContent = 'NORMAL';
+                hostilityStatusBadge.className = 'badge green';
+            } else if (hLevel === 'caution') {
+                hostilityStatusBadge.textContent = 'CAUTION';
+                hostilityStatusBadge.className = 'badge yellow';
+            } else if (hLevel === 'pause') {
+                hostilityStatusBadge.textContent = 'PAUSE';
+                hostilityStatusBadge.className = 'badge red';
+            } else if (hLevel === 'extended_pause') {
+                hostilityStatusBadge.textContent = 'EXT PAUSE';
+                hostilityStatusBadge.className = 'badge red';
+            }
+
+            // Score in card
+            const hostilityScoreCard = document.getElementById('hostilityScoreCard');
+            hostilityScoreCard.textContent = hScore.toFixed(1);
+            hostilityScoreCard.style.color = hScore < 10 ? 'var(--green)' : hScore < 20 ? 'var(--yellow)' : 'var(--red)';
+
+            // Pause blocks remaining
+            const hostilityPauseBlocks = document.getElementById('hostilityPauseBlocks');
+            hostilityPauseBlocks.textContent = hPauseBlocks;
+            hostilityPauseBlocks.style.color = hPauseBlocks > 0 ? 'var(--red)' : 'var(--dim)';
+
+            // Recovery signal status
+            const hostilityRecovery = document.getElementById('hostilityRecovery');
+            if (hPauseBlocks > 0) {
+                hostilityRecovery.innerHTML = hRecoverySignal
+                    ? '<span style="color:var(--green)">Recovery: YES</span>'
+                    : '<span style="color:var(--red)">Recovery: NO</span>';
+            } else {
+                hostilityRecovery.textContent = '-';
+            }
+
+            // Active indicators
+            const hostilityIndicatorsEl = document.getElementById('hostilityIndicators');
+            if (hIndicators.length > 0) {
+                const indicatorColors = {
+                    'CASCADE': 'var(--red)',
+                    'CROSS_PATTERN': 'var(--orange)',
+                    'OPPOSITE_SYNC': 'var(--purple)',
+                    'HIGH_PCT': 'var(--yellow)',
+                    'HIGH_PCT_CLUSTER': 'var(--orange)',
+                    'WR_COLLAPSE': 'var(--red)'
+                };
+                hostilityIndicatorsEl.innerHTML = hIndicators.slice(-5).reverse().map(ind => {
+                    const color = indicatorColors[ind.type] || 'var(--dim)';
+                    return `<span style="color:${color}">+${ind.weight} ${ind.type}</span>`;
+                }).join(' | ');
+            } else {
+                hostilityIndicatorsEl.innerHTML = '<span style="color:var(--dim)">No recent indicators</span>';
             }
         }
 

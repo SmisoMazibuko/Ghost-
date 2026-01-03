@@ -815,9 +815,15 @@ export class SameDirectionManager {
 
   /**
    * Check if SD can place a bet (active AND not paused).
+   *
+   * DISABLED: SD analysis showed it's net negative (-2,262 unique contribution).
+   * SD steals profitable trades from Anti/AP5/ST patterns.
+   * See Hierarchy-Manager branch for full analysis.
    */
   canBet(): boolean {
-    return this.state.active && !this.state.paused;
+    // SD DISABLED - always return false
+    // Original: return this.state.active && !this.state.paused;
+    return false;
   }
 
   /**

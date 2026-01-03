@@ -159,6 +159,7 @@ export class SessionManager {
       healthState: this.reactionEngine.getHealthManager().exportState(),
       recoveryState: this.reactionEngine.getRecoveryManager().exportState(),
       hostilityState: this.reactionEngine.getHostilityManager().exportState(),
+      enhancedHostilityState: this.reactionEngine.getHostilityDetector().exportState(),
       profitTracking: data.profitTracking ?? {
         totals: { actualProfit: data.pnlTotal, activationAccumulatedProfit: 0, baitSwitchProfit: 0 },
         history: [],

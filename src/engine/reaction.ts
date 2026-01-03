@@ -55,6 +55,8 @@ import {
   createSameDirectionManager,
   SameDirectionState,
 } from './same-direction';
+import { HostilityDetector, createHostilityDetector } from './hostility-detector';
+import { EnhancedHostilityState } from '../types';
 
 // ============================================================================
 // CONFIDENCE CALCULATION
@@ -120,6 +122,9 @@ export class ReactionEngine {
   // Same Direction Manager - run-based profit regime system
   private sameDirectionManager: SameDirectionManager;
 
+  // Enhanced Hostility Detector - multi-indicator hostility detection
+  private hostilityDetector: HostilityDetector;
+
   // === PROFIT/LOSS MANAGEMENT SYSTEM ===
   // Pause Manager - controls when trading pauses
   private pauseManager: PauseManager;
@@ -176,6 +181,9 @@ export class ReactionEngine {
 
     // Initialize Same Direction Manager
     this.sameDirectionManager = createSameDirectionManager();
+
+    // Initialize Enhanced Hostility Detector
+    this.hostilityDetector = createHostilityDetector();
 
     // Initialize Profit/Loss Management System
     this.pauseManager = new PauseManager(this.pauseConfig);
@@ -302,7 +310,15 @@ export class ReactionEngine {
         const sdDirection = this.sameDirectionManager.getBetDirection(previousBlock);
 
         if (sdDirection !== null) {
-          // === REVERSAL PATTERN CHECK ===
+          // === ENHANCED HOSTILITY CHECK FOR SAMEDIR ===
+          // SameDir is not exempt from hostility (only ZZ/AntiZZ are exempt)
+          // Caution mode: SameDir confidence is 75%, which passes 60% threshold
+          // Pause mode: Block SameDir entirely
+          if (this.hostilityDetector.isPaused()) {
+            console.log(`[Prediction] SameDir BLOCKED by hostility pause: ${this.hostilityDetector.getSummary()}`);
+            // Fall through to check other patterns
+          } else {
+            // === REVERSAL PATTERN CHECK ===
           // Skip SameDir if a strong reversal pattern is in MAIN
           // XAX patterns (2A2-6A6): trigger at run length 2-6, predict reversal
           // OZ: triggers at run length 1, predicts flip back (reversal)
@@ -343,6 +359,7 @@ export class ReactionEngine {
               reason: `Same Direction ACTIVE (loss: ${accLoss.toFixed(0)}/140) - betting continuation ${bucketStatus}`,
             };
           }
+          } // Close the else block for hostility check
         }
       }
     }
@@ -411,6 +428,15 @@ export class ReactionEngine {
 
       const profit = lifecycle.getCumulativeProfit(pattern);
       const confidence = calculateConfidence(pattern, profit);
+
+      // === ENHANCED HOSTILITY CHECK ===
+      // ZZ/AntiZZ are exempt (handled by Pocket system above, but checked in canPatternTrade too)
+      // Caution mode: Skip trades with confidence < 60%
+      // Pause mode: Block all non-exempt patterns
+      if (!this.hostilityDetector.canPatternTrade(pattern, confidence)) {
+        console.log(`[Prediction] ${pattern} BLOCKED by hostility: ${this.hostilityDetector.getSummary()}`);
+        continue;
+      }
 
       // Determine bucket label for display
       const isInverse = bucket === 'BNS';
@@ -561,6 +587,9 @@ export class ReactionEngine {
 
     // Update hostility manager with trade result (legacy)
     this.hostilityManager.processTradeResult(trade);
+
+    // Update enhanced hostility detector with trade result
+    this.hostilityDetector.updateAfterTrade(trade);
 
     // Update bucket manager with trade result for consecutive win tracking
     // This is used to determine when B&S should break (2+ consecutive opposite wins)
@@ -1091,6 +1120,10 @@ export class ReactionEngine {
     // === ADVANCE PAUSE COUNTER ===
     // This decrements the blocks remaining in current pause
     this.pauseManager.advanceBlock();
+
+    // === ADVANCE HOSTILITY DETECTOR ===
+    // Decays score for idle block and advances pause counter
+    this.hostilityDetector.advanceBlock();
 
     return {
       blockResult,
@@ -1664,6 +1697,13 @@ export class ReactionEngine {
   }
 
   /**
+   * Get enhanced hostility detector
+   */
+  getHostilityDetector(): HostilityDetector {
+    return this.hostilityDetector;
+  }
+
+  /**
    * Get bucket manager (3-Bucket system)
    */
   getBucketManager(): BucketManager {
@@ -1727,6 +1767,7 @@ export class ReactionEngine {
     this.healthManager.reset();
     this.recoveryManager.reset();
     this.hostilityManager.reset();
+    this.hostilityDetector.reset();
     this.bucketManager.reset();
     this.zzStateManager.reset();
     this.hierarchyManager.reset();
@@ -1785,6 +1826,7 @@ export class ReactionEngine {
     this.healthManager.reset();
     this.recoveryManager.reset();
     this.hostilityManager.reset();
+    this.hostilityDetector.reset();
 
     this.sessionStopped = false;
     this.sessionStopReason = '';
@@ -1812,6 +1854,7 @@ export class ReactionEngine {
     for (const trade of this.completedTrades) {
       this.healthManager.updateAfterTrade(trade);
       this.hostilityManager.processTradeResult(trade);
+      this.hostilityDetector.updateAfterTrade(trade);
 
       // Rebuild per-system stats
       const tradingSystem = this.getTradeSystem(trade.pattern);
@@ -1925,6 +1968,7 @@ export class ReactionEngine {
     healthState: ReturnType<SessionHealthManager['exportState']>;
     recoveryState: ReturnType<RecoveryManager['exportState']>;
     hostilityState: ReturnType<HostilityManager['exportState']>;
+    enhancedHostilityState: EnhancedHostilityState;
     profitTracking: SessionProfitState;
     zzState: ZZStrategyState;
     sameDirectionState: SameDirectionState;
@@ -1946,6 +1990,7 @@ export class ReactionEngine {
       healthState: this.healthManager.exportState(),
       recoveryState: this.recoveryManager.exportState(),
       hostilityState: this.hostilityManager.exportState(),
+      enhancedHostilityState: this.hostilityDetector.exportState(),
       profitTracking: this.getProfitTracking(),
       zzState: this.zzStateManager.exportState(),
       sameDirectionState: this.sameDirectionManager.exportState(),
@@ -1978,6 +2023,9 @@ export class ReactionEngine {
     }
     if (state.hostilityState) {
       this.hostilityManager.importState(state.hostilityState);
+    }
+    if (state.enhancedHostilityState) {
+      this.hostilityDetector.importState(state.enhancedHostilityState);
     }
 
     // Import profit tracking (with defaults for older sessions)
@@ -2150,6 +2198,9 @@ export class ReactionEngine {
     // Reset hostility manager
     this.hostilityManager.reset();
 
+    // Reset enhanced hostility detector
+    this.hostilityDetector.reset();
+
     // Reset session stopped state (will be recalculated)
     this.sessionStopped = false;
     this.sessionStopReason = '';
@@ -2170,6 +2221,7 @@ export class ReactionEngine {
     for (const trade of this.completedTrades) {
       this.healthManager.updateAfterTrade(trade);
       this.hostilityManager.processTradeResult(trade);
+      this.hostilityDetector.updateAfterTrade(trade);
 
       // Rebuild per-system stats
       const tradingSystem = this.getTradeSystem(trade.pattern);
