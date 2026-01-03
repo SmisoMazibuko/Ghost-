@@ -1,7 +1,7 @@
 {
   "$schema": "./config.schema.json",
-  "version": "15.1",
-  "description": "Ghost Evaluator v15.1 - Default Configuration",
+  "version": "16.0",
+  "description": "Ghost Evaluator v16.0 - Default Configuration (No SameDir)",
 
   "evaluator": {
     "neutralBand": 0.05,

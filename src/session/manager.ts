@@ -112,7 +112,7 @@ export class SessionManager {
     const reactionExport = this.reactionEngine.exportState();
 
     return {
-      version: '15.3',
+      version: '16.0',
       blocks: gameExport.blocks,
       results: gameExport.results,
       patternCycles: gameExport.patternCycles,

@@ -46,7 +46,7 @@ export interface FullConfig {
 // ============================================================================
 
 const DEFAULT_FULL_CONFIG: FullConfig = {
-  version: '15.3',
+  version: '16.0',
   description: 'Ghost Evaluator v15.3 - Default Configuration',
   evaluator: DEFAULT_CONFIG,
   patterns: {

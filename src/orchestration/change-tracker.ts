@@ -289,7 +289,7 @@ export class ChangeTracker {
     }
 
     return {
-      version: '15.3',
+      version: '16.0',
       changes: [],
       lastModified: new Date().toISOString(),
     };
@@ -322,7 +322,7 @@ export class ChangeTracker {
    */
   clearAll(): void {
     this.changeLog = {
-      version: '15.3',
+      version: '16.0',
       changes: [],
       lastModified: new Date().toISOString(),
     };

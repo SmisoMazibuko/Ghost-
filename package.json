@@ -1,7 +1,7 @@
 {
   "name": "ghost-evaluator",
-  "version": "15.1.0",
-  "description": "Ghost Manual Evaluator v15.1 - Pattern Detection & Auto-Betting System",
+  "version": "16.0.0",
+  "description": "Ghost Manual Evaluator v16.0 - Pattern Detection & Auto-Betting (No SameDir)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

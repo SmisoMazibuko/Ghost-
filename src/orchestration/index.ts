@@ -129,7 +129,7 @@ export class OrchestrationManager {
    */
   exportState(): OrchestrationState {
     return {
-      version: '15.3',
+      version: '16.0',
       changeLog: this.changeTracker.exportChangeLog(),
       ruleSets: this.ruleManager.getAllRuleSets(),
       activeRuleSetId: this.ruleManager.getActiveRuleSet()?.id || 'default',
