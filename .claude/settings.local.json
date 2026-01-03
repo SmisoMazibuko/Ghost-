@@ -25,7 +25,12 @@
       "Bash(npm test:*)",
       "Bash(npx ts-node:*)",
       "Bash(PORT=3001 npm run web:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(grep:*)",
+      "Bash(dir:*)",
+      "Bash(set PORT=3001)",
+      "Bash(sort:*)",
+      "Bash(cmd //c \"taskkill /PID 11716 /F\")"
     ],
     "deny": [],
     "ask": []
