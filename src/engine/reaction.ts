@@ -57,7 +57,7 @@ import {
 } from './same-direction';
 import { HostilityDetector, createHostilityDetector } from './hostility-detector';
 import { EnhancedHostilityState } from '../types';
-
+import { checkTradingWindow } from './trading-window';
 // ============================================================================
 // CONFIDENCE CALCULATION
 // ============================================================================
@@ -201,6 +201,17 @@ export class ReactionEngine {
       return {
         hasPrediction: false,
         reason: 'DONE FOR THE DAY',
+      };
+    }
+
+    // === TRADING WINDOW CHECK ===
+    // Only allow trading during optimal UTC windows: 08-10 and 18-22
+    // Based on analysis showing Jan 3 collapse (-2190%) when trading outside windows
+    const windowCheck = checkTradingWindow();
+    if (!windowCheck.isAllowed) {
+      return {
+        hasPrediction: false,
+        reason: windowCheck.message,
       };
     }
 

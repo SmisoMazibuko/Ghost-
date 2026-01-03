@@ -134,6 +134,11 @@ ${COLORS.dim}Type 'help' for commands, 'exit' to quit${COLORS.reset}
         this.handler.displayPause();
         break;
 
+      case 'time':
+      case 'window':
+        this.handler.displayTradingWindow();
+        break;
+
       case 'undo':
       case 'u':
         this.handler.undo();

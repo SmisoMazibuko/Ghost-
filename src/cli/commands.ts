@@ -8,6 +8,7 @@ import { Direction } from '../types';
 import { SessionManager } from '../session/manager';
 import { OrchestrationManager, createOrchestrationManager } from '../orchestration';
 import { loadRecentAnalytics, aggregateAnalytics, AggregatedAnalytics } from '../data/analytics-storage';
+import { checkTradingWindow } from '../engine/trading-window';
 
 // ============================================================================
 // DISPLAY HELPERS
@@ -211,7 +212,21 @@ export class CommandHandler {
     const state = this.session.getGameState();
     const reaction = this.session.getReactionEngine();
 
+
+    // Trading Window Status (show first - most important)
+    const windowStatus = checkTradingWindow();
+    const timeStr = `${windowStatus.currentHourUTC.toString().padStart(2, '0')}:${windowStatus.currentMinuteUTC.toString().padStart(2, '0')} UTC`;
+
     console.log(`\n${'─'.repeat(50)}`);
+    if (windowStatus.isAllowed) {
+      console.log(`${COLORS.green}⏰ ${windowStatus.currentWindow?.label || 'Trading Window'}${COLORS.reset} (${timeStr})`);
+    } else {
+      const waitMins = windowStatus.minutesToNextWindow || 0;
+      const hours = Math.floor(waitMins / 60);
+      const mins = waitMins % 60;
+      const waitStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+      console.log(`${COLORS.red}⏰ OUTSIDE WINDOW${COLORS.reset} (${timeStr}) - Next: ${windowStatus.nextWindow?.label} in ${COLORS.yellow}${waitStr}${COLORS.reset}`);
+    }
     console.log(`${COLORS.bright}Session Status${COLORS.reset}`);
     console.log(`${'─'.repeat(50)}`);
     console.log(`  State: ${colorState(summary.sessionState)}`);
@@ -870,6 +885,45 @@ export class CommandHandler {
     console.log(`  ${COLORS.dim}Pocket (ZZ/AntiZZ) is ONLY affected by STOP_GAME${COLORS.reset}`);
   }
 
+
+  /**
+   * Display trading window status
+   */
+  displayTradingWindow(): void {
+    const windowStatus = checkTradingWindow();
+
+    console.log('\n' + '='.repeat(60));
+    console.log(COLORS.bright + 'Trading Window Status' + COLORS.reset);
+    console.log('='.repeat(60));
+
+    const timeStr = windowStatus.currentHourUTC.toString().padStart(2, '0') + ':' + windowStatus.currentMinuteUTC.toString().padStart(2, '0') + ' UTC';
+
+    if (windowStatus.isAllowed) {
+      console.log('\n' + COLORS.green + 'TRADING ALLOWED' + COLORS.reset);
+      console.log('  Current time: ' + COLORS.bright + timeStr + COLORS.reset);
+      if (windowStatus.currentWindow) {
+        console.log('  Window: ' + COLORS.cyan + windowStatus.currentWindow.label + COLORS.reset);
+        console.log('  Hours: ' + windowStatus.currentWindow.startHourUTC + ':00 - ' + windowStatus.currentWindow.endHourUTC + ':00 UTC');
+      }
+    } else {
+      console.log('\n' + COLORS.red + 'TRADING BLOCKED' + COLORS.reset);
+      console.log('  Current time: ' + COLORS.bright + timeStr + COLORS.reset);
+      console.log('  ' + COLORS.yellow + windowStatus.message + COLORS.reset);
+      if (windowStatus.nextWindow) {
+        console.log('\n  Next window: ' + COLORS.cyan + windowStatus.nextWindow.label + COLORS.reset);
+        console.log('  Starts at: ' + windowStatus.nextWindow.startHourUTC + ':00 UTC');
+        if (windowStatus.minutesToNextWindow) {
+          const hours = Math.floor(windowStatus.minutesToNextWindow / 60);
+          const mins = windowStatus.minutesToNextWindow % 60;
+          const waitStr = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
+          console.log('  Wait time: ' + COLORS.yellow + waitStr + COLORS.reset);
+        }
+      }
+    }
+
+    console.log('\n' + COLORS.dim + 'Optimal windows: 08:00-12:00 UTC, 18:00-22:00 UTC' + COLORS.reset);
+    console.log(COLORS.dim + 'Based on Jan 3 analysis: trading outside windows = -2190% loss' + COLORS.reset);
+  }
   /**
    * Display help
    */
