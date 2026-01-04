@@ -1961,6 +1961,15 @@ export class ReactionEngine {
       this.sessionStopReason = this.healthManager.getStopReason();
     }
 
+    // v16.0 FIX: Check STOP_GAME after rebuilding health state
+    // This ensures drawdown-based stop is triggered after undo/restore
+    const blockCount = this.gameState.getBlockCount();
+    const pauseTriggerData = this.healthManager.getPauseTriggerData(
+      blockCount,
+      this.actualSimLedger.getActualPnl()
+    );
+    this.pauseManager.checkAndTriggerPause(pauseTriggerData);
+
     console.log('[ReactionEngine] State rebuilt after undo');
   }
 
@@ -2074,6 +2083,15 @@ export class ReactionEngine {
     this.samedirConsecutiveLosses = state.samedirConsecutiveLosses ?? 0;
     this.bucketTotalPnl = state.bucketTotalPnl ?? 0;
     this.samedirTotalPnl = state.samedirTotalPnl ?? 0;
+
+    // v16.0 FIX: Check STOP_GAME after importing state
+    // This ensures drawdown-based stop is triggered after session restore
+    const blockCount = this.gameState.getBlockCount();
+    const pauseTriggerData = this.healthManager.getPauseTriggerData(
+      blockCount,
+      this.actualSimLedger.getActualPnl()
+    );
+    this.pauseManager.checkAndTriggerPause(pauseTriggerData);
   }
 
   /**
@@ -2285,6 +2303,15 @@ export class ReactionEngine {
       this.sessionStopped = true;
       this.sessionStopReason = this.healthManager.getStopReason();
     }
+
+    // v16.0 FIX: Check STOP_GAME after rebuilding health state
+    // This ensures drawdown-based stop is triggered after undo
+    const blockCount = this.gameState.getBlockCount();
+    const pauseTriggerData = this.healthManager.getPauseTriggerData(
+      blockCount,
+      this.actualSimLedger.getActualPnl()
+    );
+    this.pauseManager.checkAndTriggerPause(pauseTriggerData);
   }
 
   /**
