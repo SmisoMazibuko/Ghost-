@@ -747,9 +747,9 @@ export const DEFAULT_SESSION_HEALTH_CONFIG: SessionHealthConfig = {
   },
   drawdown: {
     warningLevel: -300,
-    cautionLevel: -500,
-    stopLevel: -800,
-    abortLevel: -1000,
+    cautionLevel: -400,
+    stopLevel: -560,
+    abortLevel: -560,
   },
   baitSwitch: {
     divergenceWarning: 0.25,
@@ -1163,8 +1163,8 @@ export interface PauseConfig {
 
 /** Default pause configuration */
 export const DEFAULT_PAUSE_CONFIG: PauseConfig = {
-  stopGameDrawdown: -1000,
-  stopGameActualLoss: -500,
+  stopGameDrawdown: -560,
+  stopGameActualLoss: -560,
   majorPauseInterval: -300,
   majorPauseBlocks: 10,
   minorPauseLosses: 2,
